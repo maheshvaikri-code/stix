@@ -34,6 +34,7 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+.Claude/
 *.swp
 *.swo
 
