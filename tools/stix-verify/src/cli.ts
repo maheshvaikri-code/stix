@@ -302,7 +302,8 @@ program
       for (const event of events) {
         const decision = event.decision;
         if (decision === 'ALLOW' || decision === 'DENY' || decision === 'QUARANTINE') {
-          stats.decisions[decision]++;
+          const key = decision as keyof typeof stats.decisions;
+          stats.decisions[key]++;
         }
         if (event.actor?.id) {
           stats.actors.add(event.actor.id);
