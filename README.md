@@ -311,6 +311,7 @@ Use them as source material, then convert to current STIX policy schema before r
 - Set `DEFAULT_FAIL_MODE=CLOSED`.
 - Keep `EVIDENCE_WRITE_MODE=strict`.
 - Wire backup/restore and replay/verify into runbooks.
+- Apply repository branch and tag protection controls from `_Development_Notes/STIX_Branch_Protection_Checklist.md`.
 
 ## Operations and Verification
 
@@ -367,6 +368,7 @@ High-level summary:
 - SLO and error budget: `_Development_Notes/STIX_SLO_and_Error_Budget.md`
 - Transport security runbook: `_Development_Notes/STIX_Transport_Security_Runbook.md`
 - Key rotation runbook: `_Development_Notes/STIX_Key_Rotation_Runbook.md`
+- Branch protection checklist: `_Development_Notes/STIX_Branch_Protection_Checklist.md`
 
 ## Contributing
 
