@@ -77,7 +77,7 @@ export function evaluateConditions(
   // Tags check (if specified, at least one must match)
   if (conditions.tags && conditions.tags.length > 0) {
     const contextTags = ctx.context.tags ?? [];
-    const hasMatchingTag = conditions.tags.some(t => contextTags.includes(t));
+    const hasMatchingTag = conditions.tags.some((t: string) => contextTags.includes(t));
     if (!hasMatchingTag) {
       return false;
     }

@@ -5,6 +5,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   type PolicyArtifact,
+  type StixError,
   PolicyArtifactSchema,
   formatZodErrors,
   isStixError,
@@ -82,7 +83,8 @@ export async function evaluateRoutes(
       return reply.code(200).send(decision);
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Policy evaluation failed');
       return reply.code(500).send({
@@ -217,7 +219,8 @@ export async function policyRoutes(
       return reply.code(200).send(toPolicyResponse(policy));
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Failed to get policy');
       return reply.code(500).send({
@@ -240,7 +243,7 @@ export async function policyRoutes(
       if (!parsed.success) {
         const details = formatZodErrors(parsed.error);
         return reply.code(400).send({
-          error: `Validation failed: ${details.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+          error: `Validation failed: ${details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join('; ')}`,
           details,
         });
       }
@@ -263,7 +266,8 @@ export async function policyRoutes(
       return reply.code(201).send(toPolicyResponse(validated));
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Failed to create policy');
       return reply.code(500).send({
@@ -292,7 +296,7 @@ export async function policyRoutes(
         if (!parsed.success) {
           const details = formatZodErrors(parsed.error);
           return reply.code(400).send({
-            error: `Validation failed: ${details.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+            error: `Validation failed: ${details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join('; ')}`,
             details,
           });
         }
@@ -306,7 +310,8 @@ export async function policyRoutes(
         return reply.code(200).send(toPolicyResponse(validated));
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         request.log.error({ err: error }, 'Failed to update policy');
         return reply.code(500).send({
@@ -351,7 +356,7 @@ export async function policyRoutes(
         if (!parsed.success) {
           const details = formatZodErrors(parsed.error);
           return reply.code(400).send({
-            error: `Validation failed: ${details.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+            error: `Validation failed: ${details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join('; ')}`,
             details,
           });
         }
@@ -362,7 +367,8 @@ export async function policyRoutes(
         return reply.code(200).send(toPolicyResponse(validated));
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         request.log.error({ err: error }, 'Failed to update policy');
         return reply.code(500).send({
@@ -392,7 +398,8 @@ export async function policyRoutes(
       return reply.code(204).send();
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Failed to delete policy');
       return reply.code(500).send({
