@@ -36,7 +36,7 @@ export class SimulationPolicyEngine {
 
   constructor(pack: PolicyPack) {
     // Only use active policies
-    this.policies = pack.policies.filter(p => p.active !== false);
+    this.policies = pack.policies.filter((p: PolicyArtifact) => p.active !== false);
     this.packHash = pack.hash;
   }
 
@@ -228,7 +228,7 @@ export class SimulationPolicyEngine {
       reason_code: policy.reason_code || `POLICY_${policy.decision}`,
       policy_id: policy.policy_id,
       policy_hash: policyHash,
-      obligations: (policy.obligations || []).map(o => o.type),
+      obligations: (policy.obligations || []).map((o: { type: string }) => o.type),
       controls: policy.controls || [],
       regulations: policy.regulations || [],
     };
