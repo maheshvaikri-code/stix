@@ -5,6 +5,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   isStixError,
+  type StixError,
   createErrorResponse,
   EvidenceNotFoundError,
 } from '@stix/shared';
@@ -138,7 +139,8 @@ export async function evidenceRoutes(
       });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Failed to record decision');
       return reply.code(500).send({
@@ -172,7 +174,8 @@ export async function evidenceRoutes(
       });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       request.log.error({ err: error }, 'Failed to record outcome');
       return reply.code(500).send({
@@ -209,7 +212,8 @@ export async function evidenceRoutes(
       });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       return reply.code(500).send({
         success: false,
