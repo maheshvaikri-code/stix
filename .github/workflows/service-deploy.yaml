@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: service-validation-${{ github.ref }}
   cancel-in-progress: true

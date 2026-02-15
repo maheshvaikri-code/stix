@@ -16,6 +16,9 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+
 concurrency:
   group: policy-validation-${{ github.ref }}
   cancel-in-progress: false
