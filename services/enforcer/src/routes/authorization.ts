@@ -6,6 +6,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   type AuthorizeRequest,
+  type StixError,
   AuthorizeRequestSchema,
   OutcomeRequestSchema,
   formatZodErrors,
@@ -131,7 +132,7 @@ export async function authorizationRoutes(
       if (!parsed.success) {
         const details = formatZodErrors(parsed.error);
         return reply.code(400).send({
-          error: `Validation failed: ${details.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+          error: `Validation failed: ${details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join('; ')}`,
           details,
         });
       }
@@ -157,7 +158,8 @@ export async function authorizationRoutes(
       return reply.code(200).send(response);
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       
       request.log.error({ err: error }, 'Authorization failed');
@@ -207,7 +209,7 @@ export async function authorizationRoutes(
       if (!parsed.success) {
         const details = formatZodErrors(parsed.error);
         return reply.code(400).send({
-          error: `Validation failed: ${details.map(d => `${d.field}: ${d.message}`).join('; ')}`,
+          error: `Validation failed: ${details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join('; ')}`,
           details,
         });
       }
@@ -224,7 +226,8 @@ export async function authorizationRoutes(
       return reply.code(200).send({ success: true, recorded: true });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       
       request.log.error({ err: error }, 'Failed to record outcome');
@@ -280,7 +283,8 @@ export async function authorizationRoutes(
       });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
 
       return reply.code(500).send({
