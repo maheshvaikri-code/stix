@@ -23,6 +23,7 @@ import {
   getEnvNumber,
   getEnvBool,
   isStixError,
+  StixError,
   createErrorResponse,
   ApprovalNotFoundError,
   ApprovalExpiredError,
@@ -761,7 +762,8 @@ async function registerRoutes(
       });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       return reply.code(500).send({
         success: false,
@@ -778,7 +780,8 @@ async function registerRoutes(
       return reply.send({ success: true, data: ticket });
     } catch (error) {
       if (isStixError(error)) {
-        return reply.code(error.statusCode).send(createErrorResponse(error));
+        const stixError = error as StixError;
+        return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
       }
       return reply.code(500).send({
         success: false,
@@ -839,7 +842,8 @@ async function registerRoutes(
         });
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         return reply.code(400).send({
           success: false,
@@ -879,7 +883,8 @@ async function registerRoutes(
         });
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         return reply.code(400).send({
           success: false,
@@ -898,7 +903,8 @@ async function registerRoutes(
         return reply.send({ success: true, data: ticket });
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         return reply.code(400).send({
           success: false,
@@ -917,7 +923,8 @@ async function registerRoutes(
         return reply.send({ success: true, data: ticket });
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         return reply.code(400).send({
           success: false,
@@ -936,7 +943,8 @@ async function registerRoutes(
         return reply.send({ success: true, data: ticket });
       } catch (error) {
         if (isStixError(error)) {
-          return reply.code(error.statusCode).send(createErrorResponse(error));
+          const stixError = error as StixError;
+          return reply.code(stixError.statusCode).send(createErrorResponse(stixError));
         }
         return reply.code(400).send({
           success: false,
