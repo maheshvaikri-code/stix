@@ -231,7 +231,7 @@ export class ReplayEngine {
   private extractObligations(policy: PolicyArtifact | undefined): string[] {
     if (!policy?.obligations) return [];
 
-    return policy.obligations.map((obligation) => obligation.type);
+    return policy.obligations.map((obligation: { type: string }) => obligation.type);
   }
 
   /**
