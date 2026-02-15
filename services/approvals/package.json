@@ -1,0 +1,33 @@
+{
+  "name": "@stix/approvals",
+  "version": "0.1.0",
+  "description": "STIX Approvals Service - Human-in-the-loop approval workflows",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stix/shared": "workspace:*",
+    "fastify": "^4.25.0",
+    "@fastify/cors": "^8.5.0",
+    "@fastify/helmet": "^11.1.1",
+    "pino": "^8.17.0",
+    "pg": "^8.11.3",
+    "zod": "^3.22.4",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.0",
+    "tsx": "^4.7.0",
+    "vitest": "^1.1.0"
+  }
+}

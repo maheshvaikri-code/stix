@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ison-memory": {
+      "command": "ison-memory-mcp",
+      "args": ["serve"],
+      "env": {
+        "ISON_MEMORY_STORAGE__PATH": "~/.ison-memory/memory.db"
+      }
+    }
+  },
+  "allowedTools": ["ison-memory"]
+}

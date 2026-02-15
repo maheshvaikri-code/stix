@@ -1,0 +1,82 @@
+{
+  "name": "@stix/monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "STIX - Shield, Trust & Integrity eXecution Platform",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "tools/*",
+    "cli",
+    "dashboard",
+    "targets/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:shared": "pnpm --filter @stix/shared build",
+    "build:services": "pnpm --filter './services/*' build",
+    "build:sdk": "pnpm --filter './sdk/*' build",
+    "dev": "pnpm -r --parallel dev",
+    "dev:enforcer": "pnpm --filter @stix/enforcer dev",
+    "dev:policy": "pnpm --filter @stix/policy dev",
+    "dev:evidence": "pnpm --filter @stix/evidence dev",
+    "dev:approvals": "pnpm --filter @stix/approvals dev",
+    "start": "pnpm -r start",
+    "test": "pnpm -r test",
+    "test:unit": "vitest run tests/*.test.ts",
+    "test:integration": "npx tsx tests/run-integration.ts",
+    "test:integration:watch": "npx tsx tests/run-integration.ts --watch",
+    "test:smoke": "pnpm --filter @stix/cli exec stix test smoke --api-url http://localhost:8080",
+    "test:load": "pnpm --filter @stix/cli exec stix test load --api-url http://localhost:8080",
+    "dr:backup": "powershell -ExecutionPolicy Bypass -File scripts/dr/backup-postgres.ps1",
+    "dr:restore": "powershell -ExecutionPolicy Bypass -File scripts/dr/restore-postgres.ps1",
+    "dr:verify": "powershell -ExecutionPolicy Bypass -File scripts/dr/verify-dr.ps1",
+    "perf:load": "node scripts/perf/stix-load.mjs",
+    "perf:report": "node scripts/perf/generate-capacity-report.mjs",
+    "test:all": "pnpm test:unit && pnpm test:integration",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec -- rm -rf dist node_modules",
+    "clean:dist": "pnpm -r exec -- rm -rf dist",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "docker:build": "docker compose -f deploy/docker/docker-compose.yaml build",
+    "docker:up": "docker compose -f deploy/docker/docker-compose.yaml up -d",
+    "docker:down": "docker compose -f deploy/docker/docker-compose.yaml down",
+    "docker:logs": "docker compose -f deploy/docker/docker-compose.yaml logs -f",
+    "k8s:apply": "kubectl apply -f deploy/k8s/",
+    "k8s:delete": "kubectl delete -f deploy/k8s/",
+    "prepare": "pnpm build:shared"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.12.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stix-platform/stix.git"
+  },
+  "keywords": [
+    "stix",
+    "compliance",
+    "authorization",
+    "ai-governance",
+    "guardrails",
+    "policy",
+    "audit",
+    "enterprise"
+  ],
+  "author": "STIX Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.8.2"
+  }
+}

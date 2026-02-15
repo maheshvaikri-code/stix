@@ -1,0 +1,1175 @@
+# =============================================================================
+# STIX Enterprise Policy Pack - HIPAA Compliance
+# Comprehensive healthcare data protection policies for AI agent operations
+# Version: 2.0.0 | 25 Policies
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: PHI ACCESS CONTROL (Policies 1-5)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 1: Block PHI access without authorization
+# -----------------------------------------------------------------------------
+policy_id: hipaa-phi-block-unauthorized
+version: "2.0.0"
+priority: 10
+description: |
+  Blocks access to Protected Health Information (PHI) by unauthorized actors.
+  Applies to all environments and requires explicit authorization.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: "patient_data"
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: DENY
+reason_code: PHI_ACCESS_DENIED
+
+controls:
+  - "HIPAA:164.502"
+  - "HIPAA:164.514"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "HIPAA"
+  - "HITECH"
+
+tags:
+  - healthcare
+  - phi
+  - compliance
+  - hipaa
+  - access-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 2: Quarantine PHI access for AI agents
+# -----------------------------------------------------------------------------
+policy_id: hipaa-phi-quarantine
+version: "2.0.0"
+priority: 20
+description: |
+  Requires human approval for AI agents accessing PHI when they have
+  a legitimate business purpose documented in the context.
+
+scope:
+  actor_type: AI_AGENT
+  action: read_*
+  resource_type: patient_data
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: QUARANTINE
+reason_code: PHI_REQUIRES_APPROVAL
+
+approval:
+  approver_role: hipaa_privacy_officer
+  require_count: 1
+  require_justification: true
+  timeout_hours: 4
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+  - type: MASK_PII
+  - type: WATERMARK_OUTPUT
+
+controls:
+  - "HIPAA:164.502"
+  - "HIPAA:164.506"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - approval-required
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 3: Allow de-identified health data
+# -----------------------------------------------------------------------------
+policy_id: hipaa-deidentified-allow
+version: "2.0.0"
+priority: 30
+description: |
+  Allows access to properly de-identified health data as per HIPAA Safe Harbor.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: health_data
+
+conditions:
+  require_resource_attr:
+    deidentified: true
+    method: "safe_harbor"
+
+decision: ALLOW
+reason_code: DEIDENTIFIED_DATA_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+
+controls:
+  - "HIPAA:164.514(b)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - deidentified
+  - allowed
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 4: Block PHI export/transmission
+# -----------------------------------------------------------------------------
+policy_id: hipaa-phi-no-export
+version: "2.0.0"
+priority: 5
+description: |
+  Blocks any attempt to export, transmit, or copy PHI to external systems.
+
+scope:
+  actor_type: "*"
+  action: export_*
+  resource_type: "*"
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: DENY
+reason_code: PHI_EXPORT_BLOCKED
+
+controls:
+  - "HIPAA:164.312(e)(1)"
+  - "HIPAA:164.312(e)(2)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - export-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 5: Restrict PHI to minimum necessary
+# -----------------------------------------------------------------------------
+policy_id: hipaa-minimum-necessary
+version: "2.0.0"
+priority: 15
+description: |
+  Enforces the HIPAA minimum necessary standard - only access the PHI
+  required for the specific task at hand.
+
+scope:
+  actor_type: "*"
+  action: read_*
+  resource_type: patient_record
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: ALLOW
+reason_code: MINIMUM_NECESSARY_ACCESS
+
+obligations:
+  - type: REDACT_FIELDS
+    params:
+      fields:
+        - ssn
+        - financial_accounts
+        - genetic_data
+        - psychotherapy_notes
+      unless_explicitly_needed: true
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_fields_accessed: true
+
+controls:
+  - "HIPAA:164.502(b)"
+  - "HIPAA:164.514(d)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - minimum-necessary
+
+active: true
+
+---
+# =============================================================================
+# SECTION 2: TREATMENT/PAYMENT/OPERATIONS (TPO) (Policies 6-9)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 6: Allow PHI for Treatment
+# -----------------------------------------------------------------------------
+policy_id: hipaa-tpo-treatment
+version: "2.0.0"
+priority: 25
+description: |
+  Allows PHI access for direct treatment purposes by authorized healthcare
+  providers as permitted under HIPAA's Treatment exception.
+
+scope:
+  actor_type: HUMAN
+  action: "*"
+  resource_type: patient_record
+
+conditions:
+  require_actor_attr:
+    role_category: healthcare_provider
+    treatment_relationship: true
+
+decision: ALLOW
+reason_code: TPO_TREATMENT_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      purpose: treatment
+  - type: TIME_LIMIT
+    params:
+      duration_minutes: 60
+
+controls:
+  - "HIPAA:164.506(c)(1)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - tpo
+  - treatment
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 7: Allow PHI for Payment operations
+# -----------------------------------------------------------------------------
+policy_id: hipaa-tpo-payment
+version: "2.0.0"
+priority: 25
+description: |
+  Allows PHI access for payment and billing operations by authorized
+  billing personnel.
+
+scope:
+  actor_type: "*"
+  action: process_billing
+  resource_type: patient_record
+
+conditions:
+  require_actor_attr:
+    department: billing
+    billing_authorized: true
+
+decision: ALLOW
+reason_code: TPO_PAYMENT_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      purpose: payment
+  - type: REDACT_FIELDS
+    params:
+      fields:
+        - clinical_notes
+        - diagnoses_detail
+
+controls:
+  - "HIPAA:164.506(c)(2)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - tpo
+  - payment
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 8: Allow PHI for Healthcare Operations
+# -----------------------------------------------------------------------------
+policy_id: hipaa-tpo-operations
+version: "2.0.0"
+priority: 25
+description: |
+  Allows PHI access for healthcare operations like quality assessment,
+  training, and compliance auditing.
+
+scope:
+  actor_type: "*"
+  action: analyze_*
+  resource_type: health_data
+
+conditions:
+  require_actor_attr:
+    operations_authorized: true
+  require_resource_attr:
+    purpose:
+      - quality_assessment
+      - training
+      - compliance_audit
+
+decision: ALLOW
+reason_code: TPO_OPERATIONS_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      purpose: operations
+  - type: MASK_PII
+    params:
+      mask_direct_identifiers: true
+
+controls:
+  - "HIPAA:164.506(c)(3)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - tpo
+  - operations
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 9: Require BAA for business associates
+# -----------------------------------------------------------------------------
+policy_id: hipaa-baa-required
+version: "2.0.0"
+priority: 12
+description: |
+  Requires Business Associate Agreement verification before allowing
+  external services to process PHI.
+
+scope:
+  actor_type: SERVICE
+  action: "*"
+  resource_type: patient_data
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: DENY
+reason_code: BAA_NOT_VERIFIED
+
+controls:
+  - "HIPAA:164.502(e)"
+  - "HIPAA:164.504(e)"
+
+regulations:
+  - "HIPAA"
+  - "HITECH"
+
+tags:
+  - healthcare
+  - phi
+  - baa
+  - business-associate
+
+active: true
+
+---
+# =============================================================================
+# SECTION 3: SENSITIVE PHI CATEGORIES (Policies 10-14)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 10: Block psychotherapy notes access
+# -----------------------------------------------------------------------------
+policy_id: hipaa-psychotherapy-block
+version: "2.0.0"
+priority: 3
+description: |
+  Psychotherapy notes receive extra protection under HIPAA. Access requires
+  explicit patient authorization beyond standard TPO consent.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: psychotherapy_notes
+
+decision: DENY
+reason_code: PSYCHOTHERAPY_NOTES_PROTECTED
+
+controls:
+  - "HIPAA:164.508(a)(2)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - psychotherapy
+  - sensitive
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 11: Restrict genetic information (GINA)
+# -----------------------------------------------------------------------------
+policy_id: hipaa-gina-genetic
+version: "2.0.0"
+priority: 5
+description: |
+  Genetic information requires special handling under GINA and HIPAA.
+  Must not be used for employment or insurance underwriting decisions.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: genetic_data
+
+decision: QUARANTINE
+reason_code: GENETIC_DATA_RESTRICTED
+
+approval:
+  approver_role: genetic_counselor
+  require_count: 1
+  require_justification: true
+  timeout_hours: 24
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      include_justification: true
+  - type: NOTIFY
+    params:
+      recipient: privacy_officer
+      template: genetic_access_notification
+
+controls:
+  - "HIPAA:164.502"
+  - "GINA:Title I"
+  - "GINA:Title II"
+
+regulations:
+  - "HIPAA"
+  - "GINA"
+
+tags:
+  - healthcare
+  - phi
+  - genetic
+  - gina
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 12: Substance abuse records (42 CFR Part 2)
+# -----------------------------------------------------------------------------
+policy_id: hipaa-substance-abuse
+version: "2.0.0"
+priority: 3
+description: |
+  Substance abuse treatment records have additional protections under
+  42 CFR Part 2, beyond standard HIPAA requirements.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: substance_abuse_record
+
+decision: DENY
+reason_code: SUBSTANCE_ABUSE_RECORD_PROTECTED
+
+controls:
+  - "42CFR:Part2"
+  - "HIPAA:164.502"
+
+regulations:
+  - "HIPAA"
+  - "42CFR_PART_2"
+
+tags:
+  - healthcare
+  - phi
+  - substance-abuse
+  - 42cfr
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 13: HIV/AIDS information protection
+# -----------------------------------------------------------------------------
+policy_id: hipaa-hiv-protection
+version: "2.0.0"
+priority: 5
+description: |
+  HIV/AIDS status and related health information requires enhanced
+  privacy protections in most jurisdictions.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: patient_record
+
+conditions:
+  require_resource_attr:
+    contains_hiv_status: true
+
+decision: QUARANTINE
+reason_code: HIV_STATUS_PROTECTED
+
+approval:
+  approver_role: privacy_officer
+  require_count: 1
+  require_justification: true
+  timeout_hours: 4
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+  - type: MASK_PII
+  - type: ENCRYPT_TRANSIT
+
+controls:
+  - "HIPAA:164.502"
+
+regulations:
+  - "HIPAA"
+  - "STATE_HIV_LAWS"
+
+tags:
+  - healthcare
+  - phi
+  - hiv
+  - sensitive
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 14: Minor patient records
+# -----------------------------------------------------------------------------
+policy_id: hipaa-minor-records
+version: "2.0.0"
+priority: 8
+description: |
+  Records of minor patients have additional protections and may require
+  parental consent for access in some cases.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: patient_record
+
+conditions:
+  require_resource_attr:
+    patient_is_minor: true
+
+decision: QUARANTINE
+reason_code: MINOR_RECORD_REQUIRES_REVIEW
+
+approval:
+  approver_role: pediatric_compliance_officer
+  require_count: 1
+  require_justification: true
+  timeout_hours: 2
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: minor_access
+
+controls:
+  - "HIPAA:164.502(g)"
+
+regulations:
+  - "HIPAA"
+  - "STATE_MINOR_CONSENT"
+
+tags:
+  - healthcare
+  - phi
+  - minor
+  - pediatric
+
+active: true
+
+---
+# =============================================================================
+# SECTION 4: SECURITY SAFEGUARDS (Policies 15-18)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 15: Require encryption for PHI transmission
+# -----------------------------------------------------------------------------
+policy_id: hipaa-encryption-required
+version: "2.0.0"
+priority: 10
+description: |
+  All PHI transmissions must be encrypted in transit as required by
+  HIPAA Security Rule.
+
+scope:
+  actor_type: "*"
+  action: transmit_*
+  resource_type: "*"
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: ALLOW
+reason_code: ENCRYPTED_TRANSMISSION_REQUIRED
+
+obligations:
+  - type: ENCRYPT_TRANSIT
+    params:
+      algorithm: AES-256-GCM
+      protocol: TLS_1_3
+  - type: LOG_LEVEL
+    params:
+      level: info
+
+controls:
+  - "HIPAA:164.312(e)(1)"
+  - "HIPAA:164.312(e)(2)(ii)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - encryption
+  - security
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 16: Audit logging requirement
+# -----------------------------------------------------------------------------
+policy_id: hipaa-audit-logging
+version: "2.0.0"
+priority: 50
+description: |
+  All access to PHI must be logged for audit purposes as required by
+  HIPAA Security Rule.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: patient_data
+
+decision: ALLOW
+reason_code: AUDIT_LOGGING_APPLIED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_actor: true
+      include_action: true
+      include_resource: true
+      include_timestamp: true
+      retention_days: 2190  # 6 years per HIPAA
+
+controls:
+  - "HIPAA:164.312(b)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - audit
+  - logging
+  - security
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 17: Session timeout for PHI access
+# -----------------------------------------------------------------------------
+policy_id: hipaa-session-timeout
+version: "2.0.0"
+priority: 40
+description: |
+  Enforce automatic session termination after period of inactivity
+  when accessing PHI.
+
+scope:
+  actor_type: "*"
+  action: access_*
+  resource_type: patient_data
+
+decision: ALLOW
+reason_code: SESSION_TIMEOUT_ENFORCED
+
+obligations:
+  - type: TIME_LIMIT
+    params:
+      duration_minutes: 15
+      warn_at_minutes: 12
+      action_on_timeout: logout
+
+controls:
+  - "HIPAA:164.312(a)(2)(iii)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - security
+  - session
+  - timeout
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 18: Emergency access override
+# -----------------------------------------------------------------------------
+policy_id: hipaa-emergency-access
+version: "2.0.0"
+priority: 1
+description: |
+  Allows emergency "break-the-glass" access to PHI in life-threatening
+  situations. All such access is logged and reviewed.
+
+scope:
+  actor_type: HUMAN
+  action: emergency_access
+  resource_type: patient_record
+
+conditions:
+  require_actor_attr:
+    role_category: healthcare_provider
+  require_context:
+    emergency_declared: true
+
+decision: ALLOW
+reason_code: EMERGENCY_ACCESS_GRANTED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: emergency_access
+      require_followup_review: true
+  - type: NOTIFY
+    params:
+      recipient: privacy_officer
+      template: emergency_access_alert
+      immediate: true
+  - type: TIME_LIMIT
+    params:
+      duration_minutes: 30
+
+controls:
+  - "HIPAA:164.312(a)(2)(ii)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - emergency
+  - break-glass
+
+active: true
+
+---
+# =============================================================================
+# SECTION 5: PATIENT RIGHTS (Policies 19-22)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 19: Patient access to own records
+# -----------------------------------------------------------------------------
+policy_id: hipaa-patient-access
+version: "2.0.0"
+priority: 20
+description: |
+  Patients have the right to access their own medical records under HIPAA.
+  This policy enables that access.
+
+scope:
+  actor_type: HUMAN
+  action: read_*
+  resource_type: patient_record
+
+conditions:
+  require_actor_attr:
+    is_patient: true
+  require_resource_attr:
+    patient_id: "$actor.patient_id"
+
+decision: ALLOW
+reason_code: PATIENT_SELF_ACCESS
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: patient_self_access
+
+controls:
+  - "HIPAA:164.524"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - patient-rights
+  - access
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 20: Patient amendment request
+# -----------------------------------------------------------------------------
+policy_id: hipaa-patient-amendment
+version: "2.0.0"
+priority: 25
+description: |
+  Patients have the right to request amendments to their medical records.
+  This policy requires proper workflow for amendment requests.
+
+scope:
+  actor_type: HUMAN
+  action: request_amendment
+  resource_type: patient_record
+
+conditions:
+  require_actor_attr:
+    is_patient: true
+
+decision: QUARANTINE
+reason_code: AMENDMENT_REQUEST_REVIEW
+
+approval:
+  approver_role: medical_records_manager
+  require_count: 1
+  require_justification: true
+  timeout_hours: 168  # 7 days
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: amendment_request
+
+controls:
+  - "HIPAA:164.526"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - patient-rights
+  - amendment
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 21: Accounting of disclosures
+# -----------------------------------------------------------------------------
+policy_id: hipaa-disclosure-accounting
+version: "2.0.0"
+priority: 45
+description: |
+  Track and log all disclosures of PHI to enable patients to request
+  an accounting of disclosures.
+
+scope:
+  actor_type: "*"
+  action: disclose_*
+  resource_type: patient_data
+
+decision: ALLOW
+reason_code: DISCLOSURE_LOGGED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: disclosure
+      include_recipient: true
+      include_purpose: true
+      retention_days: 2190  # 6 years
+
+controls:
+  - "HIPAA:164.528"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - patient-rights
+  - disclosure
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 22: Restrict access per patient request
+# -----------------------------------------------------------------------------
+policy_id: hipaa-patient-restriction
+version: "2.0.0"
+priority: 8
+description: |
+  Honor patient requests to restrict certain uses or disclosures of
+  their PHI to specific providers or for specific purposes.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: patient_record
+
+conditions:
+  require_resource_attr:
+    has_restriction_request: true
+
+decision: DENY
+reason_code: PATIENT_RESTRICTION_IN_EFFECT
+
+controls:
+  - "HIPAA:164.522(a)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - patient-rights
+  - restriction
+
+active: true
+
+---
+# =============================================================================
+# SECTION 6: SPECIAL SCENARIOS (Policies 23-25)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 23: Research use of PHI
+# -----------------------------------------------------------------------------
+policy_id: hipaa-research-phi
+version: "2.0.0"
+priority: 20
+description: |
+  Research use of PHI requires IRB approval and either patient consent
+  or a waiver of authorization.
+
+scope:
+  actor_type: "*"
+  action: research_*
+  resource_type: patient_data
+
+conditions:
+  require_signal:
+    phiDetected: true
+
+decision: QUARANTINE
+reason_code: RESEARCH_REQUIRES_IRB
+
+approval:
+  approver_role: irb_administrator
+  require_count: 1
+  require_justification: true
+  require_ticket: true
+  timeout_hours: 72
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: research_use
+  - type: MASK_PII
+    params:
+      unless_consent_given: true
+
+controls:
+  - "HIPAA:164.512(i)"
+
+regulations:
+  - "HIPAA"
+  - "COMMON_RULE"
+
+tags:
+  - healthcare
+  - phi
+  - research
+  - irb
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 24: Public health reporting
+# -----------------------------------------------------------------------------
+policy_id: hipaa-public-health
+version: "2.0.0"
+priority: 15
+description: |
+  Allows disclosure of PHI to public health authorities for disease
+  reporting, surveillance, and other public health activities.
+
+scope:
+  actor_type: SERVICE
+  action: report_*
+  resource_type: patient_data
+
+conditions:
+  require_actor_attr:
+    is_public_health_authority: true
+  require_context:
+    purpose:
+      - disease_reporting
+      - surveillance
+      - vital_statistics
+
+decision: ALLOW
+reason_code: PUBLIC_HEALTH_REPORTING
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: public_health_disclosure
+  - type: REDACT_FIELDS
+    params:
+      fields:
+        - ssn
+        - financial_info
+        - employment_info
+
+controls:
+  - "HIPAA:164.512(b)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - public-health
+  - reporting
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 25: Law enforcement disclosure
+# -----------------------------------------------------------------------------
+policy_id: hipaa-law-enforcement
+version: "2.0.0"
+priority: 10
+description: |
+  Strictly controls disclosure of PHI to law enforcement. Requires
+  valid legal process (warrant, subpoena, court order) in most cases.
+
+scope:
+  actor_type: "*"
+  action: disclose_*
+  resource_type: patient_data
+
+conditions:
+  require_context:
+    recipient_type: law_enforcement
+
+decision: QUARANTINE
+reason_code: LAW_ENFORCEMENT_REQUIRES_LEGAL_PROCESS
+
+approval:
+  approver_role: legal_counsel
+  require_count: 1
+  require_justification: true
+  require_ticket: true
+  timeout_hours: 24
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: law_enforcement_request
+  - type: NOTIFY
+    params:
+      recipient: privacy_officer
+      template: law_enforcement_disclosure
+      immediate: true
+
+controls:
+  - "HIPAA:164.512(f)"
+
+regulations:
+  - "HIPAA"
+
+tags:
+  - healthcare
+  - phi
+  - law-enforcement
+  - legal
+
+active: true

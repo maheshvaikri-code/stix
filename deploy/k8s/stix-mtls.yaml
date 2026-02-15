@@ -1,0 +1,73 @@
+# =============================================================================
+# STIX Kubernetes mTLS Profile (Istio)
+# Apply after Istio CRDs are installed.
+# =============================================================================
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: stix-strict-mtls
+  namespace: stix
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: stix-internal-mtls
+  namespace: stix
+spec:
+  host: "*.stix.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: stix-enforcer-mtls
+  namespace: stix
+spec:
+  host: stix-enforcer.stix.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: stix-policy-mtls
+  namespace: stix
+spec:
+  host: stix-policy.stix.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: stix-evidence-mtls
+  namespace: stix
+spec:
+  host: stix-evidence.stix.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: stix-approvals-mtls
+  namespace: stix
+spec:
+  host: stix-approvals.stix.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL

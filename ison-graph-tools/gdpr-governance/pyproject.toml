@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gdpr-governance"
+version = "1.0.0"
+description = "GDPR Compliance Governance using ISONGraph"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mahesh Vaikri"}
+]
+keywords = [
+    "gdpr",
+    "privacy",
+    "data-protection",
+    "compliance",
+    "governance",
+    "isongraph",
+    "personal-data",
+    "consent-management",
+    "data-subject-rights"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Security",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "ison-graph>=1.0.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+]
+cache = [
+    "ison-cache>=1.0.0",
+]
+
+[project.scripts]
+gdpr-governance = "gdpr_governance.cli:main"
+
+[project.urls]
+Homepage = "https://www.ison.dev"
+Repository = "https://github.com/maheshvaikri-code/ison"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

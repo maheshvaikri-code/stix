@@ -1,0 +1,118 @@
+{
+  "name": "ison-language",
+  "displayName": "ISON Language Support",
+  "description": "Syntax highlighting and language support for ISON (Implicit Schema Object Notation) and ISONGraph formats",
+  "version": "1.0.0",
+  "publisher": "isongraph",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
+  "keywords": [
+    "ison",
+    "isongraph",
+    "isonl",
+    "knowledge graph",
+    "llm",
+    "token efficient"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isongraph/vscode-ison"
+  },
+  "icon": "images/icon.png",
+  "activationEvents": [
+    "onLanguage:ison",
+    "onLanguage:isonl"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "ison",
+        "aliases": ["ISON", "ison", "ISONGraph"],
+        "extensions": [".ison"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "isonl",
+        "aliases": ["ISONL", "isonl", "ISON Lines"],
+        "extensions": [".isonl"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ison",
+        "scopeName": "source.ison",
+        "path": "./syntaxes/ison.tmLanguage.json"
+      },
+      {
+        "language": "isonl",
+        "scopeName": "source.isonl",
+        "path": "./syntaxes/isonl.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ison.convertFromJson",
+        "title": "ISON: Convert JSON to ISON"
+      },
+      {
+        "command": "ison.convertToJson",
+        "title": "ISON: Convert ISON to JSON"
+      },
+      {
+        "command": "ison.formatDocument",
+        "title": "ISON: Format Document"
+      },
+      {
+        "command": "ison.validateDocument",
+        "title": "ISON: Validate Document"
+      }
+    ],
+    "configuration": {
+      "title": "ISON",
+      "properties": {
+        "ison.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically format ISON files on save"
+        },
+        "ison.validateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate ISON files on save"
+        },
+        "ison.indentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Indentation size for ISON formatting"
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "ison",
+        "path": "./snippets/ison.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,2 @@
+[console_scripts]
+isongraph = ison_graph.cli:main

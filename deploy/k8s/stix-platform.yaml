@@ -1,0 +1,587 @@
+# =============================================================================
+# STIX Kubernetes Deployment - Namespace & ConfigMap
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/part-of: stix-platform
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stix-config
+  namespace: stix
+data:
+  NODE_ENV: "prod"
+  LOG_LEVEL: "info"
+  LOG_PRETTY: "false"
+  DEFAULT_FAIL_MODE: "CLOSED"
+  EVIDENCE_SIGNING_ENABLED: "true"
+  APPROVAL_TIMEOUT_HOURS: "24"
+  STORAGE_TYPE: "postgres"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stix-db
+  namespace: stix
+type: Opaque
+stringData:
+  POSTGRES_DB: stix
+  POSTGRES_USER: stix
+  POSTGRES_PASSWORD: change-me
+  POSTGRES_URL: postgresql://stix:change-me@stix-postgres:5432/stix
+
+---
+# =============================================================================
+# STIX Enforcer Deployment
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-enforcer
+  namespace: stix
+  labels:
+    app: stix-enforcer
+    component: enforcer
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: stix-enforcer
+  template:
+    metadata:
+      labels:
+        app: stix-enforcer
+        component: enforcer
+    spec:
+      serviceAccountName: stix-enforcer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: enforcer
+          image: stix/enforcer:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: stix-config
+            - secretRef:
+                name: stix-db
+          env:
+            - name: PORT
+              value: "3001"
+            - name: POLICY_SERVICE_URL
+              value: "http://stix-policy:3002"
+            - name: EVIDENCE_SERVICE_URL
+              value: "http://stix-evidence:3003"
+            - name: APPROVALS_SERVICE_URL
+              value: "http://stix-approvals:3004"
+            - name: REDIS_ENABLED
+              value: "true"
+            - name: REDIS_HOST
+              value: "stix-redis"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-enforcer
+  namespace: stix
+spec:
+  selector:
+    app: stix-enforcer
+  ports:
+    - port: 3001
+      targetPort: 3001
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-enforcer
+  namespace: stix
+
+---
+# =============================================================================
+# STIX Policy Service Deployment
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-policy
+  namespace: stix
+  labels:
+    app: stix-policy
+    component: policy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stix-policy
+  template:
+    metadata:
+      labels:
+        app: stix-policy
+        component: policy
+    spec:
+      serviceAccountName: stix-policy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: policy
+          image: stix/policy:latest
+          ports:
+            - containerPort: 3002
+          envFrom:
+            - configMapRef:
+                name: stix-config
+            - secretRef:
+                name: stix-db
+          env:
+            - name: PORT
+              value: "3002"
+            - name: POLICY_DIRECTORY
+              value: "/app/policies"
+          volumeMounts:
+            - name: policies
+              mountPath: /app/policies
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 30
+      volumes:
+        - name: policies
+          configMap:
+            name: stix-policies
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-policy
+  namespace: stix
+spec:
+  selector:
+    app: stix-policy
+  ports:
+    - port: 3002
+      targetPort: 3002
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-policy
+  namespace: stix
+
+---
+# =============================================================================
+# STIX Evidence Service Deployment
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-evidence
+  namespace: stix
+  labels:
+    app: stix-evidence
+    component: evidence
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stix-evidence
+  template:
+    metadata:
+      labels:
+        app: stix-evidence
+        component: evidence
+    spec:
+      serviceAccountName: stix-evidence
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: evidence
+          image: stix/evidence:latest
+          ports:
+            - containerPort: 3003
+          envFrom:
+            - configMapRef:
+                name: stix-config
+            - secretRef:
+                name: stix-db
+          env:
+            - name: PORT
+              value: "3003"
+            - name: SIGNING_ENABLED
+              value: "true"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3003
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-evidence
+  namespace: stix
+spec:
+  selector:
+    app: stix-evidence
+  ports:
+    - port: 3003
+      targetPort: 3003
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-evidence
+  namespace: stix
+
+---
+# =============================================================================
+# STIX Approvals Service Deployment
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-approvals
+  namespace: stix
+  labels:
+    app: stix-approvals
+    component: approvals
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stix-approvals
+  template:
+    metadata:
+      labels:
+        app: stix-approvals
+        component: approvals
+    spec:
+      serviceAccountName: stix-approvals
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: approvals
+          image: stix/approvals:latest
+          ports:
+            - containerPort: 3004
+          envFrom:
+            - configMapRef:
+                name: stix-config
+            - secretRef:
+                name: stix-db
+          env:
+            - name: PORT
+              value: "3004"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-approvals
+  namespace: stix
+spec:
+  selector:
+    app: stix-approvals
+  ports:
+    - port: 3004
+      targetPort: 3004
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-approvals
+  namespace: stix
+
+---
+# =============================================================================
+# PostgreSQL Durable Store
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-postgres
+  namespace: stix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stix-postgres
+  template:
+    metadata:
+      labels:
+        app: stix-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: stix-db
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stix-db
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stix-db
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: stix-postgres-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stix-postgres-pvc
+  namespace: stix
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-postgres
+  namespace: stix
+spec:
+  selector:
+    app: stix-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+
+---
+# =============================================================================
+# Redis Cache
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-redis
+  namespace: stix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stix-redis
+  template:
+    metadata:
+      labels:
+        app: stix-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-redis
+  namespace: stix
+spec:
+  selector:
+    app: stix-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
+
+---
+# =============================================================================
+# Horizontal Pod Autoscaler for Enforcer
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: stix-enforcer-hpa
+  namespace: stix
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stix-enforcer
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# =============================================================================
+# Network Policy - Restrict Access
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stix-network-policy
+  namespace: stix
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: stix
+        - namespaceSelector:
+            matchLabels:
+              stix-client: "true"
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: stix
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53

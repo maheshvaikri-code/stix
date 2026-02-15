@@ -1,0 +1,301 @@
+# =============================================================================
+# STIX Default Policy Pack
+# Standard enterprise policies for AI agent operations
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy: Default deny for unmatched requests
+# -----------------------------------------------------------------------------
+policy_id: default-deny
+version: "1.0.0"
+priority: 1000
+description: |
+  Catch-all policy that denies any request not matched by other policies.
+  This ensures a fail-closed security posture.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: "*"
+
+decision: DENY
+reason_code: NO_MATCHING_POLICY
+
+controls:
+  - "SOC2:CC6.1"
+  - "NIST:AC-3"
+
+regulations:
+  - "GDPR:Art.5"
+
+tags:
+  - default
+  - security
+  - fail-closed
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Allow low-risk read operations
+# -----------------------------------------------------------------------------
+policy_id: allow-low-risk-read
+version: "1.0.0"
+priority: 100
+description: |
+  Allows low-risk read operations by authenticated actors.
+
+scope:
+  actor_type: "*"
+  action: "read_*"
+  resource_type: "*"
+
+conditions:
+  require_actor_attr:
+    authenticated: true
+
+decision: ALLOW
+reason_code: LOW_RISK_READ_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: debug
+
+controls:
+  - "SOC2:CC6.1"
+
+tags:
+  - default
+  - low-risk
+  - read
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Quarantine high-risk tool execution
+# -----------------------------------------------------------------------------
+policy_id: quarantine-high-risk-tools
+version: "1.0.0"
+priority: 20
+description: |
+  Requires approval for high-risk tool executions by AI agents.
+
+scope:
+  actor_type: AI_AGENT
+  action: "execute_*"
+  resource_type: tool
+
+conditions:
+  require_resource_attr:
+    risk_tier: HIGH
+
+decision: QUARANTINE
+reason_code: HIGH_RISK_TOOL_APPROVAL
+
+approval:
+  approver_role: security_admin
+  require_count: 1
+  require_justification: true
+  timeout_hours: 2
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+
+controls:
+  - "SOC2:CC6.1"
+  - "NIST:AC-6"
+
+tags:
+  - tools
+  - high-risk
+  - approval-required
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Block critical-risk operations
+# -----------------------------------------------------------------------------
+policy_id: block-critical-risk
+version: "1.0.0"
+priority: 1
+description: |
+  Blocks all critical-risk operations. These must be performed manually.
+
+scope:
+  actor_type: AI_AGENT
+  action: "*"
+  resource_type: "*"
+
+conditions:
+  require_resource_attr:
+    risk_tier: CRITICAL
+
+decision: DENY
+reason_code: CRITICAL_RISK_BLOCKED
+
+controls:
+  - "SOC2:CC6.1"
+  - "NIST:AC-6"
+
+tags:
+  - critical
+  - blocked
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Allow service-to-service communication
+# -----------------------------------------------------------------------------
+policy_id: allow-service-internal
+version: "1.0.0"
+priority: 50
+description: |
+  Allows authenticated service accounts to communicate with internal services.
+
+scope:
+  actor_type: SERVICE
+  action: "*"
+  resource_type: internal_service
+
+conditions:
+  require_actor_attr:
+    authenticated: true
+    internal: true
+
+decision: ALLOW
+reason_code: SERVICE_INTERNAL_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: debug
+
+controls:
+  - "SOC2:CC6.1"
+
+tags:
+  - service
+  - internal
+  - allowed
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Block secrets access by AI
+# -----------------------------------------------------------------------------
+policy_id: block-ai-secrets
+version: "1.0.0"
+priority: 5
+description: |
+  Blocks AI agents from accessing secrets, credentials, and API keys.
+
+scope:
+  actor_type: AI_AGENT
+  action: "*"
+  resource_type: secret
+
+conditions:
+  require_signal:
+    secretsDetected: true
+
+decision: DENY
+reason_code: SECRETS_ACCESS_BLOCKED
+
+controls:
+  - "SOC2:CC6.7"
+  - "NIST:IA-5"
+
+tags:
+  - secrets
+  - credentials
+  - blocked
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: PII handling with masking
+# -----------------------------------------------------------------------------
+policy_id: pii-handling
+version: "1.0.0"
+priority: 30
+description: |
+  Allows access to resources containing PII but requires masking.
+
+scope:
+  actor_type: "*"
+  action: "read_*"
+  resource_type: "*"
+
+conditions:
+  require_signal:
+    piiDetected: true
+
+decision: ALLOW
+reason_code: PII_ACCESS_WITH_MASKING
+
+obligations:
+  - type: MASK_PII
+  - type: LOG_LEVEL
+    params:
+      level: info
+
+controls:
+  - "GDPR:Art.32"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "GDPR"
+  - "CCPA"
+
+tags:
+  - pii
+  - privacy
+  - masking
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy: Production environment restrictions
+# -----------------------------------------------------------------------------
+policy_id: prod-restrictions
+version: "1.0.0"
+priority: 10
+description: |
+  Applies additional restrictions for production environment operations.
+
+scope:
+  actor_type: AI_AGENT
+  action: "write_*"
+  resource_type: "*"
+
+conditions:
+  env: prod
+
+decision: QUARANTINE
+reason_code: PROD_WRITE_APPROVAL
+
+approval:
+  approver_role: ops_admin
+  require_count: 1
+  require_ticket: true
+  timeout_hours: 8
+
+controls:
+  - "SOC2:CC8.1"
+  - "NIST:CM-3"
+
+tags:
+  - production
+  - write
+  - approval-required
+
+active: true

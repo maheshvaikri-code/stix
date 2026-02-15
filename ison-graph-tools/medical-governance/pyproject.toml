@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medical-governance"
+version = "1.0.0"
+description = "HIPAA-Compliant Governance Layer for Medical AI Systems built on ISONGraph"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mahesh Vaikri"}
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Security",
+]
+keywords = ["hipaa", "phi", "governance", "medical", "healthcare", "ai", "compliance", "isongraph"]
+
+dependencies = [
+    "ison-graph>=1.0.0",
+    "agent-governance>=1.0.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+medical-governance = "medical_governance.cli:main"
+hipaa = "medical_governance.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/isongraph/medical-governance"
+Documentation = "https://github.com/isongraph/medical-governance#readme"
+
+[tool.setuptools.packages.find]
+where = ["src"]

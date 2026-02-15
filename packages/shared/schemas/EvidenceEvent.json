@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stix.dev/schemas/EvidenceEvent.json",
+  "title": "EvidenceEvent",
+  "description": "Immutable evidence event in the STIX audit chain",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "trace_id",
+    "timestamp",
+    "decision",
+    "reason_code",
+    "actor",
+    "action",
+    "resource",
+    "context",
+    "policy",
+    "controls",
+    "regulations",
+    "integrity"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Schema version"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Unique event identifier"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^stix_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Trace identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp"
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["ALLOW", "DENY", "QUARANTINE"],
+      "description": "Authorization decision"
+    },
+    "reason_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Reason code"
+    },
+    "actor": {
+      "$ref": "#/$defs/Actor"
+    },
+    "action": {
+      "$ref": "#/$defs/ActionMeta"
+    },
+    "resource": {
+      "$ref": "#/$defs/Resource"
+    },
+    "context": {
+      "$ref": "#/$defs/Context"
+    },
+    "policy": {
+      "$ref": "#/$defs/PolicyRef"
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Security controls"
+    },
+    "regulations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Applicable regulations"
+    },
+    "obligations_applied": {
+      "$ref": "#/$defs/ObligationsApplied"
+    },
+    "outcome": {
+      "$ref": "#/$defs/OutcomeInfo"
+    },
+    "integrity": {
+      "$ref": "#/$defs/IntegrityBlock"
+    }
+  },
+  "$defs": {
+    "Actor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "type": {
+          "type": "string",
+          "enum": ["HUMAN", "SERVICE", "AI_AGENT", "JOB", "SYSTEM"]
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "tenant": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "Resource": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "classification": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "Context": {
+      "type": "object",
+      "required": ["env"],
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": ["dev", "test", "stage", "prod"]
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "run_id": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "session_id": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "ticket_id": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "jurisdiction": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          }
+        },
+        "signals": {
+          "type": "object",
+          "properties": {
+            "piiDetected": { "type": "boolean" },
+            "phiDetected": { "type": "boolean" },
+            "pciDetected": { "type": "boolean" },
+            "secretsDetected": { "type": "boolean" },
+            "custom": {
+              "type": "object",
+              "additionalProperties": { "type": "boolean" }
+            }
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "ActionMeta": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "tool": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        }
+      }
+    },
+    "PolicyRef": {
+      "type": "object",
+      "required": ["id", "version", "hash"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "ObligationsApplied": {
+      "type": "object",
+      "properties": {
+        "redaction": { "type": "boolean" },
+        "watermark": { "type": "boolean" },
+        "rate_limit": { "type": "boolean" },
+        "pii_masked": { "type": "boolean" }
+      }
+    },
+    "OutcomeInfo": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["SUCCESS", "FAILED", "SKIPPED", "PENDING"]
+        },
+        "result_summary": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "error_class": {
+          "type": "string",
+          "maxLength": 255
+        }
+      }
+    },
+    "IntegrityBlock": {
+      "type": "object",
+      "required": ["event_hash", "prev_hash", "signature", "key_id"],
+      "properties": {
+        "event_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 hash of the event"
+        },
+        "prev_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Hash of the previous event in chain"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Ed25519 signature"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Signing key identifier"
+        }
+      }
+    }
+  }
+}

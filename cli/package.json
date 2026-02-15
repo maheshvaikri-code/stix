@@ -1,0 +1,39 @@
+{
+  "name": "@stix/cli",
+  "version": "0.1.0",
+  "description": "STIX CLI - Command line tools for STIX management",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "stix": "./dist/index.js",
+    "stix-cli": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@stix/shared": "workspace:*",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0",
+    "yaml": "^2.3.0",
+    "glob": "^10.3.0",
+    "undici": "^6.0.0",
+    "table": "^6.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

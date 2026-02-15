@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "converter-mcp"
+version = "1.0.0"
+description = "Format conversion MCP server - GraphML, RDF, CSV, Cypher, DOT, JSON"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "converter", "graphml", "rdf", "csv", "cypher", "neo4j", "migration"]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "ison-graph>=1.0.0"]
+
+[project.scripts]
+converter-mcp = "converter_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/converter_mcp"]

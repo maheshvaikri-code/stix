@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ison-cache"
+version = "1.0.0"
+description = "Token-Efficient Cache for LLM Applications using ISON format"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mahesh Vaikri", email = "mahesh@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "ison-graph>=1.0.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "numpy>=1.24.0",
+    "tiktoken>=0.5.0",
+]
+
+[project.optional-dependencies]
+mcp = [
+    "mcp>=0.1.0",
+]
+http = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+]
+redis = [
+    "hiredis>=2.0.0",
+]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+]
+all = [
+    "ison-cache[mcp,http,redis,embeddings]",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+]
+
+[project.scripts]
+isoncache = "ison_cache.cli:main"
+ison-cache = "ison_cache.cli:main"
+
+[project.entry-points."mcp.servers"]
+isoncache = "ison_cache.mcp_server:serve"
+
+[project.urls]
+Homepage = "https://github.com/isongraph/ison-cache"
+Documentation = "https://github.com/isongraph/ison-cache#readme"
+Repository = "https://github.com/isongraph/ison-cache"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.ison", "*.isonl"]

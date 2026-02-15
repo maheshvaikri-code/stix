@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISONGraph Playground</title>
+    <link rel="stylesheet" href="lib/codemirror/codemirror.min.css">
+    <link rel="stylesheet" href="lib/codemirror/theme/dracula.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="logo.png" alt="ISONGraph" class="logo-img">
+            <span class="tagline">Token-Efficient Knowledge Graphs</span>
+        </div>
+        <nav>
+            <a href="https://github.com/isongraph/isongraph" target="_blank">GitHub</a>
+            <a href="https://github.com/isongraph/isongraph#documentation" target="_blank">Docs</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="toolbar">
+            <div class="button-group">
+                <button id="convertToIson" class="btn primary">JSON → ISON</button>
+                <button id="convertToJson" class="btn">ISON → JSON</button>
+                <button id="swapBtn" class="btn">⇄ Swap</button>
+                <button id="formatBtn" class="btn">Format</button>
+                <button id="validateBtn" class="btn">Validate</button>
+            </div>
+            <div class="button-group">
+                <select id="examples">
+                    <option value="">Load Example...</option>
+                    <option value="social">Social Network</option>
+                    <option value="knowledge">Knowledge Graph</option>
+                    <option value="org">Organization Chart</option>
+                    <option value="movie">Movie Database</option>
+                </select>
+                <button id="copyBtn" class="btn">Copy Output</button>
+                <button id="downloadBtn" class="btn">Download</button>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span>Input</span>
+                    <select id="inputFormat">
+                        <option value="json">JSON</option>
+                        <option value="ison">ISON</option>
+                    </select>
+                </div>
+                <textarea id="inputEditor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+            </div>
+
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span>Output</span>
+                    <span id="outputFormat">ISON</span>
+                </div>
+                <textarea id="outputEditor" readonly spellcheck="false"></textarea>
+            </div>
+
+            <div class="editor-panel graph-panel">
+                <div class="panel-header">
+                    <span>Graph View</span>
+                    <button id="refreshGraphBtn" class="btn-small">Refresh</button>
+                </div>
+                <div id="graphContainer"></div>
+                <div id="graphLegend" class="graph-legend"></div>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat">
+                <span class="stat-label">Input Tokens</span>
+                <span id="inputTokens" class="stat-value">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Output Tokens</span>
+                <span id="outputTokens" class="stat-value">0</span>
+            </div>
+            <div class="stat highlight">
+                <span class="stat-label">Token Savings</span>
+                <span id="tokenSavings" class="stat-value">0%</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Nodes</span>
+                <span id="nodeCount" class="stat-value">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Edges</span>
+                <span id="edgeCount" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <div id="validationResult" class="validation-result hidden">
+            <span class="status"></span>
+            <ul class="errors"></ul>
+        </div>
+    </main>
+
+    <footer>
+        <p>ISONGraph - 70% more token-efficient than JSON</p>
+        <p>MIT License | <a href="https://github.com/isongraph/isongraph">GitHub</a></p>
+    </footer>
+
+    <script src="lib/codemirror/codemirror.min.js"></script>
+    <script src="lib/codemirror/mode/javascript/javascript.min.js"></script>
+    <script src="ison-mode.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <script src="converter.js"></script>
+    <script src="graph-vis.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

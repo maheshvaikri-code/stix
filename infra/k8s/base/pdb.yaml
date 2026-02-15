@@ -1,0 +1,62 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stix-enforcer-pdb
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: enforcer
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stix-evidence-pdb
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: evidence
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: evidence
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stix-approvals-pdb
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: approvals
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stix-dashboard-pdb
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: dashboard
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: dashboard

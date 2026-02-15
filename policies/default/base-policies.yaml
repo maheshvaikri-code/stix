@@ -1,0 +1,647 @@
+# =============================================================================
+# STIX Default Base Policy Pack
+# =============================================================================
+# Foundational policies for all STIX deployments
+# Covers: Default deny, audit, rate limiting, basic security
+# Version: 1.0.0
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: CORE SAFETY POLICIES
+# =============================================================================
+
+# BASE-001: Default deny for unknown actions
+- policy_id: base-default-deny
+  version: "1.0.0"
+  priority: 1000
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: "*"
+  decision: DENY
+  reason_code: DEFAULT_DENY
+  controls:
+    - "CIS:5.1"
+    - "NIST:AC-3"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "WARN"
+  active: true
+
+# BASE-002: Block all destructive operations by default
+- policy_id: base-block-destructive
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "destroy_*"
+    resource_type: "*"
+  decision: DENY
+  reason_code: DESTRUCTIVE_BLOCKED
+  controls:
+    - "NIST:CM-5"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# BASE-003: Block production modifications without approval
+- policy_id: base-production-protection
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "modify_*"
+    resource_type: production
+  decision: QUARANTINE
+  reason_code: PRODUCTION_REQUIRES_APPROVAL
+  controls:
+    - "NIST:CM-3"
+    - "SOC2:CC6.1"
+  regulations:
+    - "SECURITY"
+  approval:
+    required: true
+    approver_roles: ["admin", "sre"]
+    timeout_hours: 4
+  active: true
+
+# BASE-004: Block deletion of critical resources
+- policy_id: base-block-critical-deletion
+  version: "1.0.0"
+  priority: 3
+  scope:
+    actor_type: "*"
+    action: "delete_*"
+    resource_type: critical
+  decision: DENY
+  reason_code: CRITICAL_RESOURCE_PROTECTED
+  controls:
+    - "NIST:CP-9"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# BASE-005: Block bulk operations without explicit approval
+- policy_id: base-bulk-operation-approval
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "*_bulk"
+    resource_type: "*"
+  decision: QUARANTINE
+  reason_code: BULK_REQUIRES_APPROVAL
+  controls:
+    - "NIST:AC-6"
+  regulations:
+    - "SECURITY"
+  approval:
+    required: true
+    approver_roles: ["admin"]
+    timeout_hours: 24
+  active: true
+
+# =============================================================================
+# SECTION 2: STANDARD ALLOW POLICIES
+# =============================================================================
+
+# BASE-006: Allow read operations on public resources
+- policy_id: base-allow-public-read
+  version: "1.0.0"
+  priority: 100
+  scope:
+    actor_type: "*"
+    action: "read_*"
+    resource_type: public
+  decision: ALLOW
+  reason_code: PUBLIC_READ_ALLOWED
+  controls:
+    - "NIST:AC-3"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "DEBUG"
+  active: true
+
+# BASE-007: Allow authenticated users to read their own data
+- policy_id: base-allow-own-data-read
+  version: "1.0.0"
+  priority: 80
+  scope:
+    actor_type: "*"
+    action: "read_*"
+    resource_type: user_data
+  conditions:
+    - field: "actor.authenticated"
+      op: "eq"
+      value: true
+    - field: "resource.owner_id"
+      op: "eq"
+      value: "$actor.id"
+  decision: ALLOW
+  reason_code: OWN_DATA_ACCESS_ALLOWED
+  controls:
+    - "NIST:AC-3"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# BASE-008: Allow health check endpoints
+- policy_id: base-allow-health-check
+  version: "1.0.0"
+  priority: 200
+  scope:
+    actor_type: "*"
+    action: "health_check"
+    resource_type: system
+  decision: ALLOW
+  reason_code: HEALTH_CHECK_ALLOWED
+  active: true
+
+# BASE-009: Allow metrics collection
+- policy_id: base-allow-metrics
+  version: "1.0.0"
+  priority: 150
+  scope:
+    actor_type: MONITORING
+    action: "collect_metrics"
+    resource_type: system
+  decision: ALLOW
+  reason_code: METRICS_COLLECTION_ALLOWED
+  controls:
+    - "NIST:AU-6"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# =============================================================================
+# SECTION 3: ENVIRONMENT-BASED POLICIES
+# =============================================================================
+
+# BASE-010: Allow all in development environment
+- policy_id: base-dev-allow-all
+  version: "1.0.0"
+  priority: 500
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.environment"
+      op: "eq"
+      value: "development"
+  decision: ALLOW
+  reason_code: DEV_ENVIRONMENT_ALLOWED
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "DEBUG"
+  active: true
+
+# BASE-011: Allow testing in test environment
+- policy_id: base-test-allow-testing
+  version: "1.0.0"
+  priority: 500
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: test_*
+  conditions:
+    - field: "context.environment"
+      op: "eq"
+      value: "test"
+  decision: ALLOW
+  reason_code: TEST_ENVIRONMENT_ALLOWED
+  active: true
+
+# BASE-012: Restrict staging to approved actors
+- policy_id: base-staging-restriction
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.environment"
+      op: "eq"
+      value: "staging"
+    - field: "actor.staging_approved"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: STAGING_NOT_APPROVED
+  controls:
+    - "NIST:CM-4"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# =============================================================================
+# SECTION 4: AUDIT AND LOGGING
+# =============================================================================
+
+# BASE-013: Audit all write operations
+- policy_id: base-audit-writes
+  version: "1.0.0"
+  priority: 200
+  scope:
+    actor_type: "*"
+    action: "write_*"
+    resource_type: "*"
+  decision: ALLOW
+  reason_code: WRITE_AUDITED
+  controls:
+    - "NIST:AU-2"
+    - "SOC2:CC7.2"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_actor: true
+        include_action: true
+        include_resource: true
+  active: true
+
+# BASE-014: Audit all delete operations
+- policy_id: base-audit-deletes
+  version: "1.0.0"
+  priority: 200
+  scope:
+    actor_type: "*"
+    action: "delete_*"
+    resource_type: "*"
+  decision: ALLOW
+  reason_code: DELETE_AUDITED
+  controls:
+    - "NIST:AU-2"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "WARN"
+        include_actor: true
+        include_resource: true
+        retention_days: 365
+  active: true
+
+# BASE-015: Audit admin actions
+- policy_id: base-audit-admin
+  version: "1.0.0"
+  priority: 100
+  scope:
+    actor_type: ADMIN
+    action: "*"
+    resource_type: "*"
+  decision: ALLOW
+  reason_code: ADMIN_ACTION_AUDITED
+  controls:
+    - "NIST:AU-12"
+    - "SOC2:CC6.2"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_all: true
+        tamper_evident: true
+  active: true
+
+# =============================================================================
+# SECTION 5: RATE LIMITING
+# =============================================================================
+
+# BASE-016: Rate limit API calls
+- policy_id: base-rate-limit-api
+  version: "1.0.0"
+  priority: 150
+  scope:
+    actor_type: "*"
+    action: "api_call"
+    resource_type: "*"
+  decision: ALLOW
+  reason_code: API_RATE_LIMITED
+  obligations:
+    - type: RATE_LIMIT
+      params:
+        requests: 100
+        window_seconds: 60
+        key: "$actor.id"
+  active: true
+
+# BASE-017: Rate limit email sending
+- policy_id: base-rate-limit-email
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: AI_AGENT
+    action: "send_email"
+    resource_type: email
+  decision: ALLOW
+  reason_code: EMAIL_RATE_LIMITED
+  obligations:
+    - type: RATE_LIMIT
+      params:
+        requests: 10
+        window_seconds: 60
+        key: "$actor.id"
+  active: true
+
+# BASE-018: Rate limit database writes
+- policy_id: base-rate-limit-db-write
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: AI_AGENT
+    action: "db_write"
+    resource_type: database
+  decision: ALLOW
+  reason_code: DB_WRITE_RATE_LIMITED
+  obligations:
+    - type: RATE_LIMIT
+      params:
+        requests: 50
+        window_seconds: 60
+        key: "$actor.id"
+  active: true
+
+# =============================================================================
+# SECTION 6: DATA PROTECTION
+# =============================================================================
+
+# BASE-019: Mask sensitive fields in logs
+- policy_id: base-mask-sensitive-logging
+  version: "1.0.0"
+  priority: 100
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: sensitive
+  decision: ALLOW
+  reason_code: SENSITIVE_MASKED
+  controls:
+    - "NIST:SI-4"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: DATA_MASK
+      params:
+        fields: ["password", "ssn", "credit_card", "api_key"]
+        technique: "redact"
+  active: true
+
+# BASE-020: Require encryption for sensitive data
+- policy_id: base-require-encryption
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "store_*"
+    resource_type: sensitive
+  conditions:
+    - field: "context.encrypted"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: ENCRYPTION_REQUIRED
+  controls:
+    - "NIST:SC-28"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# =============================================================================
+# SECTION 7: ACCESS CONTROL
+# =============================================================================
+
+# BASE-021: Require authentication for protected resources
+- policy_id: base-require-auth
+  version: "1.0.0"
+  priority: 30
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: protected
+  conditions:
+    - field: "actor.authenticated"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: AUTHENTICATION_REQUIRED
+  controls:
+    - "NIST:IA-2"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# BASE-022: Block expired sessions
+- policy_id: base-block-expired-session
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.session_expired"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: SESSION_EXPIRED
+  controls:
+    - "NIST:AC-12"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# BASE-023: Enforce role-based access
+- policy_id: base-rbac-enforcement
+  version: "1.0.0"
+  priority: 40
+  scope:
+    actor_type: "*"
+    action: "admin_*"
+    resource_type: "*"
+  conditions:
+    - field: "actor.role"
+      op: "not_in"
+      value: ["admin", "superadmin"]
+  decision: DENY
+  reason_code: INSUFFICIENT_ROLE
+  controls:
+    - "NIST:AC-2"
+  regulations:
+    - "SECURITY"
+  active: true
+
+# =============================================================================
+# SECTION 8: AI AGENT SPECIFIC
+# =============================================================================
+
+# BASE-024: Limit AI agent tool usage
+- policy_id: base-ai-tool-limit
+  version: "1.0.0"
+  priority: 60
+  scope:
+    actor_type: AI_AGENT
+    action: "execute_tool"
+    resource_type: "*"
+  conditions:
+    - field: "context.tool_name"
+      op: "not_in"
+      value: "$actor.allowed_tools"
+  decision: DENY
+  reason_code: TOOL_NOT_ALLOWED
+  controls:
+    - "AI:TOOL-CONTROL"
+  regulations:
+    - "AI_SAFETY"
+  active: true
+
+# BASE-025: Require human oversight for high-risk AI actions
+- policy_id: base-ai-human-oversight
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.risk_tier"
+      op: "eq"
+      value: "CRITICAL"
+  decision: QUARANTINE
+  reason_code: HUMAN_OVERSIGHT_REQUIRED
+  controls:
+    - "AI:HUMAN-OVERSIGHT"
+  regulations:
+    - "AI_SAFETY"
+  approval:
+    required: true
+    approver_roles: ["human_operator", "admin"]
+    timeout_hours: 1
+  active: true
+
+# BASE-026: Log all AI agent decisions
+- policy_id: base-ai-decision-logging
+  version: "1.0.0"
+  priority: 200
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: "*"
+  decision: ALLOW
+  reason_code: AI_ACTION_LOGGED
+  controls:
+    - "AI:AUDIT-TRAIL"
+  regulations:
+    - "AI_SAFETY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_actor: true
+        include_action: true
+        include_context: true
+        include_decision_reasoning: true
+  active: true
+
+# BASE-027: Block AI agents from modifying their own policies
+- policy_id: base-ai-no-self-modify
+  version: "1.0.0"
+  priority: 1
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: stix_policy
+  decision: DENY
+  reason_code: AI_CANNOT_MODIFY_POLICIES
+  controls:
+    - "AI:SELF-MODIFICATION"
+  regulations:
+    - "AI_SAFETY"
+  active: true
+
+# BASE-028: Block AI agents from disabling security controls
+- policy_id: base-ai-no-security-bypass
+  version: "1.0.0"
+  priority: 1
+  scope:
+    actor_type: AI_AGENT
+    action: "disable_*"
+    resource_type: security_control
+  decision: DENY
+  reason_code: AI_CANNOT_DISABLE_SECURITY
+  controls:
+    - "AI:SECURITY-INTEGRITY"
+  regulations:
+    - "AI_SAFETY"
+  active: true
+
+# =============================================================================
+# SECTION 9: EMERGENCY AND INCIDENT
+# =============================================================================
+
+# BASE-029: Allow emergency access with elevated logging
+- policy_id: base-emergency-access
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.emergency_mode"
+      op: "eq"
+      value: true
+    - field: "actor.emergency_role"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: EMERGENCY_ACCESS_GRANTED
+  controls:
+    - "NIST:CP-2"
+  regulations:
+    - "SECURITY"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "CRITICAL"
+        include_all: true
+        immediate_notification: true
+    - type: NOTIFY
+      params:
+        recipients: ["security_team", "incident_response"]
+  active: true
+
+# BASE-030: Block all during security incident (circuit breaker)
+- policy_id: base-incident-lockdown
+  version: "1.0.0"
+  priority: 1
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: "*"
+  conditions:
+    - field: "context.security_incident"
+      op: "eq"
+      value: true
+    - field: "actor.incident_response_team"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: INCIDENT_LOCKDOWN
+  controls:
+    - "NIST:IR-4"
+  regulations:
+    - "SECURITY"
+  active: true

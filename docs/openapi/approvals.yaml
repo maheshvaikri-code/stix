@@ -1,0 +1,461 @@
+openapi: 3.1.0
+info:
+  title: STIX Approvals API
+  description: |
+    Human approval workflow for quarantined actions.
+    Manages approval tickets, notifications, and resolution.
+  version: 0.1.0
+  contact:
+    name: STIX Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3003
+    description: Local development
+  - url: https://approvals.stix.example.com
+    description: Production
+
+tags:
+  - name: Tickets
+    description: Approval ticket management
+  - name: Notifications
+    description: Notification management
+  - name: Health
+    description: Health and status endpoints
+
+paths:
+  /tickets:
+    post:
+      tags:
+        - Tickets
+      summary: Create an approval ticket
+      description: Create a new approval ticket for a quarantined action
+      operationId: createTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalTicket'
+        '400':
+          description: Invalid request
+
+    get:
+      tags:
+        - Tickets
+      summary: List approval tickets
+      operationId: listTickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, EXPIRED, CANCELLED]
+        - name: approver_role
+          in: query
+          schema:
+            type: string
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Tickets found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalTicket'
+                  total:
+                    type: integer
+
+  /tickets/{ticket_id}:
+    get:
+      tags:
+        - Tickets
+      summary: Get a specific ticket
+      operationId: getTicket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalTicket'
+        '404':
+          description: Ticket not found
+
+  /tickets/{ticket_id}/approve:
+    post:
+      tags:
+        - Tickets
+      summary: Approve a ticket
+      operationId: approveTicket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - approver_id
+              properties:
+                approver_id:
+                  type: string
+                approver_role:
+                  type: string
+                notes:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Ticket approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalTicket'
+        '400':
+          description: Cannot approve
+        '404':
+          description: Ticket not found
+
+  /tickets/{ticket_id}/reject:
+    post:
+      tags:
+        - Tickets
+      summary: Reject a ticket
+      operationId: rejectTicket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - approver_id
+                - reason
+              properties:
+                approver_id:
+                  type: string
+                approver_role:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Ticket rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalTicket'
+
+  /tickets/{ticket_id}/cancel:
+    post:
+      tags:
+        - Tickets
+      summary: Cancel a pending ticket
+      operationId: cancelTicket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Ticket cancelled
+
+  /tickets/pending:
+    get:
+      tags:
+        - Tickets
+      summary: Get pending tickets for approver
+      operationId: getPendingTickets
+      parameters:
+        - name: approver_role
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pending tickets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApprovalTicket'
+                  count:
+                    type: integer
+
+  /tickets/{ticket_id}/poll:
+    get:
+      tags:
+        - Tickets
+      summary: Poll ticket status
+      description: Long-poll for ticket resolution
+      operationId: pollTicket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeout
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 120
+          description: Timeout in seconds
+      responses:
+        '200':
+          description: Ticket resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalTicket'
+        '304':
+          description: No change (timeout)
+
+  /notifications/webhook:
+    post:
+      tags:
+        - Notifications
+      summary: Configure webhook notifications
+      operationId: configureWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: [ticket.created, ticket.approved, ticket.rejected, ticket.expired]
+                secret:
+                  type: string
+      responses:
+        '200':
+          description: Webhook configured
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    CreateTicketRequest:
+      type: object
+      required:
+        - trace_id
+        - actor
+        - action
+        - policy_id
+        - approver_roles
+      properties:
+        trace_id:
+          type: string
+        actor:
+          type: object
+          required:
+            - id
+            - type
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+        action:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            params:
+              type: object
+        resource:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+        context:
+          type: object
+        policy_id:
+          type: string
+        policy_version:
+          type: string
+        reason_code:
+          type: string
+        approver_roles:
+          type: array
+          items:
+            type: string
+        timeout_hours:
+          type: number
+          default: 24
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH, URGENT]
+          default: NORMAL
+        notification_channels:
+          type: array
+          items:
+            type: string
+            enum: [email, slack, webhook]
+
+    ApprovalTicket:
+      type: object
+      properties:
+        ticket_id:
+          type: string
+        trace_id:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, EXPIRED, CANCELLED]
+        actor:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+        action:
+          type: object
+          properties:
+            name:
+              type: string
+            params:
+              type: object
+        resource:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+        policy_id:
+          type: string
+        policy_version:
+          type: string
+        reason_code:
+          type: string
+        approver_roles:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        timeout_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        resolved_by:
+          type: string
+        resolution_notes:
+          type: string
+        conditions:
+          type: array
+          items:
+            type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        version:
+          type: string
+        uptime_ms:
+          type: integer
+        pending_tickets:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time

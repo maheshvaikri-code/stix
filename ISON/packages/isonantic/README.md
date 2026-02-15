@@ -1,0 +1,279 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/somewheresystems/ison/main/ison-logo.png" alt="ISON Logo" width="120" height="120">
+</p>
+
+# ISONantic
+
+**ISONantic** - A Pydantic-like data validation library for ISON format.
+
+[![PyPI version](https://badge.fury.io/py/isonantic.svg)](https://badge.fury.io/py/isonantic)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Features
+
+- **Pydantic-like models** for ISON data validation
+- **Type-safe parsing** of LLM structured outputs
+- **Reference resolution** across ISON blocks
+- **Custom validators** and computed fields
+- **Schema generation** for LLM prompts
+- **Error recovery** for malformed LLM outputs
+
+## Installation
+
+```bash
+pip install isonantic
+```
+
+## Quick Start
+
+### Define Models
+
+```python
+from isonantic import TableModel, ObjectModel, Field, Reference
+
+class Team(TableModel):
+    __ison_block__ = "table.teams"
+    id: int = Field(primary_key=True)
+    name: str
+    budget: float
+
+class User(TableModel):
+    __ison_block__ = "table.users"
+    id: int = Field(primary_key=True)
+    name: str
+    email: str
+    team: Reference[Team]  # Reference to Team by ID
+```
+
+### Parse ISON Data
+
+```python
+from isonantic import ISONDocument, parse_ison
+
+ison_data = """
+table.teams
+id name budget
+1 Engineering 500000
+2 Marketing 250000
+
+table.users
+id name email team
+1 Alice alice@example.com :1
+2 Bob bob@example.com :2
+"""
+
+# Parse with validation
+doc = ISONDocument()
+doc.register(Team, User)
+doc.parse(ison_data)
+
+# Access typed data
+users = doc.get_all(User)
+for user in users:
+    print(f"{user.name} - Team: {user.team.name}")  # Reference auto-resolved!
+```
+
+### Parse LLM Output
+
+```python
+from isonantic import parse_llm_output, ParseResult
+
+# LLM may return partial or malformed ISON
+llm_response = """
+Here's the data you requested:
+
+table.products
+id name price
+1 Widget 9.99
+2 Gadget 19.99
+
+The products are ready.
+"""
+
+result: ParseResult = parse_llm_output(llm_response, [Product])
+if result.success:
+    products = result.data[Product]
+else:
+    print(f"Errors: {result.errors}")
+```
+
+### Schema for Prompts
+
+```python
+from isonantic import prompt_for_model
+
+# Generate ISON schema for LLM prompts
+prompt = prompt_for_model(User)
+print(prompt)
+# Output:
+# table.users
+# id:int name:string email:string team:ref
+# <rows>
+```
+
+## Model Types
+
+### TableModel
+For tabular data with multiple rows:
+
+```python
+class Product(TableModel):
+    __ison_block__ = "table.products"
+    id: int = Field(primary_key=True)
+    name: str
+    price: float
+```
+
+### ObjectModel
+For single key-value configurations:
+
+```python
+class Config(ObjectModel):
+    __ison_block__ = "object.config"
+    timeout: int = 30
+    debug: bool = False
+    api_key: str
+```
+
+### MetaModel
+For metadata blocks:
+
+```python
+class DocumentMeta(MetaModel):
+    __ison_block__ = "meta.document"
+    title: str
+    version: str
+    created: str
+```
+
+## Field Options
+
+```python
+from isonantic import Field, Reference, LazyReference
+
+class User(TableModel):
+    # Primary key
+    id: int = Field(primary_key=True)
+
+    # Required field
+    name: str = Field()
+
+    # Optional with default
+    active: bool = Field(default=True)
+
+    # Reference to another model
+    team: Reference[Team]
+
+    # Lazy reference (resolved on access)
+    manager: LazyReference[User] = None
+
+    # Constrained field
+    age: int = Field(ge=0, le=150)
+
+    # Pattern validation
+    email: str = Field(pattern=r'^[\w.]+@[\w.]+$')
+```
+
+## Validators
+
+```python
+from isonantic import TableModel, validator, root_validator, computed
+
+class Order(TableModel):
+    __ison_block__ = "table.orders"
+
+    id: int = Field(primary_key=True)
+    quantity: int
+    unit_price: float
+
+    @computed
+    def total(self) -> float:
+        return self.quantity * self.unit_price
+
+    @validator('quantity')
+    def validate_quantity(cls, v):
+        if v <= 0:
+            raise ValueError('Quantity must be positive')
+        return v
+
+    @root_validator
+    def validate_order(cls, values):
+        if values.get('total', 0) > 10000:
+            raise ValueError('Order total exceeds limit')
+        return values
+```
+
+## Reference Resolution
+
+ISONantic automatically resolves references between blocks:
+
+```python
+# ISON data with references
+ison = """
+table.departments
+id name
+D1 Engineering
+D2 Sales
+
+table.employees
+id name dept
+E1 Alice :D1
+E2 Bob :D2
+"""
+
+doc = ISONDocument()
+doc.register(Department, Employee)
+doc.parse(ison)
+
+emp = doc.get(Employee, "E1")
+print(emp.dept.name)  # "Engineering" - auto-resolved!
+```
+
+## Error Handling
+
+```python
+from isonantic import parse_ison_safe, ValidationError
+
+try:
+    result = parse_ison_safe(data, [User, Team])
+
+    if result.has_errors:
+        for error in result.errors:
+            print(f"Error: {error}")
+
+    # Access valid data even with partial errors
+    users = result.data.get(User, [])
+
+except ValidationError as e:
+    print(f"Validation failed: {e}")
+```
+
+## Use Cases
+
+- **LLM Structured Output** - Parse and validate AI-generated data
+- **Configuration Files** - Type-safe config loading
+- **API Responses** - Validate ISON API data
+- **Data Pipelines** - Transform and validate ISON streams
+- **RAG Systems** - Parse retrieved ISON documents
+
+## Comparison with Pydantic
+
+| Feature | ISONantic | Pydantic |
+|---------|-----------|----------|
+| Format | ISON | JSON |
+| Token efficiency | High | Lower |
+| Cross-record refs | Built-in | Manual |
+| LLM optimization | Yes | No |
+| Schema generation | ISON-native | JSON Schema |
+
+## Links
+
+- [Documentation](https://somewheresystems.github.io/ison/isonantic.html)
+- [ISON Specification](https://somewheresystems.github.io/ison/spec.html)
+- [GitHub](https://github.com/somewheresystems/ison)
+- [ison-parser](https://pypi.org/project/ison-parser/)
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.

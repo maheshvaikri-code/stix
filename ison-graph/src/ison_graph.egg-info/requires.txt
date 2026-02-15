@@ -1,0 +1,8 @@
+ison-py>=1.0.0
+
+[dev]
+pytest>=9.0
+pytest-cov>=6.0
+black>=25.0
+isort>=5.0
+mypy>=1.19

@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-flow-graph"
+version = "1.0.0"
+description = "Generate code flow graphs from GitHub repositories using ISONGraph"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mahesh Vaikri"}
+]
+keywords = [
+    "code-analysis",
+    "flow-graph",
+    "call-graph",
+    "dependency-graph",
+    "github",
+    "isongraph",
+    "ast",
+    "static-analysis"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "ison-graph>=1.0.0",
+    "gitpython>=3.1.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+typescript = ["tree-sitter>=0.20.0", "tree-sitter-javascript>=0.20.0", "tree-sitter-typescript>=0.20.0"]
+rust = ["tree-sitter-rust>=0.20.0"]
+all = [
+    "tree-sitter>=0.20.0",
+    "tree-sitter-javascript>=0.20.0",
+    "tree-sitter-typescript>=0.20.0",
+    "tree-sitter-rust>=0.20.0",
+]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+]
+
+[project.scripts]
+code-flow-graph = "code_flow_graph.cli:main"
+cfg = "code_flow_graph.cli:main"
+
+[project.urls]
+Homepage = "https://www.ison.dev"
+Repository = "https://github.com/maheshvaikri-code/ison"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

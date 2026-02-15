@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stix-config
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: config
+data:
+  # Logging configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Service ports
+  ENFORCER_PORT: "8080"
+  EVIDENCE_PORT: "8081"
+  APPROVALS_PORT: "8082"
+  DASHBOARD_PORT: "3000"
+
+  # CORS configuration
+  CORS_ORIGINS: "*"
+
+  # Rate limiting
+  RATE_LIMIT_MAX: "1000"
+  RATE_LIMIT_WINDOW_MS: "60000"
+
+  # Policy configuration
+  POLICY_CACHE_TTL_MS: "60000"
+  POLICY_DEFAULT_PRIORITY: "1000"
+
+  # Evidence configuration
+  EVIDENCE_BATCH_SIZE: "100"
+  EVIDENCE_FLUSH_INTERVAL_MS: "5000"
+
+  # Approval configuration
+  APPROVAL_DEFAULT_TIMEOUT_HOURS: "24"
+  APPROVAL_POLL_INTERVAL_MS: "5000"
+
+  # Proof token configuration
+  PROOF_TOKEN_ALGORITHM: "EdDSA"
+  PROOF_TOKEN_TTL_SECONDS: "300"
+
+  # Health check configuration
+  HEALTH_CHECK_INTERVAL_MS: "30000"
+
+  # Metrics configuration
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+
+  # Tracing configuration
+  TRACING_ENABLED: "true"
+  TRACING_SAMPLE_RATE: "0.1"

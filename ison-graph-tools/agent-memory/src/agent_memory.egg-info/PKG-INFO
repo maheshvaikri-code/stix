@@ -1,0 +1,312 @@
+Metadata-Version: 2.4
+Name: agent-memory
+Version: 1.0.0
+Summary: Agentic Memory System for Coding Agents using ISONGraph
+Author: Mahesh Vaikri
+License: MIT
+Project-URL: Homepage, https://www.ison.dev
+Project-URL: Repository, https://github.com/maheshvaikri-code/ison
+Keywords: agent,memory,coding-assistant,llm,isongraph,knowledge-graph,session-memory,code-conventions
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: ison-graph>=1.0.0
+Requires-Dist: click>=8.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=9.0; extra == "dev"
+Requires-Dist: pytest-cov>=6.0; extra == "dev"
+
+# Agent Memory
+
+Persistent Memory System for Coding Agents using ISONGraph.
+
+## Overview
+
+Agent Memory provides a graph-based memory system that allows AI coding agents to:
+
+- **Remember** project context across sessions
+- **Learn** from past interactions and mistakes
+- **Maintain** knowledge about codebase architecture
+- **Avoid** repeating bugs and violating decisions
+- **Apply** project-specific patterns and conventions
+
+## Installation
+
+```bash
+pip install agent-memory
+```
+
+## Quick Start
+
+### Python API
+
+```python
+from agent_memory import AgentMemory
+
+# Initialize memory for a project
+memory = AgentMemory("my-project")
+
+# Add conventions
+memory.conventions.add_convention(
+    category="naming",
+    rule="snake_case_functions",
+    enforced_by="ruff"
+)
+
+# Add architectural decisions
+memory.decisions.add_decision(
+    title="Use RocksDB over SQLite",
+    context="Need fast sequential writes for graph storage",
+    consequences_positive=["Fast writes", "Embedded"],
+    consequences_negative=["Learning curve"]
+)
+
+# Add bug patterns
+memory.bugs.add_pattern(
+    name="race_condition",
+    signature="shared_state_no_lock",
+    modules_affected=["cache", "storage"]
+)
+
+# Get coding context before a task
+context = memory.get_context(
+    task="modify the cache module",
+    files=["src/cache.py"]
+)
+print(context.to_prompt())
+
+# Save memory
+memory.save("project.memory")
+```
+
+### CLI
+
+```bash
+# Initialize a memory store
+amem init my-project
+
+# Add memories
+amem add convention project.memory -c naming -r "snake_case_functions" -e ruff
+amem add decision project.memory -t "Use RocksDB" -c "Need fast writes"
+amem add bug-pattern project.memory -n "race_condition" -s "shared_state_no_lock"
+
+# Get context for a task
+amem context project.memory "modify cache module" -f src/cache.py
+
+# Check a suggestion
+amem check project.memory "use SQLAlchemy for the ORM"
+
+# View statistics
+amem stats project.memory
+
+# Check memory health
+amem health project.memory
+
+# Run consolidation
+amem consolidate project.memory
+
+# List memories
+amem list conventions project.memory
+amem list decisions project.memory
+amem list skills project.memory
+
+# Session management
+amem start-session project.memory "Add new feature"
+amem end-session project.memory s_20240101_1000 -c 0.8
+
+# Export
+amem export project.memory -o project.json -f json
+```
+
+## Memory Types
+
+### 1. Codebase Mental Model
+Architecture understanding, module relationships, design patterns.
+
+```python
+memory.codebase.add_module("src/cache", "LRU caching layer", complexity="high")
+memory.codebase.add_dependency("src/api", "src/cache", coupling="loose")
+memory.codebase.add_pattern("singleton", ["src/cache"], why_chosen="single instance needed")
+```
+
+### 2. Decisions (ADRs)
+Architectural decisions and their rationale.
+
+```python
+memory.decisions.add_decision("Use async", "High concurrency expected")
+memory.decisions.add_alternative("Use async", "threading", "GIL limitations")
+memory.decisions.add_constraint("Use async", "src/api", "all handlers must be async")
+```
+
+### 3. Conventions
+Code style and project patterns.
+
+```python
+memory.conventions.add_convention("naming", "snake_case", "ruff")
+memory.conventions.add_idiom("null_check", "if x is None", "if not x")
+memory.conventions.add_project_pattern("error_handling", "raise CustomError(code=)", "always")
+```
+
+### 4. Bug Patterns
+Historical bugs and fixes.
+
+```python
+memory.bugs.add_bug("Race condition in cache", severity="critical")
+memory.bugs.add_pattern("race_condition", "shared_state_no_lock")
+memory.bugs.add_fix_pattern("race_condition", "use asyncio.Lock", "check reentrant need")
+```
+
+### 5. Dependencies
+Library quirks and workarounds.
+
+```python
+memory.dependencies.add_dependency("rocksdb", "0.22.0", "storage")
+memory.dependencies.add_quirk("rocksdb", "batch > 4MB causes stall", severity="high")
+memory.dependencies.add_workaround("batch > 4MB causes stall", "chunk into 2MB batches")
+```
+
+### 6. Test Patterns
+Testing conventions and requirements.
+
+```python
+memory.tests.add_convention("unit", "test_{module}_{function}_{case}")
+memory.tests.add_required_cases("graph_operation", ["empty", "cyclic", "self_loop"])
+```
+
+### 7. Performance
+Hot paths and constraints.
+
+```python
+memory.performance.add_hot_path("node_lookup", "very_high", untouchable=True)
+memory.performance.add_constraint("node_lookup", "<5ms p99", "user experience")
+```
+
+### 8. Technical Debt
+Debt items and refactoring history.
+
+```python
+memory.techdebt.add_debt("src/traverse.py", "god function", severity="high")
+memory.techdebt.add_refactoring_attempt("src/traverse.py", "split by type", "failed", "circular imports")
+```
+
+### 9. Team Knowledge
+Who knows what.
+
+```python
+memory.team.add_member("Sarah", "contributor")
+memory.team.add_expertise("graph_algorithms", "deep", ["src/traverse"])
+memory.team.link_expertise("Sarah", "graph_algorithms")
+```
+
+### 10. Sessions
+Session continuity.
+
+```python
+session_id = memory.start_session("Add batch API")
+memory.sessions.add_decision(session_id, "use streaming", "memory efficiency", sticky=True)
+memory.sessions.add_open_question(session_id, "max batch size?")
+memory.end_session(session_id, completion=0.8)
+```
+
+### 11. Templates
+Code generation patterns.
+
+```python
+memory.templates.add_template("api_endpoint", "handler")
+memory.templates.add_snippet("async_lock", "async with lock:", "shared state access")
+```
+
+### 12. Skills
+Agent learning progression.
+
+```python
+memory.skills.add_skill("python_async", "language", proficiency=0.7)
+memory.skills.record_learning_event("python_async", "success", "handled race condition")
+memory.skills.update_proficiency("python_async", 0.8)
+```
+
+## Memory Consolidation
+
+The system includes automatic memory consolidation to manage memory over time:
+
+```python
+# Run consolidation manually
+summary = memory._consolidator.consolidate()
+
+# Check memory health
+health = memory._consolidator.get_memory_health()
+```
+
+Consolidation strategies:
+- **Frequency-based**: Keep frequently accessed memories
+- **Recency-based**: Decay old unused memories
+- **Importance-based**: Keep high-impact memories longer
+- **Reinforcement-based**: Strengthen memories that prove useful
+
+## Context Building
+
+Get relevant context before coding:
+
+```python
+context = memory.get_context(
+    task="modify the cache module",
+    files=["src/cache.py"],
+    max_tokens=4000
+)
+
+# High priority (always included)
+context.warnings      # Decision conflicts, failed refactoring warnings
+context.constraints   # Decisions constraining files
+context.hot_paths     # Performance-critical paths
+
+# Medium priority
+context.conventions   # Applicable conventions
+context.patterns      # Project patterns
+context.bug_risks     # Relevant bug patterns
+context.dependencies  # Dependency quirks
+
+# Session continuity
+context.session_context  # Open questions, prior decisions
+
+# Generate prompt
+prompt = context.to_prompt()
+```
+
+## ISONQL Queries
+
+Query the memory graph directly:
+
+```python
+from ison_graph.query import QueryEngine
+
+engine = QueryEngine(memory.graph)
+
+# Find all decisions
+result = engine.execute("MATCH (decision) RETURN *")
+
+# Find bug patterns for a module
+result = engine.execute("""
+    MATCH (bp:bug_pattern)
+    WHERE modules_affected CONTAINS 'cache'
+    RETURN bp
+""")
+
+# Find expertise chain
+result = engine.execute("""
+    TRAVERSE team_member:sarah -> HAS_EXPERTISE -> expertise_area
+""")
+```
+
+## License
+
+MIT

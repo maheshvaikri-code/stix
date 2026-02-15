@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-enforcer
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: enforcer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stix
+        app.kubernetes.io/component: enforcer
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: stix-enforcer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: enforcer
+          image: ghcr.io/stix-ai/stix-enforcer:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: ENFORCER_PORT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: LOG_LEVEL
+            - name: LOG_FORMAT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: LOG_FORMAT
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: REDIS_URL
+            - name: JWT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: JWT_PRIVATE_KEY
+            - name: JWT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: JWT_PUBLIC_KEY
+            - name: POLICY_CACHE_TTL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: POLICY_CACHE_TTL_MS
+            - name: METRICS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: METRICS_ENABLED
+            - name: METRICS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: METRICS_PORT
+            - name: TRACING_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: TRACING_ENABLED
+            - name: TRACING_SAMPLE_RATE
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: TRACING_SAMPLE_RATE
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability:4318"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: policies
+              mountPath: /app/policies
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: policies
+          configMap:
+            name: stix-policies
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/component: enforcer
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: enforcer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-enforcer
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-enforcer
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer

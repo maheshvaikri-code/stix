@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: medical-governance
+Version: 1.0.0
+Summary: HIPAA-Compliant Governance Layer for Medical AI Systems built on ISONGraph
+Author: Mahesh Vaikri
+License: MIT
+Project-URL: Homepage, https://github.com/isongraph/medical-governance
+Project-URL: Documentation, https://github.com/isongraph/medical-governance#readme
+Keywords: hipaa,phi,governance,medical,healthcare,ai,compliance,isongraph
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Healthcare Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Medical Science Apps.
+Classifier: Topic :: Security
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: ison-graph>=1.0.0
+Requires-Dist: agent-governance>=1.0.0
+Requires-Dist: click>=8.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"

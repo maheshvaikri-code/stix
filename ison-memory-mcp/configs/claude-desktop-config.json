@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ison-memory": {
+      "command": "ison-memory-mcp",
+      "args": ["serve"],
+      "env": {
+        "ISON_MEMORY_STORAGE__PATH": "~/.ison-memory/memory.db",
+        "ISON_MEMORY_STORAGE__FORMAT": "sqlite",
+        "ISON_MEMORY_COMPACTION__ENABLED": "true",
+        "ISON_MEMORY_COMPACTION__STRATEGY": "smart",
+        "ISON_MEMORY_BACKUP__ENABLED": "true"
+      }
+    }
+  }
+}

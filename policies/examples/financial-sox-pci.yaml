@@ -1,0 +1,1164 @@
+# =============================================================================
+# STIX Enterprise Policy Pack - Financial Services (SOX/PCI-DSS/AML)
+# Comprehensive financial data protection and audit compliance
+# Version: 2.0.0 | 25 Policies
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: PCI-DSS CARDHOLDER DATA (Policies 1-6)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 1: Block credit card data access
+# -----------------------------------------------------------------------------
+policy_id: pci-block-card-data
+version: "2.0.0"
+priority: 5
+description: |
+  Blocks direct access to primary account numbers (PAN) and cardholder data.
+  AI agents should never have direct access to unmasked card numbers.
+
+scope:
+  actor_type: AI_AGENT
+  action: "*"
+  resource_type: payment_card
+
+conditions:
+  require_signal:
+    pciDetected: true
+
+decision: DENY
+reason_code: PCI_DATA_BLOCKED
+
+controls:
+  - "PCI-DSS:3.4"
+  - "PCI-DSS:7.1"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - card-data
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 2: Allow tokenized payment operations
+# -----------------------------------------------------------------------------
+policy_id: pci-allow-tokenized
+version: "2.0.0"
+priority: 50
+description: |
+  Allows operations on tokenized payment data where actual card numbers
+  have been replaced with secure tokens.
+
+scope:
+  actor_type: "*"
+  action: process_payment
+  resource_type: payment_token
+
+decision: ALLOW
+reason_code: TOKENIZED_PAYMENT_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+  - type: ENCRYPT_TRANSIT
+
+controls:
+  - "PCI-DSS:3.4"
+  - "PCI-DSS:4.1"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - tokenized
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 3: Require encryption for card data transmission
+# -----------------------------------------------------------------------------
+policy_id: pci-encrypt-transmission
+version: "2.0.0"
+priority: 8
+description: |
+  All cardholder data transmissions must use strong cryptography
+  as required by PCI-DSS Requirement 4.
+
+scope:
+  actor_type: "*"
+  action: transmit_*
+  resource_type: "*"
+
+conditions:
+  require_signal:
+    pciDetected: true
+
+decision: ALLOW
+reason_code: PCI_ENCRYPTED_TRANSMISSION
+
+obligations:
+  - type: ENCRYPT_TRANSIT
+    params:
+      algorithm: AES-256-GCM
+      protocol: TLS_1_3
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_destination: true
+
+controls:
+  - "PCI-DSS:4.1"
+  - "PCI-DSS:4.2"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - encryption
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 4: Restrict cardholder data retention
+# -----------------------------------------------------------------------------
+policy_id: pci-data-retention
+version: "2.0.0"
+priority: 10
+description: |
+  Prohibits storing sensitive authentication data after authorization.
+  CVV/CVC, full track data, and PIN blocks must never be stored.
+
+scope:
+  actor_type: "*"
+  action: store_*
+  resource_type: payment_card
+
+conditions:
+  require_resource_attr:
+    data_type:
+      - cvv
+      - cvc
+      - track_data
+      - pin_block
+
+decision: DENY
+reason_code: SENSITIVE_AUTH_DATA_NO_STORE
+
+controls:
+  - "PCI-DSS:3.2"
+  - "PCI-DSS:3.2.1"
+  - "PCI-DSS:3.2.2"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - retention
+  - sensitive-auth
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 5: PCI audit logging requirement
+# -----------------------------------------------------------------------------
+policy_id: pci-audit-logging
+version: "2.0.0"
+priority: 45
+description: |
+  All access to cardholder data must be logged and tracked for audit.
+  Logs must be retained for at least one year.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: payment_*
+
+decision: ALLOW
+reason_code: PCI_AUDIT_LOGGED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_actor: true
+      include_action: true
+      include_resource: true
+      include_timestamp: true
+      retention_days: 365
+
+controls:
+  - "PCI-DSS:10.1"
+  - "PCI-DSS:10.2"
+  - "PCI-DSS:10.7"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - audit
+  - logging
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 6: Block PCI scope expansion
+# -----------------------------------------------------------------------------
+policy_id: pci-scope-containment
+version: "2.0.0"
+priority: 3
+description: |
+  Prevents AI agents from copying cardholder data to systems outside
+  the designated cardholder data environment (CDE).
+
+scope:
+  actor_type: AI_AGENT
+  action: copy_*
+  resource_type: "*"
+
+conditions:
+  require_signal:
+    pciDetected: true
+  require_context:
+    destination_in_cde: false
+
+decision: DENY
+reason_code: PCI_SCOPE_VIOLATION
+
+controls:
+  - "PCI-DSS:1.3"
+  - "PCI-DSS:2.4"
+
+regulations:
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - pci
+  - scope
+  - segmentation
+
+active: true
+
+---
+# =============================================================================
+# SECTION 2: SOX FINANCIAL CONTROLS (Policies 7-12)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 7: Quarantine financial report generation
+# -----------------------------------------------------------------------------
+policy_id: sox-quarantine-reports
+version: "2.0.0"
+priority: 20
+description: |
+  Requires dual approval for AI agents generating financial reports
+  that may be used for regulatory filings.
+
+scope:
+  actor_type: AI_AGENT
+  action: generate_report
+  resource_type: financial_*
+
+conditions:
+  env: prod
+  require_resource_attr:
+    regulatory: true
+
+decision: QUARANTINE
+reason_code: FINANCIAL_REPORT_APPROVAL
+
+approval:
+  approver_role: finance_controller
+  require_count: 2
+  require_justification: true
+  timeout_hours: 24
+
+obligations:
+  - type: WATERMARK_OUTPUT
+    params:
+      text: "AI-GENERATED - REQUIRES REVIEW"
+  - type: DUAL_CONTROL
+
+controls:
+  - "SOX:302"
+  - "SOX:404"
+  - "SOC2:CC7.2"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - sox
+  - reporting
+  - dual-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 8: Block production database modifications
+# -----------------------------------------------------------------------------
+policy_id: sox-block-prod-modify
+version: "2.0.0"
+priority: 1
+description: |
+  Blocks AI agents from directly modifying production financial databases.
+  All changes must go through approved change management processes.
+
+scope:
+  actor_type: AI_AGENT
+  action: "write_*"
+  resource_type: database
+
+conditions:
+  env: prod
+  require_resource_attr:
+    contains_financial_data: true
+
+decision: DENY
+reason_code: PROD_FINANCIAL_WRITE_BLOCKED
+
+controls:
+  - "SOX:404"
+  - "SOC2:CC8.1"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - sox
+  - production
+  - write-protection
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 9: Allow read-only financial analytics
+# -----------------------------------------------------------------------------
+policy_id: sox-allow-analytics-read
+version: "2.0.0"
+priority: 60
+description: |
+  Allows AI agents to read financial data for analytics purposes
+  with appropriate logging and rate limiting.
+
+scope:
+  actor_type: AI_AGENT
+  action: "read_*"
+  resource_type: financial_analytics
+
+decision: ALLOW
+reason_code: ANALYTICS_READ_ALLOWED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+  - type: RATE_LIMIT
+    params:
+      requests_per_minute: 100
+  - type: REDACT_FIELDS
+    params:
+      fields:
+        - ssn
+        - account_number
+        - routing_number
+
+controls:
+  - "SOC2:CC6.1"
+  - "SOC2:CC7.2"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - analytics
+  - read-only
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 10: SOX segregation of duties
+# -----------------------------------------------------------------------------
+policy_id: sox-segregation-duties
+version: "2.0.0"
+priority: 15
+description: |
+  Enforces segregation of duties - the same actor cannot both
+  initiate and approve financial transactions.
+
+scope:
+  actor_type: "*"
+  action: approve_transaction
+  resource_type: financial_transaction
+
+conditions:
+  require_context:
+    approver_is_initiator: true
+
+decision: DENY
+reason_code: SOD_VIOLATION_SELF_APPROVAL
+
+controls:
+  - "SOX:404"
+  - "SOC2:CC5.2"
+  - "COSO:Control Activities"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - sox
+  - segregation-duties
+  - internal-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 11: Require change management for GL modifications
+# -----------------------------------------------------------------------------
+policy_id: sox-gl-change-control
+version: "2.0.0"
+priority: 12
+description: |
+  All modifications to the General Ledger require change management
+  approval and documentation.
+
+scope:
+  actor_type: "*"
+  action: modify_*
+  resource_type: general_ledger
+
+decision: QUARANTINE
+reason_code: GL_CHANGE_REQUIRES_APPROVAL
+
+approval:
+  approver_role: controller
+  require_count: 1
+  require_ticket: true
+  require_justification: true
+  timeout_hours: 48
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: gl_modification
+  - type: NOTIFY
+    params:
+      recipient: internal_audit
+      template: gl_change_notification
+
+controls:
+  - "SOX:404"
+  - "SOX:302"
+  - "SOC2:CC6.6"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - sox
+  - general-ledger
+  - change-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 12: Financial period close controls
+# -----------------------------------------------------------------------------
+policy_id: sox-period-close
+version: "2.0.0"
+priority: 8
+description: |
+  During financial close periods, all AI modifications to financial
+  data require heightened controls.
+
+scope:
+  actor_type: AI_AGENT
+  action: "*"
+  resource_type: financial_*
+
+conditions:
+  require_context:
+    period_close_active: true
+
+decision: QUARANTINE
+reason_code: PERIOD_CLOSE_RESTRICTION
+
+approval:
+  approver_role: cfo
+  require_count: 1
+  require_justification: true
+  timeout_hours: 4
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: period_close_access
+
+controls:
+  - "SOX:302"
+  - "SOX:404"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - sox
+  - period-close
+  - heightened-control
+
+active: true
+
+---
+# =============================================================================
+# SECTION 3: AML/KYC COMPLIANCE (Policies 13-17)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 13: Block high-risk jurisdiction transactions
+# -----------------------------------------------------------------------------
+policy_id: aml-high-risk-jurisdiction
+version: "2.0.0"
+priority: 5
+description: |
+  Blocks automated transactions involving FATF high-risk jurisdictions
+  without compliance review.
+
+scope:
+  actor_type: AI_AGENT
+  action: process_transaction
+  resource_type: financial_transaction
+
+conditions:
+  require_context:
+    jurisdiction_risk: high
+
+decision: DENY
+reason_code: HIGH_RISK_JURISDICTION_BLOCKED
+
+controls:
+  - "BSA:AML"
+  - "FATF:Recommendation 19"
+
+regulations:
+  - "BSA"
+  - "AML"
+  - "FATF"
+
+tags:
+  - financial
+  - aml
+  - jurisdiction
+  - sanctions
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 14: Large transaction reporting threshold
+# -----------------------------------------------------------------------------
+policy_id: aml-large-transaction
+version: "2.0.0"
+priority: 20
+description: |
+  Transactions above reporting thresholds require additional
+  documentation and compliance review.
+
+scope:
+  actor_type: "*"
+  action: process_transaction
+  resource_type: financial_transaction
+
+conditions:
+  require_resource_attr:
+    amount_usd_gte: 10000
+
+decision: QUARANTINE
+reason_code: CTR_THRESHOLD_EXCEEDED
+
+approval:
+  approver_role: bsa_officer
+  require_count: 1
+  require_justification: true
+  timeout_hours: 24
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: ctr_threshold
+  - type: NOTIFY
+    params:
+      recipient: compliance_team
+      template: large_transaction_alert
+
+controls:
+  - "BSA:CTR"
+  - "FinCEN:Currency Transaction"
+
+regulations:
+  - "BSA"
+  - "AML"
+
+tags:
+  - financial
+  - aml
+  - ctr
+  - reporting
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 15: Suspicious activity detection
+# -----------------------------------------------------------------------------
+policy_id: aml-suspicious-activity
+version: "2.0.0"
+priority: 10
+description: |
+  Transactions flagged by AML monitoring systems require
+  compliance investigation before processing.
+
+scope:
+  actor_type: "*"
+  action: process_transaction
+  resource_type: financial_transaction
+
+conditions:
+  require_signal:
+    suspiciousActivity: true
+
+decision: QUARANTINE
+reason_code: SAR_INVESTIGATION_REQUIRED
+
+approval:
+  approver_role: aml_investigator
+  require_count: 1
+  require_justification: true
+  timeout_hours: 72
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: potential_sar
+  - type: NOTIFY
+    params:
+      recipient: bsa_officer
+      template: suspicious_activity_alert
+      immediate: true
+
+controls:
+  - "BSA:SAR"
+  - "FinCEN:SAR"
+
+regulations:
+  - "BSA"
+  - "AML"
+
+tags:
+  - financial
+  - aml
+  - sar
+  - suspicious
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 16: KYC verification required
+# -----------------------------------------------------------------------------
+policy_id: aml-kyc-required
+version: "2.0.0"
+priority: 15
+description: |
+  New customer accounts or high-risk transactions require
+  completed KYC verification before processing.
+
+scope:
+  actor_type: "*"
+  action: open_account
+  resource_type: customer_account
+
+conditions:
+  require_resource_attr:
+    kyc_verified: false
+
+decision: DENY
+reason_code: KYC_NOT_VERIFIED
+
+controls:
+  - "BSA:CDD"
+  - "FinCEN:CDD Rule"
+
+regulations:
+  - "BSA"
+  - "AML"
+
+tags:
+  - financial
+  - aml
+  - kyc
+  - cdd
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 17: PEP (Politically Exposed Person) enhanced due diligence
+# -----------------------------------------------------------------------------
+policy_id: aml-pep-edd
+version: "2.0.0"
+priority: 12
+description: |
+  Transactions involving Politically Exposed Persons require
+  enhanced due diligence and senior management approval.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: customer_account
+
+conditions:
+  require_resource_attr:
+    pep_status: true
+
+decision: QUARANTINE
+reason_code: PEP_ENHANCED_DUE_DILIGENCE
+
+approval:
+  approver_role: chief_compliance_officer
+  require_count: 1
+  require_justification: true
+  timeout_hours: 48
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: pep_transaction
+  - type: NOTIFY
+    params:
+      recipient: compliance_team
+      template: pep_activity
+
+controls:
+  - "BSA:EDD"
+  - "FATF:Recommendation 12"
+
+regulations:
+  - "BSA"
+  - "AML"
+  - "FATF"
+
+tags:
+  - financial
+  - aml
+  - pep
+  - edd
+
+active: true
+
+---
+# =============================================================================
+# SECTION 4: ACCESS CONTROLS (Policies 18-21)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 18: Privileged access to financial systems
+# -----------------------------------------------------------------------------
+policy_id: fin-privileged-access
+version: "2.0.0"
+priority: 10
+description: |
+  Privileged access to financial systems requires multi-factor
+  authentication and session logging.
+
+scope:
+  actor_type: "*"
+  action: admin_*
+  resource_type: financial_system
+
+conditions:
+  require_actor_attr:
+    mfa_verified: false
+
+decision: DENY
+reason_code: MFA_REQUIRED_FOR_PRIVILEGED
+
+controls:
+  - "SOX:404"
+  - "PCI-DSS:8.3"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "SOX"
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - access-control
+  - mfa
+  - privileged
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 19: Time-based access restrictions
+# -----------------------------------------------------------------------------
+policy_id: fin-time-restrictions
+version: "2.0.0"
+priority: 25
+description: |
+  Access to sensitive financial systems is restricted to
+  business hours unless emergency access is invoked.
+
+scope:
+  actor_type: AI_AGENT
+  action: "*"
+  resource_type: financial_system
+
+conditions:
+  require_context:
+    business_hours: false
+    emergency_access: false
+
+decision: DENY
+reason_code: OUTSIDE_BUSINESS_HOURS
+
+controls:
+  - "SOC2:CC6.1"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - access-control
+  - time-based
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 20: Service account restrictions
+# -----------------------------------------------------------------------------
+policy_id: fin-service-account
+version: "2.0.0"
+priority: 15
+description: |
+  Service accounts accessing financial systems have restricted
+  permissions and require explicit authorization.
+
+scope:
+  actor_type: SERVICE
+  action: "*"
+  resource_type: financial_*
+
+conditions:
+  require_actor_attr:
+    service_account_authorized: false
+
+decision: DENY
+reason_code: SERVICE_ACCOUNT_NOT_AUTHORIZED
+
+controls:
+  - "SOX:404"
+  - "PCI-DSS:7.1"
+  - "SOC2:CC6.3"
+
+regulations:
+  - "SOX"
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - access-control
+  - service-account
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 21: Need-to-know financial data access
+# -----------------------------------------------------------------------------
+policy_id: fin-need-to-know
+version: "2.0.0"
+priority: 30
+description: |
+  Financial data access is restricted based on job function
+  and business need. Enforces least privilege principle.
+
+scope:
+  actor_type: "*"
+  action: read_*
+  resource_type: financial_data
+
+decision: ALLOW
+reason_code: NEED_TO_KNOW_ACCESS
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_purpose: true
+  - type: REDACT_FIELDS
+    params:
+      fields:
+        - full_account_number
+        - ssn
+        - tax_id
+      unless_explicitly_authorized: true
+
+controls:
+  - "SOX:404"
+  - "PCI-DSS:7.1"
+  - "SOC2:CC6.1"
+
+regulations:
+  - "SOX"
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - access-control
+  - least-privilege
+
+active: true
+
+---
+# =============================================================================
+# SECTION 5: AUDIT AND MONITORING (Policies 22-25)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Policy 22: Financial audit trail requirement
+# -----------------------------------------------------------------------------
+policy_id: fin-audit-trail
+version: "2.0.0"
+priority: 40
+description: |
+  All financial transactions must have complete audit trails
+  for regulatory examination and internal audit.
+
+scope:
+  actor_type: "*"
+  action: "*"
+  resource_type: financial_transaction
+
+decision: ALLOW
+reason_code: AUDIT_TRAIL_LOGGED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      include_actor: true
+      include_action: true
+      include_resource: true
+      include_timestamp: true
+      include_before_after: true
+      retention_years: 7
+
+controls:
+  - "SOX:802"
+  - "SOC2:CC7.2"
+  - "PCI-DSS:10.1"
+
+regulations:
+  - "SOX"
+  - "PCI-DSS"
+
+tags:
+  - financial
+  - audit
+  - trail
+  - retention
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 23: Real-time transaction monitoring
+# -----------------------------------------------------------------------------
+policy_id: fin-realtime-monitoring
+version: "2.0.0"
+priority: 50
+description: |
+  High-value transactions trigger real-time monitoring
+  and alerting to the treasury team.
+
+scope:
+  actor_type: "*"
+  action: process_transaction
+  resource_type: financial_transaction
+
+conditions:
+  require_resource_attr:
+    amount_usd_gte: 50000
+
+decision: ALLOW
+reason_code: REALTIME_MONITORED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: high_value_transaction
+  - type: NOTIFY
+    params:
+      recipient: treasury
+      template: high_value_transaction
+      immediate: true
+
+controls:
+  - "SOC2:CC7.1"
+  - "SOC2:CC7.4"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - monitoring
+  - real-time
+  - treasury
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 24: Reconciliation access controls
+# -----------------------------------------------------------------------------
+policy_id: fin-reconciliation
+version: "2.0.0"
+priority: 20
+description: |
+  Access to reconciliation systems requires finance department
+  authorization and creates audit evidence.
+
+scope:
+  actor_type: "*"
+  action: perform_reconciliation
+  resource_type: financial_*
+
+conditions:
+  require_actor_attr:
+    department: finance
+    reconciliation_authorized: true
+
+decision: ALLOW
+reason_code: RECONCILIATION_AUTHORIZED
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+      flag: reconciliation
+  - type: DUAL_CONTROL
+    params:
+      require_witness: true
+
+controls:
+  - "SOX:404"
+  - "SOC2:CC4.1"
+
+regulations:
+  - "SOX"
+
+tags:
+  - financial
+  - reconciliation
+  - dual-control
+
+active: true
+
+---
+# -----------------------------------------------------------------------------
+# Policy 25: External reporting controls
+# -----------------------------------------------------------------------------
+policy_id: fin-external-reporting
+version: "2.0.0"
+priority: 8
+description: |
+  Financial data submitted to external regulators or exchanges
+  requires CFO sign-off and legal review.
+
+scope:
+  actor_type: "*"
+  action: submit_*
+  resource_type: regulatory_filing
+
+decision: QUARANTINE
+reason_code: EXTERNAL_REPORTING_APPROVAL
+
+approval:
+  approver_role: cfo
+  require_count: 1
+  require_justification: true
+  require_ticket: true
+  timeout_hours: 24
+
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: warn
+      flag: external_submission
+  - type: WATERMARK_OUTPUT
+    params:
+      text: "OFFICIAL FILING - REVIEW COMPLETE"
+  - type: NOTIFY
+    params:
+      recipient: legal_team
+      template: regulatory_filing
+
+controls:
+  - "SOX:302"
+  - "SOX:906"
+  - "SEC:Rule 10b-5"
+
+regulations:
+  - "SOX"
+  - "SEC"
+
+tags:
+  - financial
+  - external-reporting
+  - regulatory
+  - cfo-approval
+
+active: true

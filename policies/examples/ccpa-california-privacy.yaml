@@ -1,0 +1,712 @@
+# =============================================================================
+# STIX CCPA Policy Pack - California Consumer Privacy Act
+# =============================================================================
+# Comprehensive policies for CCPA/CPRA compliance
+# Covers: Consumer rights, sale/sharing, sensitive data, opt-out
+# Version: 1.0.0
+# Regulation: California Consumer Privacy Act (as amended by CPRA)
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: CONSUMER RIGHTS (Civil Code 1798.100-1798.125)
+# =============================================================================
+
+# CCPA-001: Allow consumers to know what PI is collected (Right to Know)
+- policy_id: ccpa-right-to-know
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: CONSUMER
+    action: "request_disclosure"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.california_resident"
+      op: "eq"
+      value: true
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_RIGHT_TO_KNOW
+  controls:
+    - "CCPA:1798.100"
+    - "CCPA:1798.110"
+  regulations:
+    - "CCPA"
+    - "CPRA"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        retention_days: 365
+    - type: RESPOND_WITHIN
+      params:
+        days: 45
+  active: true
+
+# CCPA-002: Allow consumers to delete their PI (Right to Delete)
+- policy_id: ccpa-right-to-delete
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: CONSUMER
+    action: "delete_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.california_resident"
+      op: "eq"
+      value: true
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+    - field: "context.exception_applies"
+      op: "neq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_RIGHT_TO_DELETE
+  controls:
+    - "CCPA:1798.105"
+  regulations:
+    - "CCPA"
+  obligations:
+    - type: NOTIFY_SERVICE_PROVIDERS
+      params:
+        action: "delete"
+    - type: RESPOND_WITHIN
+      params:
+        days: 45
+  active: true
+
+# CCPA-003: Block deletion if legal exception applies
+- policy_id: ccpa-delete-exception
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "delete_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.legal_obligation"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_LEGAL_EXCEPTION
+  controls:
+    - "CCPA:1798.105.d"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-004: Allow consumers to correct inaccurate PI (Right to Correct - CPRA)
+- policy_id: ccpa-right-to-correct
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: CONSUMER
+    action: "correct_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.california_resident"
+      op: "eq"
+      value: true
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_RIGHT_TO_CORRECT
+  controls:
+    - "CPRA:1798.106"
+  regulations:
+    - "CPRA"
+  obligations:
+    - type: AUDIT_LOG
+    - type: RESPOND_WITHIN
+      params:
+        days: 45
+  active: true
+
+# CCPA-005: Allow data portability
+- policy_id: ccpa-right-to-portability
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: CONSUMER
+    action: "export_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.california_resident"
+      op: "eq"
+      value: true
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_RIGHT_TO_PORTABILITY
+  controls:
+    - "CCPA:1798.100.d"
+  regulations:
+    - "CCPA"
+  obligations:
+    - type: DATA_FORMAT
+      params:
+        format: "machine_readable"
+        portable: true
+  active: true
+
+# =============================================================================
+# SECTION 2: SALE AND SHARING OF PI (Civil Code 1798.120-1798.135)
+# =============================================================================
+
+# CCPA-006: Honor opt-out of sale requests
+- policy_id: ccpa-opt-out-sale
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: "*"
+    action: "sell_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.consumer_opted_out"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_OPT_OUT_SALE
+  controls:
+    - "CCPA:1798.120"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-007: Honor opt-out of sharing requests (cross-context behavioral advertising)
+- policy_id: ccpa-opt-out-sharing
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: "*"
+    action: "share_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.consumer_opted_out"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_OPT_OUT_SHARING
+  controls:
+    - "CPRA:1798.120"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-008: Block sale of minors' PI without affirmative consent (under 16)
+- policy_id: ccpa-minor-sale-block
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "sell_personal_information"
+    resource_type: minor_personal_information
+  conditions:
+    - field: "context.age"
+      op: "lt"
+      value: 16
+    - field: "context.affirmative_consent"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_MINOR_SALE_BLOCKED
+  controls:
+    - "CCPA:1798.120.c"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-009: Require parental consent for minors under 13
+- policy_id: ccpa-under-13-parental-consent
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "sell_personal_information"
+    resource_type: minor_personal_information
+  conditions:
+    - field: "context.age"
+      op: "lt"
+      value: 13
+    - field: "context.parental_consent"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_PARENTAL_CONSENT_REQUIRED
+  controls:
+    - "CCPA:1798.120.c"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-010: Allow sale with valid consent
+- policy_id: ccpa-sale-with-consent
+  version: "1.0.0"
+  priority: 40
+  scope:
+    actor_type: BUSINESS
+    action: "sell_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.consumer_opted_out"
+      op: "neq"
+      value: true
+    - field: "context.notice_provided"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_SALE_ALLOWED
+  controls:
+    - "CCPA:1798.120"
+  regulations:
+    - "CCPA"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_categories: true
+  active: true
+
+# =============================================================================
+# SECTION 3: SENSITIVE PERSONAL INFORMATION (CPRA)
+# =============================================================================
+
+# CCPA-011: Limit use of sensitive PI (CPRA requirement)
+- policy_id: ccpa-sensitive-pi-limit
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: sensitive_personal_information
+  conditions:
+    - field: "context.limit_use_requested"
+      op: "eq"
+      value: true
+    - field: "context.necessary_for_service"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_SENSITIVE_PI_LIMITED
+  controls:
+    - "CPRA:1798.121"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-012: Protect Social Security numbers
+- policy_id: ccpa-ssn-protection
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: ssn
+  conditions:
+    - field: "context.legitimate_purpose"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_SSN_PROTECTED
+  controls:
+    - "CPRA:1798.140.ae"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-013: Protect government ID numbers
+- policy_id: ccpa-government-id-protection
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: government_id
+  conditions:
+    - field: "context.verification_purpose"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_GOVT_ID_PROTECTED
+  controls:
+    - "CPRA:1798.140.ae"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-014: Protect precise geolocation data
+- policy_id: ccpa-geolocation-protection
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "collect_*"
+    resource_type: precise_geolocation
+  conditions:
+    - field: "context.consumer_consent"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_GEOLOCATION_CONSENT_REQUIRED
+  controls:
+    - "CPRA:1798.140.ae"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-015: Protect racial/ethnic origin data
+- policy_id: ccpa-racial-ethnic-protection
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: racial_ethnic_data
+  conditions:
+    - field: "context.limit_use_requested"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_RACIAL_ETHNIC_LIMITED
+  controls:
+    - "CPRA:1798.121"
+  regulations:
+    - "CPRA"
+  active: true
+
+# =============================================================================
+# SECTION 4: SERVICE PROVIDER REQUIREMENTS
+# =============================================================================
+
+# CCPA-016: Ensure service provider contract compliance
+- policy_id: ccpa-service-provider-contract
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: SERVICE_PROVIDER
+    action: "process_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.contract_in_place"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_NO_SERVICE_PROVIDER_CONTRACT
+  controls:
+    - "CCPA:1798.140.ag"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-017: Block service provider from selling PI
+- policy_id: ccpa-service-provider-no-sell
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: SERVICE_PROVIDER
+    action: "sell_personal_information"
+    resource_type: personal_information
+  decision: DENY
+  reason_code: CCPA_SERVICE_PROVIDER_CANNOT_SELL
+  controls:
+    - "CCPA:1798.140.ag"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-018: Contractor requirements (CPRA)
+- policy_id: ccpa-contractor-requirements
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: CONTRACTOR
+    action: "process_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.contractor_agreement"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_CONTRACTOR_AGREEMENT_REQUIRED
+  controls:
+    - "CPRA:1798.140.j"
+  regulations:
+    - "CPRA"
+  active: true
+
+# =============================================================================
+# SECTION 5: AUTOMATED DECISION-MAKING (CPRA)
+# =============================================================================
+
+# CCPA-019: Right to opt-out of automated decision-making
+- policy_id: ccpa-automated-decision-opt-out
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: AI_AGENT
+    action: "automated_decision"
+    resource_type: "*"
+  conditions:
+    - field: "context.consumer_opted_out"
+      op: "eq"
+      value: true
+    - field: "context.significant_effect"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_AUTOMATED_OPT_OUT
+  controls:
+    - "CPRA:1798.185.a.16"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-020: Require access to information about automated processing
+- policy_id: ccpa-automated-access
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: CONSUMER
+    action: "request_automated_info"
+    resource_type: automated_decision_info
+  conditions:
+    - field: "actor.california_resident"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_AUTOMATED_ACCESS_GRANTED
+  controls:
+    - "CPRA:1798.185.a.16"
+  regulations:
+    - "CPRA"
+  obligations:
+    - type: PROVIDE_EXPLANATION
+      params:
+        include_logic: true
+        include_purpose: true
+  active: true
+
+# =============================================================================
+# SECTION 6: SECURITY REQUIREMENTS
+# =============================================================================
+
+# CCPA-021: Implement reasonable security measures
+- policy_id: ccpa-reasonable-security
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "store_*"
+    resource_type: personal_information
+  conditions:
+    - field: "context.security_measures"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_SECURITY_REQUIRED
+  controls:
+    - "CCPA:1798.150"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-022: Require encryption for sensitive PI
+- policy_id: ccpa-encryption-sensitive
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: sensitive_personal_information
+  conditions:
+    - field: "context.encrypted"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_ENCRYPTION_REQUIRED
+  controls:
+    - "CCPA:1798.150"
+  regulations:
+    - "CCPA"
+  active: true
+
+# =============================================================================
+# SECTION 7: NON-DISCRIMINATION (Civil Code 1798.125)
+# =============================================================================
+
+# CCPA-023: Prevent discriminatory pricing for opt-out
+- policy_id: ccpa-non-discrimination
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: BUSINESS
+    action: "deny_service"
+    resource_type: "*"
+  conditions:
+    - field: "context.reason"
+      op: "eq"
+      value: "privacy_rights_exercised"
+  decision: DENY
+  reason_code: CCPA_DISCRIMINATION_BLOCKED
+  controls:
+    - "CCPA:1798.125"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-024: Allow financial incentive programs with notice
+- policy_id: ccpa-financial-incentives
+  version: "1.0.0"
+  priority: 40
+  scope:
+    actor_type: BUSINESS
+    action: "offer_financial_incentive"
+    resource_type: "*"
+  conditions:
+    - field: "context.notice_provided"
+      op: "eq"
+      value: true
+    - field: "context.opt_in_consent"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: CCPA_INCENTIVE_ALLOWED
+  controls:
+    - "CCPA:1798.125.b"
+  regulations:
+    - "CCPA"
+  active: true
+
+# =============================================================================
+# SECTION 8: AUDIT AND COMPLIANCE
+# =============================================================================
+
+# CCPA-025: Log all consumer requests
+- policy_id: ccpa-request-logging
+  version: "1.0.0"
+  priority: 100
+  scope:
+    actor_type: CONSUMER
+    action: "request_*"
+    resource_type: personal_information
+  decision: ALLOW
+  reason_code: CCPA_REQUEST_LOGGED
+  controls:
+    - "CCPA:1798.130"
+  regulations:
+    - "CCPA"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        retention_days: 730
+        include_request_type: true
+  active: true
+
+# CCPA-026: Retain request records for 24 months
+- policy_id: ccpa-retention-requirement
+  version: "1.0.0"
+  priority: 25
+  scope:
+    actor_type: "*"
+    action: "delete_audit_records"
+    resource_type: consumer_request_records
+  conditions:
+    - field: "context.age_months"
+      op: "lt"
+      value: 24
+  decision: DENY
+  reason_code: CCPA_RETENTION_REQUIRED
+  controls:
+    - "CCPA:1798.130.a.7"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-027: Verify consumer identity before fulfilling requests
+- policy_id: ccpa-identity-verification
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: CONSUMER
+    action: "*"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.verified"
+      op: "neq"
+      value: true
+  decision: QUARANTINE
+  reason_code: CCPA_VERIFICATION_REQUIRED
+  controls:
+    - "CCPA:1798.100.c"
+  regulations:
+    - "CCPA"
+  approval:
+    required: true
+    approver_roles: ["privacy_officer"]
+    timeout_hours: 24
+  active: true
+
+# CCPA-028: Provide training records
+- policy_id: ccpa-training-compliance
+  version: "1.0.0"
+  priority: 80
+  scope:
+    actor_type: EMPLOYEE
+    action: "handle_consumer_request"
+    resource_type: personal_information
+  conditions:
+    - field: "actor.ccpa_trained"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_TRAINING_REQUIRED
+  controls:
+    - "CCPA:1798.130.a.6"
+  regulations:
+    - "CCPA"
+  active: true
+
+# CCPA-029: Global Privacy Control (GPC) signal recognition
+- policy_id: ccpa-gpc-recognition
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: "*"
+    action: "sell_personal_information"
+    resource_type: personal_information
+  conditions:
+    - field: "context.gpc_signal"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_GPC_OPT_OUT
+  controls:
+    - "CPRA:1798.135.e"
+  regulations:
+    - "CPRA"
+  active: true
+
+# CCPA-030: Risk assessment for high-risk processing
+- policy_id: ccpa-risk-assessment
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: "*"
+    action: "high_risk_processing"
+    resource_type: personal_information
+  conditions:
+    - field: "context.risk_assessment_completed"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: CCPA_RISK_ASSESSMENT_REQUIRED
+  controls:
+    - "CPRA:1798.185.a.15"
+  regulations:
+    - "CPRA"
+  active: true

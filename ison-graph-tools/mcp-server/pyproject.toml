@@ -1,0 +1,131 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "isongraph-mcp"
+version = "1.0.0"
+description = "Unified MCP Server for all ISONGraph tools - Agent Memory, Governance, Learning, Compliance"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Mahesh Vaikri" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "isongraph",
+    "agent",
+    "governance",
+    "compliance",
+    "gdpr",
+    "ccpa",
+    "hipaa",
+    "ai-safety"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "ison-graph>=1.0.0",
+]
+
+[project.optional-dependencies]
+# Core tools
+converters = [
+    "ison-graph[converters]",
+]
+schema = [
+    "ison-graph[schema]",
+]
+cache = [
+    "ison-cache>=1.0.0",
+]
+
+# Agent tools
+memory = [
+    "agent-memory>=1.0.0",
+]
+governance = [
+    "agent-governance>=1.0.0",
+]
+learning = [
+    "agent-learning>=0.1.0",
+]
+
+# Compliance tools
+gdpr = [
+    "gdpr-governance>=0.1.0",
+]
+ccpa = [
+    "ccpa-governance>=0.1.0",
+]
+pii = [
+    "pii-governance>=0.1.0",
+]
+eu-ai-act = [
+    "eu-ai-act-governance>=1.0.0",
+]
+hipaa = [
+    "medical-governance>=1.0.0",
+]
+unified = [
+    "unified-governance>=0.1.0",
+]
+
+# Code analysis
+codeflow = [
+    "code-flow-graph>=1.0.0",
+]
+
+# All tools
+all = [
+    "isongraph-mcp[converters,schema,cache,memory,governance,learning,gdpr,ccpa,pii,eu-ai-act,hipaa,unified,codeflow]",
+]
+
+# Development
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+isongraph-mcp = "isongraph_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/isongraph/isongraph"
+Documentation = "https://isongraph.readthedocs.io"
+Repository = "https://github.com/isongraph/isongraph"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/isongraph_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,721 @@
+# =============================================================================
+# STIX GDPR Policy Pack - EU General Data Protection Regulation
+# =============================================================================
+# Comprehensive policies for GDPR compliance
+# Covers: Personal data processing, consent, rights, cross-border transfers
+# Version: 1.0.0
+# Regulation: EU GDPR (2016/679)
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: LAWFUL BASIS FOR PROCESSING (Articles 6-10)
+# =============================================================================
+
+# GDPR-001: Require consent for personal data processing
+- policy_id: gdpr-consent-required
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "process_personal_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.consent_obtained"
+      op: "neq"
+      value: true
+    - field: "context.lawful_basis"
+      op: "not_in"
+      value: ["contract", "legal_obligation", "vital_interests", "public_task", "legitimate_interests"]
+  decision: DENY
+  reason_code: GDPR_NO_LAWFUL_BASIS
+  controls:
+    - "GDPR:Art6"
+    - "NIST:PR.DS-5"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "WARN"
+        include_actor: true
+  active: true
+
+# GDPR-002: Block processing of special category data without explicit consent
+- policy_id: gdpr-special-category-data
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "process_*"
+    resource_type: special_category_data
+  conditions:
+    - field: "context.explicit_consent"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_SPECIAL_CATEGORY_NO_CONSENT
+  controls:
+    - "GDPR:Art9"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-003: Sensitive data includes racial/ethnic origin, health, biometric
+- policy_id: gdpr-sensitive-racial-ethnic
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: racial_ethnic_data
+  decision: DENY
+  reason_code: GDPR_SENSITIVE_CATEGORY_BLOCKED
+  controls:
+    - "GDPR:Art9.1"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-004: Political opinions processing restricted
+- policy_id: gdpr-political-opinions
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: political_data
+  conditions:
+    - field: "context.explicit_consent"
+      op: "neq"
+      value: true
+    - field: "context.substantial_public_interest"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_POLITICAL_DATA_BLOCKED
+  controls:
+    - "GDPR:Art9.2"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-005: Criminal conviction data restricted
+- policy_id: gdpr-criminal-data
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: AI_AGENT
+    action: "*"
+    resource_type: criminal_offense_data
+  conditions:
+    - field: "context.official_authority"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_CRIMINAL_DATA_NO_AUTHORITY
+  controls:
+    - "GDPR:Art10"
+  regulations:
+    - "GDPR"
+  active: true
+
+# =============================================================================
+# SECTION 2: DATA SUBJECT RIGHTS (Articles 12-23)
+# =============================================================================
+
+# GDPR-006: Allow data access requests (Right of Access)
+- policy_id: gdpr-right-of-access
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: DATA_SUBJECT
+    action: "access_own_data"
+    resource_type: personal_data
+  conditions:
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_RIGHT_OF_ACCESS
+  controls:
+    - "GDPR:Art15"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        retention_days: 365
+  active: true
+
+# GDPR-007: Allow data rectification requests
+- policy_id: gdpr-right-to-rectification
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: DATA_SUBJECT
+    action: "rectify_own_data"
+    resource_type: personal_data
+  conditions:
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_RIGHT_TO_RECTIFICATION
+  controls:
+    - "GDPR:Art16"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: NOTIFY_DPO
+      params:
+        reason: "Data rectification request"
+  active: true
+
+# GDPR-008: Allow erasure requests (Right to be Forgotten)
+- policy_id: gdpr-right-to-erasure
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: DATA_SUBJECT
+    action: "delete_own_data"
+    resource_type: personal_data
+  conditions:
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+    - field: "context.legal_hold"
+      op: "neq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_RIGHT_TO_ERASURE
+  controls:
+    - "GDPR:Art17"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+    - type: NOTIFY_DPO
+  active: true
+
+# GDPR-009: Block erasure if legal retention required
+- policy_id: gdpr-erasure-legal-hold
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "delete_*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.legal_hold"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_LEGAL_RETENTION_REQUIRED
+  controls:
+    - "GDPR:Art17.3"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-010: Allow data portability requests
+- policy_id: gdpr-right-to-portability
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: DATA_SUBJECT
+    action: "export_own_data"
+    resource_type: personal_data
+  conditions:
+    - field: "actor.verified"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_RIGHT_TO_PORTABILITY
+  controls:
+    - "GDPR:Art20"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: DATA_FORMAT
+      params:
+        format: "machine_readable"
+        structured: true
+  active: true
+
+# GDPR-011: Allow objection to processing
+- policy_id: gdpr-right-to-object
+  version: "1.0.0"
+  priority: 50
+  scope:
+    actor_type: DATA_SUBJECT
+    action: "object_to_processing"
+    resource_type: personal_data
+  decision: ALLOW
+  reason_code: GDPR_RIGHT_TO_OBJECT
+  controls:
+    - "GDPR:Art21"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: STOP_PROCESSING
+      params:
+        immediate: true
+  active: true
+
+# =============================================================================
+# SECTION 3: CROSS-BORDER DATA TRANSFERS (Articles 44-49)
+# =============================================================================
+
+# GDPR-012: Block transfers to inadequate third countries
+- policy_id: gdpr-transfer-inadequate-country
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: "*"
+    action: "transfer_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.destination_country"
+      op: "not_in"
+      value: ["EEA", "adequacy_decision"]
+    - field: "context.transfer_mechanism"
+      op: "not_in"
+      value: ["SCCs", "BCRs", "explicit_consent", "derogation"]
+  decision: DENY
+  reason_code: GDPR_INADEQUATE_TRANSFER_SAFEGUARDS
+  controls:
+    - "GDPR:Art44"
+    - "GDPR:Art45"
+    - "GDPR:Art46"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-013: Allow transfers with Standard Contractual Clauses
+- policy_id: gdpr-transfer-with-sccs
+  version: "1.0.0"
+  priority: 30
+  scope:
+    actor_type: "*"
+    action: "transfer_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.transfer_mechanism"
+      op: "eq"
+      value: "SCCs"
+    - field: "context.sccs_signed"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_TRANSFER_WITH_SCCS
+  controls:
+    - "GDPR:Art46.2c"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_destination: true
+  active: true
+
+# GDPR-014: Allow transfers with Binding Corporate Rules
+- policy_id: gdpr-transfer-with-bcrs
+  version: "1.0.0"
+  priority: 30
+  scope:
+    actor_type: "*"
+    action: "transfer_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.transfer_mechanism"
+      op: "eq"
+      value: "BCRs"
+    - field: "context.bcrs_approved"
+      op: "eq"
+      value: true
+  decision: ALLOW
+  reason_code: GDPR_TRANSFER_WITH_BCRS
+  controls:
+    - "GDPR:Art47"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-015: Block transfers to US without supplementary measures (post-Schrems II)
+- policy_id: gdpr-transfer-us-schrems
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: "*"
+    action: "transfer_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.destination_country"
+      op: "eq"
+      value: "US"
+    - field: "context.supplementary_measures"
+      op: "neq"
+      value: true
+    - field: "context.dpf_certified"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_US_TRANSFER_NO_SAFEGUARDS
+  controls:
+    - "GDPR:Art46"
+  regulations:
+    - "GDPR"
+  active: true
+
+# =============================================================================
+# SECTION 4: DATA PROTECTION BY DESIGN (Article 25)
+# =============================================================================
+
+# GDPR-016: Enforce data minimization
+- policy_id: gdpr-data-minimization
+  version: "1.0.0"
+  priority: 40
+  scope:
+    actor_type: AI_AGENT
+    action: "collect_*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.purpose_specified"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_PURPOSE_NOT_SPECIFIED
+  controls:
+    - "GDPR:Art5.1c"
+    - "GDPR:Art25"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-017: Enforce purpose limitation
+- policy_id: gdpr-purpose-limitation
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: AI_AGENT
+    action: "process_personal_data"
+    resource_type: personal_data
+  conditions:
+    - field: "context.compatible_purpose"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_INCOMPATIBLE_PURPOSE
+  controls:
+    - "GDPR:Art5.1b"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-018: Require pseudonymization for analytics
+- policy_id: gdpr-pseudonymization-analytics
+  version: "1.0.0"
+  priority: 30
+  scope:
+    actor_type: AI_AGENT
+    action: "analyze_*"
+    resource_type: personal_data
+  decision: ALLOW
+  reason_code: GDPR_ANALYTICS_ALLOWED
+  controls:
+    - "GDPR:Art25.1"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: DATA_MASK
+      params:
+        technique: "pseudonymization"
+        reversible: true
+  active: true
+
+# GDPR-019: Enforce storage limitation
+- policy_id: gdpr-storage-limitation
+  version: "1.0.0"
+  priority: 25
+  scope:
+    actor_type: "*"
+    action: "store_*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.retention_period_defined"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_NO_RETENTION_PERIOD
+  controls:
+    - "GDPR:Art5.1e"
+  regulations:
+    - "GDPR"
+  active: true
+
+# =============================================================================
+# SECTION 5: SECURITY (Article 32)
+# =============================================================================
+
+# GDPR-020: Require encryption for personal data at rest
+- policy_id: gdpr-encryption-at-rest
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "store_*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.encryption_enabled"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_ENCRYPTION_REQUIRED
+  controls:
+    - "GDPR:Art32.1a"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-021: Require encryption for personal data in transit
+- policy_id: gdpr-encryption-in-transit
+  version: "1.0.0"
+  priority: 20
+  scope:
+    actor_type: "*"
+    action: "transfer_*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.tls_enabled"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_TLS_REQUIRED
+  controls:
+    - "GDPR:Art32.1a"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-022: Log all personal data access
+- policy_id: gdpr-access-logging
+  version: "1.0.0"
+  priority: 100
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: personal_data
+  decision: ALLOW
+  reason_code: GDPR_ACCESS_LOGGED
+  controls:
+    - "GDPR:Art32.1d"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: AUDIT_LOG
+      params:
+        level: "INFO"
+        include_actor: true
+        include_action: true
+        include_resource: true
+        retention_days: 365
+  active: true
+
+# =============================================================================
+# SECTION 6: BREACH NOTIFICATION (Articles 33-34)
+# =============================================================================
+
+# GDPR-023: Trigger breach notification on high-risk access
+- policy_id: gdpr-breach-detection
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "bulk_export"
+    resource_type: personal_data
+  conditions:
+    - field: "context.records_count"
+      op: "gt"
+      value: 1000
+  decision: QUARANTINE
+  reason_code: GDPR_POTENTIAL_BREACH
+  controls:
+    - "GDPR:Art33"
+    - "GDPR:Art34"
+  regulations:
+    - "GDPR"
+  approval:
+    required: true
+    approver_roles: ["dpo", "security_officer"]
+    timeout_hours: 1
+  active: true
+
+# GDPR-024: Require DPO approval for mass data operations
+- policy_id: gdpr-mass-operation-approval
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "*_bulk"
+    resource_type: personal_data
+  decision: QUARANTINE
+  reason_code: GDPR_MASS_OPERATION_REVIEW
+  controls:
+    - "GDPR:Art37"
+  regulations:
+    - "GDPR"
+  approval:
+    required: true
+    approver_roles: ["dpo"]
+    timeout_hours: 24
+  active: true
+
+# =============================================================================
+# SECTION 7: CHILDREN'S DATA (Article 8)
+# =============================================================================
+
+# GDPR-025: Block processing of children's data without parental consent
+- policy_id: gdpr-childrens-data
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: childrens_data
+  conditions:
+    - field: "context.parental_consent"
+      op: "neq"
+      value: true
+    - field: "context.age_verified"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_CHILDRENS_DATA_NO_CONSENT
+  controls:
+    - "GDPR:Art8"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-026: Age verification requirement for information society services
+- policy_id: gdpr-age-verification
+  version: "1.0.0"
+  priority: 15
+  scope:
+    actor_type: AI_AGENT
+    action: "provide_service"
+    resource_type: information_society_service
+  conditions:
+    - field: "context.age_gate_implemented"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_AGE_VERIFICATION_REQUIRED
+  controls:
+    - "GDPR:Art8.2"
+  regulations:
+    - "GDPR"
+  active: true
+
+# =============================================================================
+# SECTION 8: AUTOMATED DECISION MAKING (Article 22)
+# =============================================================================
+
+# GDPR-027: Restrict fully automated decisions with legal effects
+- policy_id: gdpr-automated-decision-making
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "automated_decision"
+    resource_type: "*"
+  conditions:
+    - field: "context.legal_effect"
+      op: "eq"
+      value: true
+    - field: "context.human_review"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_AUTOMATED_DECISION_BLOCKED
+  controls:
+    - "GDPR:Art22"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-028: Require explainability for automated processing
+- policy_id: gdpr-automated-explainability
+  version: "1.0.0"
+  priority: 30
+  scope:
+    actor_type: AI_AGENT
+    action: "automated_decision"
+    resource_type: personal_data
+  decision: ALLOW
+  reason_code: GDPR_AUTOMATED_WITH_EXPLANATION
+  controls:
+    - "GDPR:Art22.3"
+  regulations:
+    - "GDPR"
+  obligations:
+    - type: PROVIDE_EXPLANATION
+      params:
+        include_logic: true
+        include_significance: true
+        include_consequences: true
+  active: true
+
+# =============================================================================
+# SECTION 9: DATA PROTECTION IMPACT ASSESSMENT (Article 35)
+# =============================================================================
+
+# GDPR-029: Require DPIA for high-risk processing
+- policy_id: gdpr-dpia-required
+  version: "1.0.0"
+  priority: 10
+  scope:
+    actor_type: AI_AGENT
+    action: "systematic_processing"
+    resource_type: personal_data
+  conditions:
+    - field: "context.dpia_completed"
+      op: "neq"
+      value: true
+    - field: "context.high_risk"
+      op: "eq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_DPIA_REQUIRED
+  controls:
+    - "GDPR:Art35"
+  regulations:
+    - "GDPR"
+  active: true
+
+# GDPR-030: Require prior consultation for residual high risk
+- policy_id: gdpr-prior-consultation
+  version: "1.0.0"
+  priority: 5
+  scope:
+    actor_type: "*"
+    action: "*"
+    resource_type: personal_data
+  conditions:
+    - field: "context.residual_high_risk"
+      op: "eq"
+      value: true
+    - field: "context.supervisory_authority_consulted"
+      op: "neq"
+      value: true
+  decision: DENY
+  reason_code: GDPR_PRIOR_CONSULTATION_REQUIRED
+  controls:
+    - "GDPR:Art36"
+  regulations:
+    - "GDPR"
+  active: true

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "schema-mcp"
+version = "1.0.0"
+description = "Schema generation and validation MCP server for ISONGraph"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "schema", "validation", "generation", "isongraph"]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "ison-graph>=1.0.0"]
+
+[project.scripts]
+schema-mcp = "schema_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/schema_mcp"]

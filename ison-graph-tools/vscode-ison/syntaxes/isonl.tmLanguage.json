@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ISONL",
+  "scopeName": "source.isonl",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#operation" },
+    { "include": "#node-reference" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#null" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.isonl",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "operation": {
+      "patterns": [
+        {
+          "name": "keyword.control.operation.isonl",
+          "match": "^(\\+|\\-|~)"
+        },
+        {
+          "name": "entity.name.type.node.isonl",
+          "match": "^(\\+|\\-|~)n\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s+[a-zA-Z0-9_-]+"
+        },
+        {
+          "name": "entity.name.type.edge.isonl",
+          "match": "^(\\+|\\-|~)e\\s+[A-Z_][A-Z0-9_]*"
+        }
+      ]
+    },
+    "node-reference": {
+      "patterns": [
+        {
+          "name": "constant.other.reference.isonl",
+          "match": ":[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.isonl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.isonl",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.isonl",
+          "match": "-?\\d+(\\.\\d+)?"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.isonl",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "null": {
+      "patterns": [
+        {
+          "name": "constant.language.null.isonl",
+          "match": "\\b(null|nil)\\b"
+        }
+      ]
+    }
+  }
+}

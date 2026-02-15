@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ison-cache-mcp"
+version = "1.0.0"
+description = "Token-efficient caching MCP server - shared data layer for AI agents"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "cache", "llm", "token-efficient", "ison", "ai-agent"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "ison-cache>=1.0.0",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=4.0.0"]
+sqlite = ["aiosqlite>=0.19.0"]
+embeddings = ["numpy>=1.24.0"]
+all = ["ison-cache-mcp[redis,sqlite,embeddings]"]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=23.0.0", "ruff>=0.1.0"]
+
+[project.scripts]
+ison-cache-mcp = "ison_cache_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ison_cache_mcp"]

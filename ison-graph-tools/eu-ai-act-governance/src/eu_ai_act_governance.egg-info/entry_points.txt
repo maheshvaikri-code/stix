@@ -1,0 +1,3 @@
+[console_scripts]
+aiact = eu_ai_act_governance.cli:main
+eu-ai-act = eu_ai_act_governance.cli:main

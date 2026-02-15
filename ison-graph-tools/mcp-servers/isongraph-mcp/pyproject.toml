@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "isongraph-mcp"
+version = "1.0.0"
+description = "Core graph operations MCP server for ISONGraph - the foundation layer"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "graph", "isongraph", "ison", "property-graph", "traversal", "isonql"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "ison-graph>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=23.0.0", "ruff>=0.1.0"]
+
+[project.scripts]
+isongraph-mcp = "isongraph_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/isongraph_mcp"]

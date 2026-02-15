@@ -1,0 +1,180 @@
+# =============================================================================
+# STIX Docker Compose - Development Environment
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # STIX Enforcer - Authorization Decision Engine
+  # ---------------------------------------------------------------------------
+  enforcer:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: enforcer
+    container_name: stix-enforcer
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=stage
+      - PORT=3001
+      - LOG_LEVEL=debug
+      - LOG_PRETTY=true
+      - POLICY_SERVICE_URL=http://policy:3002
+      - EVIDENCE_SERVICE_URL=http://evidence:3003
+      - APPROVALS_SERVICE_URL=http://approvals:3004
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DEFAULT_FAIL_MODE=CLOSED
+    depends_on:
+      - policy
+      - evidence
+      - approvals
+      - redis
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # STIX Policy Service - Policy Evaluation Engine
+  # ---------------------------------------------------------------------------
+  policy:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: policy
+    container_name: stix-policy
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=stage
+      - PORT=3002
+      - LOG_LEVEL=debug
+      - LOG_PRETTY=true
+      - STORAGE_TYPE=postgres
+      - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
+      - POLICY_DIRECTORY=/app/policies
+    volumes:
+      - ../../policies/examples:/app/policies:ro
+    depends_on:
+      - postgres
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # STIX Evidence Service - Tamper-Evident Audit Trail
+  # ---------------------------------------------------------------------------
+  evidence:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: evidence
+    container_name: stix-evidence
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=stage
+      - PORT=3003
+      - LOG_LEVEL=debug
+      - LOG_PRETTY=true
+      - STORAGE_TYPE=postgres
+      - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
+      - SIGNING_ENABLED=true
+    depends_on:
+      - postgres
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # STIX Approvals Service - Human-in-the-Loop Workflows
+  # ---------------------------------------------------------------------------
+  approvals:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: approvals
+    container_name: stix-approvals
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=stage
+      - PORT=3004
+      - LOG_LEVEL=debug
+      - LOG_PRETTY=true
+      - STORAGE_TYPE=postgres
+      - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
+      - APPROVAL_TIMEOUT_HOURS=24
+    depends_on:
+      - postgres
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Redis - Caching Layer
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: stix-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - Durable Storage Layer
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: stix-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=stix
+      - POSTGRES_USER=stix
+      - POSTGRES_PASSWORD=stix
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stix -d stix"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  stix-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:

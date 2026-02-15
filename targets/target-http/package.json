@@ -1,0 +1,44 @@
+{
+  "name": "@stix/target-http",
+  "version": "0.1.0",
+  "description": "STIX Target HTTP - Protected HTTP/API calling service",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "stix-target-http": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stix/shared": "workspace:*",
+    "@stix/target-verifier": "workspace:*",
+    "fastify": "^4.25.0",
+    "@fastify/cors": "^8.5.0",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "undici": "^6.3.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.7.0",
+    "vitest": "^1.1.0"
+  },
+  "keywords": [
+    "stix",
+    "target",
+    "http",
+    "api",
+    "protected",
+    "authorization"
+  ]
+}

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccpa-governance"
+version = "1.0.0"
+description = "CCPA/CPRA Compliance Governance using ISONGraph"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mahesh Vaikri"}
+]
+keywords = [
+    "ccpa",
+    "cpra",
+    "california",
+    "privacy",
+    "data-protection",
+    "compliance",
+    "governance",
+    "isongraph",
+    "consumer-rights",
+    "do-not-sell"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Security",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "ison-graph>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+]
+
+[project.scripts]
+ccpa-governance = "ccpa_governance.cli:main"
+
+[project.urls]
+Homepage = "https://www.ison.dev"
+Repository = "https://github.com/maheshvaikri-code/ison"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

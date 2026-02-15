@@ -1,0 +1,164 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ISON",
+  "scopeName": "source.ison",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#graph-header" },
+    { "include": "#section-header" },
+    { "include": "#schema-header" },
+    { "include": "#column-header" },
+    { "include": "#node-reference" },
+    { "include": "#edge-reference" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#null" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.ison",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "graph-header": {
+      "patterns": [
+        {
+          "name": "keyword.control.graph.ison",
+          "match": "^graph\\s+\\w+"
+        },
+        {
+          "name": "keyword.control.graph.ison",
+          "match": "^(directed|undirected)$"
+        }
+      ]
+    },
+    "section-header": {
+      "patterns": [
+        {
+          "name": "entity.name.section.nodes.ison",
+          "match": "^nodes\\.[a-zA-Z_][a-zA-Z0-9_]*",
+          "captures": {
+            "0": { "name": "keyword.control.section.ison" }
+          }
+        },
+        {
+          "name": "entity.name.section.edges.ison",
+          "match": "^edges\\.[A-Z_][A-Z0-9_]*",
+          "captures": {
+            "0": { "name": "keyword.control.section.ison" }
+          }
+        }
+      ]
+    },
+    "schema-header": {
+      "patterns": [
+        {
+          "name": "storage.type.schema.ison",
+          "match": "^schema\\.[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        {
+          "name": "storage.type.constraint.ison",
+          "match": "\\b(required|optional|unique|min|max|pattern|enum)\\b"
+        }
+      ]
+    },
+    "column-header": {
+      "patterns": [
+        {
+          "name": "variable.parameter.column.ison",
+          "match": "^[a-zA-Z_][a-zA-Z0-9_]*(\\s+[a-zA-Z_][a-zA-Z0-9_]*)*$"
+        }
+      ]
+    },
+    "node-reference": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.node-ref.ison",
+          "match": ":[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z0-9_-]+",
+          "captures": {
+            "0": { "name": "constant.other.reference.ison" }
+          }
+        }
+      ]
+    },
+    "edge-reference": {
+      "patterns": [
+        {
+          "name": "keyword.operator.edge.ison",
+          "match": "-\\[?[A-Z_][A-Z0-9_]*\\]?->"
+        },
+        {
+          "name": "keyword.operator.edge.ison",
+          "match": "<-\\[?[A-Z_][A-Z0-9_]*\\]?-"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.ison",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.ison",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.ison",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.ison",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.ison",
+          "match": "-?\\d+\\.\\d+([eE][+-]?\\d+)?"
+        },
+        {
+          "name": "constant.numeric.integer.ison",
+          "match": "-?\\d+"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.ison",
+          "match": "\\b(true|false|True|False|TRUE|FALSE)\\b"
+        }
+      ]
+    },
+    "null": {
+      "patterns": [
+        {
+          "name": "constant.language.null.ison",
+          "match": "\\b(null|nil|none|None|NULL)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.ison",
+          "match": "[=<>!]+"
+        }
+      ]
+    }
+  }
+}

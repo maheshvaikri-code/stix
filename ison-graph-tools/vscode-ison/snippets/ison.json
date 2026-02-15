@@ -1,0 +1,127 @@
+{
+  "Graph Header": {
+    "prefix": "graph",
+    "body": [
+      "graph ${1:name}",
+      "${2|directed,undirected|}",
+      "",
+      "nodes.${3:type}",
+      "id ${4:properties}",
+      "${5:data}",
+      ""
+    ],
+    "description": "Create a new ISON graph"
+  },
+  "Node Section": {
+    "prefix": "nodes",
+    "body": [
+      "nodes.${1:type}",
+      "id ${2:property1} ${3:property2}",
+      "${4:id1} ${5:value1} ${6:value2}",
+      ""
+    ],
+    "description": "Create a nodes section"
+  },
+  "Edge Section": {
+    "prefix": "edges",
+    "body": [
+      "edges.${1:RELATIONSHIP}",
+      "source target${2: property}",
+      ":${3:type}:${4:id} :${5:type}:${6:id}${7: value}",
+      ""
+    ],
+    "description": "Create an edges section"
+  },
+  "Node Reference": {
+    "prefix": "ref",
+    "body": ":${1:type}:${2:id}",
+    "description": "Create a node reference"
+  },
+  "Person Node": {
+    "prefix": "person",
+    "body": [
+      "nodes.person",
+      "id name age role",
+      "${1:id} ${2:name} ${3:age} ${4:role}",
+      ""
+    ],
+    "description": "Create a person node section"
+  },
+  "Company Node": {
+    "prefix": "company",
+    "body": [
+      "nodes.company",
+      "id name industry size",
+      "${1:id} ${2:name} ${3:industry} ${4:size}",
+      ""
+    ],
+    "description": "Create a company node section"
+  },
+  "KNOWS Edge": {
+    "prefix": "knows",
+    "body": [
+      "edges.KNOWS",
+      "source target since",
+      ":person:${1:id1} :person:${2:id2} ${3:year}",
+      ""
+    ],
+    "description": "Create a KNOWS relationship"
+  },
+  "WORKS_AT Edge": {
+    "prefix": "worksat",
+    "body": [
+      "edges.WORKS_AT",
+      "source target role since",
+      ":person:${1:personId} :company:${2:companyId} ${3:role} ${4:year}",
+      ""
+    ],
+    "description": "Create a WORKS_AT relationship"
+  },
+  "Social Graph Template": {
+    "prefix": "social",
+    "body": [
+      "graph social",
+      "directed",
+      "",
+      "nodes.person",
+      "id name age",
+      "${1:alice} ${2:Alice} ${3:30}",
+      "${4:bob} ${5:Bob} ${6:25}",
+      "",
+      "nodes.company",
+      "id name",
+      "${7:techcorp} ${8:TechCorp}",
+      "",
+      "edges.KNOWS",
+      "source target",
+      ":person:${1:alice} :person:${4:bob}",
+      "",
+      "edges.WORKS_AT",
+      "source target",
+      ":person:${1:alice} :company:${7:techcorp}",
+      ""
+    ],
+    "description": "Create a social network graph template"
+  },
+  "Knowledge Graph Template": {
+    "prefix": "knowledge",
+    "body": [
+      "graph knowledge",
+      "directed",
+      "",
+      "nodes.concept",
+      "id name description",
+      "${1:ml} \"${2:Machine Learning}\" \"${3:AI subfield}\"",
+      "",
+      "nodes.paper",
+      "id title year",
+      "${4:paper1} \"${5:Title}\" ${6:2024}",
+      "",
+      "edges.RELATED_TO",
+      "source target",
+      ":concept:${1:ml} :paper:${4:paper1}",
+      ""
+    ],
+    "description": "Create a knowledge graph template"
+  }
+}

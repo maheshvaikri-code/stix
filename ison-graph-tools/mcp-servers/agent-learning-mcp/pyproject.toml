@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-learning-mcp"
+version = "1.0.0"
+description = "Agent learning and retraining MCP server"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "agent", "learning", "experience", "mistakes", "skills", "retraining"]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "agent-learning>=0.1.0", "ison-graph>=1.0.0"]
+
+[project.scripts]
+agent-learning-mcp = "agent_learning_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_learning_mcp"]

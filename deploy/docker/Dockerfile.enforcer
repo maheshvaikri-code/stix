@@ -1,0 +1,28 @@
+# STIX Enforcer Service Dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml tsconfig.base.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY services/enforcer/package.json ./services/enforcer/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/shared/ ./packages/shared/
+COPY services/enforcer/ ./services/enforcer/
+
+RUN pnpm run build --filter @stix/shared --filter @stix/enforcer
+
+FROM node:20-alpine
+WORKDIR /app
+RUN apk add --no-cache curl && addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder --chown=nodejs:nodejs /app/services/enforcer/dist ./services/enforcer/dist
+COPY --from=builder --chown=nodejs:nodejs /app/services/enforcer/package.json ./services/enforcer/
+USER nodejs
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=10s CMD curl -f http://localhost:3001/health || exit 1
+CMD ["node", "services/enforcer/dist/index.js"]

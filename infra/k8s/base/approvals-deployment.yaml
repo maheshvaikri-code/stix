@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stix-approvals
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: approvals
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stix
+        app.kubernetes.io/component: approvals
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: stix-approvals
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: approvals
+          image: ghcr.io/stix-ai/stix-approvals:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: APPROVALS_PORT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: LOG_LEVEL
+            - name: LOG_FORMAT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: LOG_FORMAT
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stix-secrets
+                  key: REDIS_URL
+            - name: APPROVAL_DEFAULT_TIMEOUT_HOURS
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: APPROVAL_DEFAULT_TIMEOUT_HOURS
+            - name: METRICS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: METRICS_ENABLED
+            - name: METRICS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: METRICS_PORT
+            - name: TRACING_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: stix-config
+                  key: TRACING_ENABLED
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability:4318"
+            # Notification configuration
+            - name: NOTIFICATION_WEBHOOK_URL
+              value: ""
+            - name: NOTIFICATION_SLACK_WEBHOOK
+              value: ""
+            - name: NOTIFICATION_EMAIL_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/component: approvals
+                topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stix-approvals
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8082
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stix-approvals
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals

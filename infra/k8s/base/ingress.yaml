@@ -1,0 +1,86 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stix-ingress
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: ingress
+  annotations:
+    # NGINX Ingress annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" always;
+
+    # cert-manager annotation for automatic TLS
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - stix.example.com
+        - api.stix.example.com
+      secretName: stix-tls
+  rules:
+    # Dashboard
+    - host: stix.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stix-dashboard
+                port:
+                  number: 3000
+
+    # API Gateway
+    - host: api.stix.example.com
+      http:
+        paths:
+          - path: /v1/authorize
+            pathType: Prefix
+            backend:
+              service:
+                name: stix-enforcer
+                port:
+                  number: 8080
+          - path: /v1/evidence
+            pathType: Prefix
+            backend:
+              service:
+                name: stix-evidence
+                port:
+                  number: 8081
+          - path: /v1/outcome
+            pathType: Prefix
+            backend:
+              service:
+                name: stix-evidence
+                port:
+                  number: 8081
+          - path: /v1/approvals
+            pathType: Prefix
+            backend:
+              service:
+                name: stix-approvals
+                port:
+                  number: 8082
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: stix-enforcer
+                port:
+                  number: 8080

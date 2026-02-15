@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build outputs
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+.next/
+**/.next/
+out/
+**/out/
+
+# local env / secrets
+.env
+.env.*
+!.env.example
+
+# logs and runtime files
+*.log
+*.pid
+*.seed
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# test artifacts / temp
+.tmp*
+*.tmp
+artifacts/
+
+# python cache (subprojects)
+__pycache__/
+*.pyc
+.venv/
+
+# project-local noise
+_Development_Notes/*.log
+_Development_Notes/*.err.log
+nul

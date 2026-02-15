@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stix.dev/schemas/ApprovalTicket.json",
+  "title": "ApprovalTicket",
+  "description": "STIX approval workflow ticket",
+  "type": "object",
+  "required": [
+    "ticket_id",
+    "trace_id",
+    "status",
+    "actor",
+    "action",
+    "resource",
+    "context",
+    "required_count",
+    "require_justification",
+    "decisions",
+    "created_at",
+    "expires_at"
+  ],
+  "properties": {
+    "ticket_id": {
+      "type": "string",
+      "pattern": "^appr_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Unique approval ticket identifier"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^stix_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Associated trace identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"],
+      "description": "Current approval status"
+    },
+    "actor": {
+      "$ref": "#/$defs/Actor"
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Action being approved"
+    },
+    "resource": {
+      "$ref": "#/$defs/Resource"
+    },
+    "context": {
+      "$ref": "#/$defs/Context"
+    },
+    "required_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Number of approvals required"
+    },
+    "required_role": {
+      "type": "string",
+      "maxLength": 255,
+      "description": "Required approver role"
+    },
+    "require_justification": {
+      "type": "boolean",
+      "description": "Whether justification is required"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ApprovalDecision"
+      },
+      "description": "Approval decisions made"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Ticket creation time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Ticket expiration time"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Resolution time"
+    }
+  },
+  "$defs": {
+    "Actor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "type": { "type": "string", "enum": ["HUMAN", "SERVICE", "AI_AGENT", "JOB", "SYSTEM"] },
+        "role": { "type": "string", "maxLength": 255 },
+        "tenant": { "type": "string", "maxLength": 255 },
+        "attributes": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "Resource": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "id": { "type": "string", "maxLength": 1024 },
+        "classification": { "type": "array", "items": { "type": "string", "maxLength": 64 } },
+        "attributes": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "Context": {
+      "type": "object",
+      "required": ["env"],
+      "properties": {
+        "env": { "type": "string", "enum": ["dev", "test", "stage", "prod"] },
+        "purpose": { "type": "string", "maxLength": 1024 },
+        "run_id": { "type": "string", "maxLength": 255 },
+        "session_id": { "type": "string", "maxLength": 255 },
+        "ticket_id": { "type": "string", "maxLength": 255 },
+        "jurisdiction": { "type": "string", "maxLength": 64 },
+        "tags": { "type": "array", "items": { "type": "string", "maxLength": 64 } },
+        "attributes": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "ApprovalDecision": {
+      "type": "object",
+      "required": ["approver_id", "decision", "timestamp"],
+      "properties": {
+        "approver_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Approver identifier"
+        },
+        "approver_role": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Approver role"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["APPROVE", "REJECT"],
+          "description": "Approval decision"
+        },
+        "justification": {
+          "type": "string",
+          "maxLength": 4096,
+          "description": "Justification text"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Decision timestamp"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "compliance-mcp"
+version = "1.0.0"
+description = "Unified regulatory compliance MCP server - GDPR, CCPA, HIPAA, EU AI Act, PII"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "compliance", "gdpr", "ccpa", "hipaa", "eu-ai-act", "pii", "privacy"]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "unified-governance>=0.1.0", "gdpr-governance>=0.1.0", "ccpa-governance>=0.1.0"]
+
+[project.scripts]
+compliance-mcp = "compliance_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/compliance_mcp"]

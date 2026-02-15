@@ -1,0 +1,3 @@
+[console_scripts]
+hipaa = medical_governance.cli:main
+medical-governance = medical_governance.cli:main

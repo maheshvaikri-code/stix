@@ -1,0 +1,161 @@
+# ServiceMonitor for Prometheus Operator
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stix-enforcer
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: enforcer
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - stix
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stix-evidence
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: evidence
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: evidence
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - stix
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stix-approvals
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stix
+      app.kubernetes.io/component: approvals
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - stix
+
+---
+# PrometheusRule for STIX alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: stix-alerts
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    release: prometheus
+spec:
+  groups:
+    - name: stix-enforcer
+      rules:
+        - alert: StixEnforcerHighLatency
+          expr: histogram_quantile(0.99, rate(stix_authorization_duration_seconds_bucket[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "STIX Enforcer high latency"
+            description: "99th percentile authorization latency is above 500ms for 5 minutes"
+
+        - alert: StixEnforcerHighDenyRate
+          expr: rate(stix_authorization_total{decision="DENY"}[5m]) / rate(stix_authorization_total[5m]) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "STIX Enforcer high deny rate"
+            description: "More than 50% of authorizations are being denied for 10 minutes"
+
+        - alert: StixEnforcerDown
+          expr: up{job="stix-enforcer"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "STIX Enforcer is down"
+            description: "STIX Enforcer instance {{ $labels.instance }} is not responding"
+
+        - alert: StixEnforcerHighErrorRate
+          expr: rate(stix_authorization_errors_total[5m]) / rate(stix_authorization_total[5m]) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "STIX Enforcer high error rate"
+            description: "More than 1% of authorizations are failing for 5 minutes"
+
+    - name: stix-evidence
+      rules:
+        - alert: StixEvidenceWriteFailure
+          expr: rate(stix_evidence_write_errors_total[5m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "STIX Evidence write failures"
+            description: "Evidence service is failing to write audit records"
+
+        - alert: StixEvidenceChainBroken
+          expr: stix_evidence_chain_verification_failures_total > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "STIX Evidence chain integrity failure"
+            description: "Hash chain verification has failed - potential data tampering detected"
+
+    - name: stix-approvals
+      rules:
+        - alert: StixApprovalsBacklog
+          expr: stix_approvals_pending_count > 100
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "STIX Approvals backlog"
+            description: "More than 100 approvals pending for 30 minutes"
+
+        - alert: StixApprovalsExpiring
+          expr: stix_approvals_expiring_soon_count > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "STIX Approvals expiring soon"
+            description: "Multiple approvals are about to expire"

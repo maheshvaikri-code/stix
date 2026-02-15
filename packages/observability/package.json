@@ -1,0 +1,64 @@
+{
+  "name": "@stix/observability",
+  "version": "0.1.0",
+  "description": "STIX Observability - Metrics and tracing for STIX services",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./metrics": {
+      "types": "./dist/metrics.d.ts",
+      "import": "./dist/metrics.mjs",
+      "require": "./dist/metrics.js"
+    },
+    "./tracing": {
+      "types": "./dist/tracing.d.ts",
+      "import": "./dist/tracing.mjs",
+      "require": "./dist/tracing.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/metrics.ts src/tracing.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts src/metrics.ts src/tracing.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.46.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.46.0",
+    "@opentelemetry/instrumentation-fastify": "^0.33.0",
+    "@opentelemetry/instrumentation-http": "^0.46.0",
+    "@opentelemetry/instrumentation-pg": "^0.38.0",
+    "@opentelemetry/resources": "^1.18.0",
+    "@opentelemetry/sdk-metrics": "^1.18.0",
+    "@opentelemetry/sdk-node": "^0.46.0",
+    "@opentelemetry/sdk-trace-node": "^1.18.0",
+    "@opentelemetry/semantic-conventions": "^1.18.0",
+    "prom-client": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "fastify": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "fastify": {
+      "optional": true
+    }
+  }
+}

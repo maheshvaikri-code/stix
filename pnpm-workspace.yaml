@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "services/*"
+  - "tools/*"
+  - "cli"
+  - "dashboard"
+  - "targets/*"

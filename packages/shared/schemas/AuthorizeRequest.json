@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stix.dev/schemas/AuthorizeRequest.json",
+  "title": "AuthorizeRequest",
+  "description": "Request to authorize an action in the STIX policy enforcement system",
+  "type": "object",
+  "required": ["actor", "action", "resource", "context"],
+  "properties": {
+    "actor": {
+      "$ref": "#/$defs/Actor"
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "The action being requested"
+    },
+    "resource": {
+      "$ref": "#/$defs/Resource"
+    },
+    "context": {
+      "$ref": "#/$defs/Context"
+    },
+    "tool_call": {
+      "$ref": "#/$defs/ToolCall"
+    }
+  },
+  "$defs": {
+    "Actor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Unique identifier for the actor"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["HUMAN", "SERVICE", "AI_AGENT", "JOB", "SYSTEM"],
+          "description": "Type of actor"
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Role of the actor"
+        },
+        "tenant": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Tenant the actor belongs to"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Additional actor attributes"
+        }
+      }
+    },
+    "Resource": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Type of resource"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Resource identifier"
+        },
+        "classification": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": "Data classification labels"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Additional resource attributes"
+        }
+      }
+    },
+    "Context": {
+      "type": "object",
+      "required": ["env"],
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": ["dev", "test", "stage", "prod"],
+          "description": "Environment"
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Purpose of the action"
+        },
+        "run_id": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Run or execution ID"
+        },
+        "session_id": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Session identifier"
+        },
+        "ticket_id": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Associated ticket ID"
+        },
+        "jurisdiction": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Legal jurisdiction"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": "Tags for categorization"
+        },
+        "signals": {
+          "$ref": "#/$defs/DetectionSignals"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "DetectionSignals": {
+      "type": "object",
+      "properties": {
+        "piiDetected": {
+          "type": "boolean",
+          "description": "PII detected in content"
+        },
+        "phiDetected": {
+          "type": "boolean",
+          "description": "PHI detected in content"
+        },
+        "pciDetected": {
+          "type": "boolean",
+          "description": "PCI data detected"
+        },
+        "secretsDetected": {
+          "type": "boolean",
+          "description": "Secrets or credentials detected"
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "ToolCall": {
+      "type": "object",
+      "required": ["tool"],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Tool being invoked"
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Risk tier of the tool"
+        },
+        "args_summary": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Summary of tool arguments"
+        }
+      }
+    }
+  }
+}

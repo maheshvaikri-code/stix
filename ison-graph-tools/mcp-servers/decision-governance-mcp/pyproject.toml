@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "decision-governance-mcp"
+version = "1.0.0"
+description = "Decision Traces, Audit Trail, Provenance, Identity & Policy MCP server"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = [
+    "mcp", "decision-trace", "audit-trail", "provenance", "identity", "policy",
+    "governance", "isongraph", "traceability", "compliance", "accountability"
+]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "decision-governance>=1.0.0"]
+
+[project.scripts]
+decision-governance-mcp = "decision_governance_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/decision_governance_mcp"]

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-governance-mcp"
+version = "1.0.0"
+description = "Comprehensive governance MCP server for AI agents - 15 domains"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mahesh Vaikri" }]
+keywords = ["mcp", "governance", "agent", "policy", "authority", "compliance", "ethics"]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "agent-governance>=1.0.0"]
+
+[project.scripts]
+agent-governance-mcp = "agent_governance_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_governance_mcp"]

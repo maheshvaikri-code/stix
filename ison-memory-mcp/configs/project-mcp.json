@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "project-memory": {
+      "command": "ison-memory-mcp",
+      "args": ["serve"],
+      "env": {
+        "ISON_MEMORY_STORAGE__PATH": "./.ison-memory/project.db",
+        "ISON_MEMORY_STORAGE__MAX_ENTITIES": "10000",
+        "ISON_MEMORY_COMPACTION__AUTO_COMPACT_ENABLED": "true"
+      }
+    }
+  }
+}

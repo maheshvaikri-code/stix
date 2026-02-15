@@ -1,0 +1,28 @@
+[package]
+name = "ison-parser"
+version = "1.0.0"
+edition = "2021"
+authors = ["ISON Project"]
+description = "ISON (Interchange Simple Object Notation) parser for Rust"
+license = "MIT"
+repository = "https://github.com/somewheresystems/ison"
+documentation = "https://docs.rs/ison-parser"
+readme = "README.md"
+keywords = ["ison", "parser", "json", "llm", "serialization"]
+categories = ["parser-implementations", "encoding", "data-structures"]
+
+[dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[features]
+default = ["serde"]
+serde = ["dep:serde", "dep:serde_json"]
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"

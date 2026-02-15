@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stix.dev/schemas/PolicyArtifact.json",
+  "title": "PolicyArtifact",
+  "description": "STIX policy definition artifact",
+  "type": "object",
+  "required": ["policy_id", "version", "scope", "decision", "reason_code"],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Unique policy identifier"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$",
+      "description": "Semantic version"
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 500,
+      "description": "Policy priority (lower = higher precedence)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Human-readable description"
+    },
+    "scope": {
+      "$ref": "#/$defs/PolicyScope"
+    },
+    "conditions": {
+      "$ref": "#/$defs/PolicyConditions"
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["ALLOW", "DENY", "QUARANTINE"],
+      "description": "Policy decision"
+    },
+    "reason_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Machine-readable reason code"
+    },
+    "obligations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Obligation"
+      },
+      "description": "Required obligations"
+    },
+    "approval": {
+      "$ref": "#/$defs/PolicyApprovalConfig"
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Security control mappings"
+    },
+    "regulations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Regulatory compliance mappings"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Categorization tags"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether policy is active"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "PolicyScope": {
+      "type": "object",
+      "required": ["actor_type", "action", "resource_type"],
+      "properties": {
+        "actor_type": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": ["HUMAN", "SERVICE", "AI_AGENT", "JOB", "SYSTEM"]
+            },
+            {
+              "type": "string",
+              "const": "*"
+            }
+          ],
+          "description": "Actor type filter (* for all)"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Action pattern (supports wildcards)"
+        },
+        "resource_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Resource type pattern"
+        }
+      }
+    },
+    "PolicyConditions": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": ["dev", "test", "stage", "prod"],
+          "description": "Environment condition"
+        },
+        "require_signal": {
+          "type": "object",
+          "properties": {
+            "piiDetected": { "type": "boolean" },
+            "phiDetected": { "type": "boolean" },
+            "pciDetected": { "type": "boolean" },
+            "secretsDetected": { "type": "boolean" }
+          },
+          "description": "Required detection signals"
+        },
+        "require_resource_attr": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Required resource attributes"
+        },
+        "require_actor_attr": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Required actor attributes"
+        },
+        "require_tenant_match": {
+          "type": "boolean",
+          "description": "Require actor.tenant == resource.tenant"
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Custom conditions"
+        }
+      }
+    },
+    "Obligation": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "REDACT_FIELDS",
+            "MASK_PII",
+            "WATERMARK_OUTPUT",
+            "REQUIRE_APPROVAL",
+            "RATE_LIMIT",
+            "LOG_LEVEL",
+            "ENCRYPT_TRANSIT",
+            "DUAL_CONTROL",
+            "TIME_LIMIT",
+            "NOTIFY"
+          ]
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "PolicyApprovalConfig": {
+      "type": "object",
+      "properties": {
+        "approver_role": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Required approver role"
+        },
+        "require_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of approvals required"
+        },
+        "require_ticket": {
+          "type": "boolean",
+          "description": "Require ticket reference"
+        },
+        "require_justification": {
+          "type": "boolean",
+          "description": "Require written justification"
+        },
+        "timeout_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "description": "Approval timeout in hours"
+        }
+      }
+    }
+  }
+}

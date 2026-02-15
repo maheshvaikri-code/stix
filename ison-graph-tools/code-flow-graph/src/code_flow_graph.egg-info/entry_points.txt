@@ -1,0 +1,3 @@
+[console_scripts]
+cfg = code_flow_graph.cli:main
+code-flow-graph = code_flow_graph.cli:main

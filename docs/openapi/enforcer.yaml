@@ -1,0 +1,412 @@
+openapi: 3.1.0
+info:
+  title: STIX Enforcer API
+  description: |
+    Authorization decision engine for AI agent actions.
+    The Enforcer evaluates requests against policies and returns decisions
+    with proof tokens for enforcement.
+  version: 0.1.0
+  contact:
+    name: STIX Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://enforcer.stix.example.com
+    description: Production
+
+tags:
+  - name: Authorization
+    description: Core authorization endpoints
+  - name: Health
+    description: Health and status endpoints
+
+paths:
+  /authorize:
+    post:
+      tags:
+        - Authorization
+      summary: Request authorization for an action
+      description: |
+        Evaluates the request against configured policies and returns
+        a decision (ALLOW, DENY, QUARANTINE) with a proof token.
+      operationId: authorize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizeRequest'
+            example:
+              actor:
+                id: "agent-123"
+                type: "AI_AGENT"
+                attributes:
+                  model: "gpt-4"
+                  org: "acme"
+              action:
+                name: "send_email"
+                params:
+                  to: "user@example.com"
+                  subject: "Hello"
+              resource:
+                type: "email"
+                id: "email-456"
+              context:
+                environment: "production"
+                risk_tier: "MEDIUM"
+      responses:
+        '200':
+          description: Authorization decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /authorize/batch:
+    post:
+      tags:
+        - Authorization
+      summary: Batch authorization requests
+      description: Process multiple authorization requests in a single call
+      operationId: authorizeBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - requests
+              properties:
+                requests:
+                  type: array
+                  maxItems: 100
+                  items:
+                    $ref: '#/components/schemas/AuthorizeRequest'
+      responses:
+        '200':
+          description: Batch authorization decisions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuthorizeResponse'
+
+  /outcome:
+    post:
+      tags:
+        - Authorization
+      summary: Report action outcome
+      description: |
+        Report the outcome of an authorized action.
+        Used for audit trail and obligation verification.
+      operationId: reportOutcome
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutcomeRequest'
+      responses:
+        '200':
+          description: Outcome recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trace_id:
+                    type: string
+                  recorded:
+                    type: boolean
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      operationId: readyCheck
+      responses:
+        '200':
+          description: Service is ready
+        '503':
+          description: Service is not ready
+
+components:
+  schemas:
+    AuthorizeRequest:
+      type: object
+      required:
+        - actor
+        - action
+        - resource
+      properties:
+        actor:
+          $ref: '#/components/schemas/Actor'
+        action:
+          $ref: '#/components/schemas/Action'
+        resource:
+          $ref: '#/components/schemas/Resource'
+        context:
+          $ref: '#/components/schemas/Context'
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+
+    AuthorizeResponse:
+      type: object
+      required:
+        - trace_id
+        - decision
+        - reason_code
+        - timestamp
+      properties:
+        trace_id:
+          type: string
+          description: Unique trace identifier
+          example: "stix_12345678-1234-1234-1234-123456789abc"
+        decision:
+          type: string
+          enum: [ALLOW, DENY, QUARANTINE]
+          description: Authorization decision
+        reason_code:
+          type: string
+          description: Machine-readable reason code
+          example: "POLICY_ALLOWED"
+        policy:
+          type: object
+          properties:
+            id:
+              type: string
+            version:
+              type: string
+            hash:
+              type: string
+        obligations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Obligation'
+        approval:
+          $ref: '#/components/schemas/ApprovalInfo'
+        proof_token:
+          type: string
+          description: JWT proof token for enforcement
+        timestamp:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    Actor:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+          description: Unique actor identifier
+        type:
+          type: string
+          enum: [AI_AGENT, HUMAN, SERVICE, SYSTEM]
+        attributes:
+          type: object
+          additionalProperties: true
+
+    Action:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Action name (e.g., send_email, db_write)
+        params:
+          type: object
+          additionalProperties: true
+
+    Resource:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: Resource type
+        id:
+          type: string
+          description: Resource identifier
+        attributes:
+          type: object
+          additionalProperties: true
+
+    Context:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [development, test, staging, production]
+        risk_tier:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        session_id:
+          type: string
+        correlation_id:
+          type: string
+        detection_signals:
+          type: object
+          properties:
+            anomaly_score:
+              type: number
+            prompt_injection:
+              type: boolean
+
+    ToolCall:
+      type: object
+      properties:
+        name:
+          type: string
+        args:
+          type: object
+
+    Obligation:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - AUDIT_LOG
+            - DATA_MASK
+            - REDACT_FIELD
+            - RATE_LIMIT
+            - NOTIFY
+            - REQUIRE_MFA
+            - TIME_LIMIT
+            - ENCRYPTION
+        params:
+          type: object
+          additionalProperties: true
+
+    ApprovalInfo:
+      type: object
+      properties:
+        required:
+          type: boolean
+        ticket_id:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, EXPIRED]
+        approvers:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    OutcomeRequest:
+      type: object
+      required:
+        - trace_id
+        - status
+      properties:
+        trace_id:
+          type: string
+        status:
+          type: string
+          enum: [SUCCESS, FAILURE, PARTIAL, SKIPPED]
+        details:
+          type: object
+          additionalProperties: true
+        obligations_applied:
+          type: array
+          items:
+            type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        service:
+          type: string
+        version:
+          type: string
+        uptime_ms:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              healthy:
+                type: boolean
+              message:
+                type: string
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: STIX proof token
+
+security:
+  - bearerAuth: []

@@ -1,0 +1,17 @@
+# RudraDB Sample Output
+# Graph query result for users and their teams
+
+object.team
+id name budget
+10 "AI Research" 500000
+
+table.users
+id name email team active
+101 Mahesh mahesh@example.com :10 true
+102 "Anil Rao" anil@example.com :10 true
+103 Riya riya@example.com :10 false
+
+table.projects
+id name lead members.count
+1 "MAPLE Agent" :101 5
+2 RudraDB :102 3

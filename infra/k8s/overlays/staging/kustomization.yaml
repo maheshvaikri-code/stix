@@ -1,0 +1,109 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: stix-staging
+
+namespace: stix-staging
+
+resources:
+  - ../../base
+
+namePrefix: staging-
+
+patches:
+  # Reduce replicas for staging
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: stix-enforcer
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: stix-evidence
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: stix-approvals
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: stix-dashboard
+
+  # Reduce resources for staging
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "50m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "128Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+    target:
+      kind: Deployment
+
+  # Reduce HPA for staging
+  - patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+    target:
+      kind: HorizontalPodAutoscaler
+
+  # Update ingress hosts for staging
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: stix-staging.example.com
+      - op: replace
+        path: /spec/rules/1/host
+        value: api-staging.stix.example.com
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - stix-staging.example.com
+          - api-staging.stix.example.com
+    target:
+      kind: Ingress
+      name: stix-ingress
+
+configMapGenerator:
+  - name: stix-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=debug
+      - RATE_LIMIT_MAX=100
+      - TRACING_SAMPLE_RATE=1.0
+
+images:
+  - name: ghcr.io/stix-ai/stix-enforcer
+    newTag: staging
+  - name: ghcr.io/stix-ai/stix-evidence
+    newTag: staging
+  - name: ghcr.io/stix-ai/stix-approvals
+    newTag: staging
+  - name: ghcr.io/stix-ai/stix-dashboard
+    newTag: staging
+
+commonLabels:
+  environment: staging

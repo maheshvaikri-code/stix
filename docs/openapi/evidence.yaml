@@ -1,0 +1,461 @@
+openapi: 3.1.0
+info:
+  title: STIX Evidence API
+  description: |
+    Immutable evidence storage with hash-chain integrity.
+    Records authorization decisions and action outcomes for audit and compliance.
+  version: 0.1.0
+  contact:
+    name: STIX Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3002
+    description: Local development
+  - url: https://evidence.stix.example.com
+    description: Production
+
+tags:
+  - name: Events
+    description: Evidence event management
+  - name: Bundles
+    description: Evidence bundle operations
+  - name: Verification
+    description: Chain verification endpoints
+  - name: Health
+    description: Health and status endpoints
+
+paths:
+  /events:
+    post:
+      tags:
+        - Events
+      summary: Record an evidence event
+      description: Append a new event to the evidence chain
+      operationId: recordEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceEvent'
+      responses:
+        '201':
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event_id:
+                    type: string
+                  event_hash:
+                    type: string
+                  prev_hash:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Events
+      summary: Query evidence events
+      operationId: queryEvents
+      parameters:
+        - name: trace_id
+          in: query
+          schema:
+            type: string
+          description: Filter by trace ID
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+          description: Filter by actor ID
+        - name: event_type
+          in: query
+          schema:
+            type: string
+          description: Filter by event type
+        - name: decision
+          in: query
+          schema:
+            type: string
+            enum: [ALLOW, DENY, QUARANTINE]
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Events found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvidenceEvent'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /events/{event_id}:
+    get:
+      tags:
+        - Events
+      summary: Get a specific event
+      operationId: getEvent
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceEvent'
+        '404':
+          description: Event not found
+
+  /traces/{trace_id}:
+    get:
+      tags:
+        - Events
+      summary: Get all events for a trace
+      description: Returns the complete event chain for a trace ID
+      operationId: getTrace
+      parameters:
+        - name: trace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trace found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trace_id:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvidenceEvent'
+                  chain_valid:
+                    type: boolean
+                  first_event:
+                    type: string
+                    format: date-time
+                  last_event:
+                    type: string
+                    format: date-time
+
+  /bundles:
+    post:
+      tags:
+        - Bundles
+      summary: Create an evidence bundle
+      description: Package events into a signed bundle for export
+      operationId: createBundle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trace_ids
+              properties:
+                trace_ids:
+                  type: array
+                  items:
+                    type: string
+                format:
+                  type: string
+                  enum: [json, jsonl]
+                  default: json
+                include_signatures:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Bundle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceBundle'
+
+  /bundles/{bundle_id}:
+    get:
+      tags:
+        - Bundles
+      summary: Get an evidence bundle
+      operationId: getBundle
+      parameters:
+        - name: bundle_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bundle found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceBundle'
+
+  /verify/chain:
+    post:
+      tags:
+        - Verification
+      summary: Verify hash chain integrity
+      operationId: verifyChain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trace_id:
+                  type: string
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EvidenceEvent'
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  events_checked:
+                    type: integer
+                  first_invalid:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        event_id:
+                          type: string
+                        error:
+                          type: string
+
+  /verify/signature:
+    post:
+      tags:
+        - Verification
+      summary: Verify event signature
+      operationId: verifySignature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceEvent'
+      responses:
+        '200':
+          description: Signature verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  key_id:
+                    type: string
+                  algorithm:
+                    type: string
+                  error:
+                    type: string
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    EvidenceEvent:
+      type: object
+      required:
+        - event_type
+        - trace_id
+        - timestamp
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum: [DECISION, OUTCOME, APPROVAL, CHAIN_START]
+        trace_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        decision:
+          type: string
+          enum: [ALLOW, DENY, QUARANTINE]
+        reason_code:
+          type: string
+        actor:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+        action:
+          type: object
+          properties:
+            name:
+              type: string
+            params:
+              type: object
+        resource:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+        context:
+          type: object
+        policy:
+          type: object
+          properties:
+            id:
+              type: string
+            version:
+              type: string
+            hash:
+              type: string
+        obligations:
+          type: array
+          items:
+            type: object
+        integrity:
+          type: object
+          properties:
+            prev_hash:
+              type: string
+            event_hash:
+              type: string
+            signature:
+              type: string
+        outcome:
+          type: object
+          properties:
+            status:
+              type: string
+            details:
+              type: object
+
+    EvidenceBundle:
+      type: object
+      properties:
+        bundle_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        trace_ids:
+          type: array
+          items:
+            type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceEvent'
+        metadata:
+          type: object
+          properties:
+            total_events:
+              type: integer
+            first_timestamp:
+              type: string
+            last_timestamp:
+              type: string
+        bundle_hash:
+          type: string
+        signature:
+          type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        version:
+          type: string
+        uptime_ms:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

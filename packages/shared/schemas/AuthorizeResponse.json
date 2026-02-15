@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stix.dev/schemas/AuthorizeResponse.json",
+  "title": "AuthorizeResponse",
+  "description": "Response from the STIX policy enforcement engine",
+  "type": "object",
+  "required": ["decision", "reason_code", "trace_id", "policy", "obligations"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["ALLOW", "DENY", "QUARANTINE"],
+      "description": "Authorization decision"
+    },
+    "reason_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Machine-readable reason code"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^stix_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "description": "Unique trace identifier"
+    },
+    "explanation": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Human-readable explanation"
+    },
+    "policy": {
+      "$ref": "#/$defs/PolicyRef"
+    },
+    "obligations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Obligation"
+      },
+      "description": "Required obligations to fulfill"
+    },
+    "approval": {
+      "oneOf": [
+        { "$ref": "#/$defs/ApprovalInfo" },
+        { "type": "null" }
+      ],
+      "description": "Approval information if QUARANTINE"
+    },
+    "proof_token": {
+      "type": "string",
+      "description": "JWT proof token for enforcement"
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Security controls applied"
+    },
+    "regulations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "description": "Applicable regulations"
+    }
+  },
+  "$defs": {
+    "PolicyRef": {
+      "type": "object",
+      "required": ["id", "version", "hash"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Policy identifier"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$",
+          "description": "Semantic version"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 hash of policy"
+        }
+      }
+    },
+    "Obligation": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "REDACT_FIELDS",
+            "MASK_PII",
+            "WATERMARK_OUTPUT",
+            "REQUIRE_APPROVAL",
+            "RATE_LIMIT",
+            "LOG_LEVEL",
+            "ENCRYPT_TRANSIT",
+            "DUAL_CONTROL",
+            "TIME_LIMIT",
+            "NOTIFY"
+          ],
+          "description": "Type of obligation"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Obligation parameters"
+        }
+      }
+    },
+    "ApprovalInfo": {
+      "type": "object",
+      "required": ["required"],
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "description": "Whether approval is required"
+        },
+        "ticket_id": {
+          "type": "string",
+          "pattern": "^appr_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+          "description": "Approval ticket ID"
+        },
+        "approver_role": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Required approver role"
+        },
+        "require_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of approvals required"
+        },
+        "require_justification": {
+          "type": "boolean",
+          "description": "Whether justification is required"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Approval expiration time"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,312 @@
+# Default deny all ingress and egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Allow DNS resolution for all pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# Enforcer network policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stix-enforcer-policy
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: enforcer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: enforcer
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from other STIX services
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: stix
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Evidence service
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: evidence
+      ports:
+        - protocol: TCP
+          port: 8081
+    # Allow to Approvals service
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: approvals
+      ports:
+        - protocol: TCP
+          port: 8082
+    # Allow to OTEL collector
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - protocol: TCP
+          port: 4318
+
+---
+# Evidence network policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stix-evidence-policy
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: evidence
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: evidence
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8081
+    # Allow from other STIX services
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: stix
+      ports:
+        - protocol: TCP
+          port: 8081
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to OTEL collector
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - protocol: TCP
+          port: 4318
+
+---
+# Approvals network policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stix-approvals-policy
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: approvals
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: approvals
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8082
+    # Allow from other STIX services
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: stix
+      ports:
+        - protocol: TCP
+          port: 8082
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to OTEL collector
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - protocol: TCP
+          port: 4318
+    # Allow external notifications (Slack, webhooks)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Dashboard network policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stix-dashboard-policy
+  namespace: stix
+  labels:
+    app.kubernetes.io/name: stix
+    app.kubernetes.io/component: dashboard
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: dashboard
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    # Allow to Enforcer
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: enforcer
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow to Evidence
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: evidence
+      ports:
+        - protocol: TCP
+          port: 8081
+    # Allow to Approvals
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: approvals
+      ports:
+        - protocol: TCP
+          port: 8082
