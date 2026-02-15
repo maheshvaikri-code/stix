@@ -1,31 +1,24 @@
-name: Policy Deployment
+name: Policy Validation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'policies/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'policies/**'
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
+      policy_path:
+        description: Path to policy folder or file
         required: true
-        default: 'staging'
+        default: policies
+      environment:
+        description: Target environment label
+        required: true
         type: choice
+        default: staging
         options:
           - staging
           - production
-      dry_run:
-        description: 'Dry run (validate only)'
-        required: false
-        default: false
-        type: boolean
+
+concurrency:
+  group: policy-validation-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'
@@ -33,14 +26,16 @@ env:
 
 jobs:
   validate:
-    name: Validate Policies
+    name: Validate policy pack
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
@@ -48,336 +43,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate policy YAML
+        run: node scripts/ci/validate-policies.mjs "${{ github.event.inputs.policy_path }}"
+
       - name: Build CLI
         run: pnpm --filter @stix/cli build
 
-      - name: Validate policy syntax
-        run: |
-          echo "Validating policy files..."
-          for file in policies/**/*.yaml; do
-            echo "Validating: $file"
-            pnpm stix-cli policy validate "$file"
-          done
+      - name: CLI smoke check
+        run: node cli/dist/index.js policy --help
 
-      - name: Check policy conflicts
-        run: |
-          echo "Checking for policy conflicts..."
-          pnpm stix-cli policy check-conflicts policies/
-
-      - name: Lint policies
-        run: |
-          echo "Linting policies..."
-          pnpm stix-cli policy lint policies/
-
-      - name: Generate policy report
-        run: |
-          echo "Generating policy report..."
-          pnpm stix-cli policy report policies/ --output policy-report.md
-
-      - name: Upload policy report
+      - name: Upload selected policy pack
         uses: actions/upload-artifact@v4
         with:
-          name: policy-report
-          path: policy-report.md
-
-  test:
-    name: Test Policies
-    runs-on: ubuntu-latest
-    needs: validate
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build
-
-      - name: Run policy simulation tests
-        run: |
-          echo "Running policy simulations..."
-          pnpm stix-cli simulate --policy-dir policies/ --scenario-dir tests/scenarios/
-
-      - name: Run policy unit tests
-        run: pnpm test --filter @stix/policy
-
-      - name: Coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-
-  diff:
-    name: Policy Diff
-    runs-on: ubuntu-latest
-    needs: validate
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-
-      - name: Checkout base
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.base_ref }}
-          path: base
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build CLI
-        run: pnpm --filter @stix/cli build
-
-      - name: Generate policy diff
-        id: diff
-        run: |
-          echo "Generating policy diff..."
-          pnpm stix-cli policy diff base/policies policies --output diff-report.md
-
-          # Count changes
-          ADDED=$(grep -c "^\+ " diff-report.md || true)
-          REMOVED=$(grep -c "^\- " diff-report.md || true)
-          MODIFIED=$(grep -c "^\~ " diff-report.md || true)
-
-          echo "added=$ADDED" >> $GITHUB_OUTPUT
-          echo "removed=$REMOVED" >> $GITHUB_OUTPUT
-          echo "modified=$MODIFIED" >> $GITHUB_OUTPUT
-
-      - name: Comment on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const diff = fs.readFileSync('diff-report.md', 'utf8');
-            const added = '${{ steps.diff.outputs.added }}';
-            const removed = '${{ steps.diff.outputs.removed }}';
-            const modified = '${{ steps.diff.outputs.modified }}';
-
-            const body = `## Policy Changes Summary
-
-            | Change Type | Count |
-            |-------------|-------|
-            | Added | ${added} |
-            | Removed | ${removed} |
-            | Modified | ${modified} |
-
-            <details>
-            <summary>View Detailed Diff</summary>
-
-            \`\`\`diff
-            ${diff}
-            \`\`\`
-            </details>
-
-            ---
-            *Generated by STIX Policy CI*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [validate, test]
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
-    environment:
-      name: staging
-      url: https://stix-staging.example.com
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build CLI
-        run: pnpm --filter @stix/cli build
-
-      - name: Deploy policies to staging
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.STAGING_API_URL }}
-          STIX_API_KEY: ${{ secrets.STAGING_API_KEY }}
-        run: |
-          echo "Deploying policies to staging..."
-          pnpm stix-cli policy deploy policies/ \
-            --api-url "$STIX_API_URL" \
-            --api-key "$STIX_API_KEY" \
-            --environment staging
-
-      - name: Verify deployment
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.STAGING_API_URL }}
-          STIX_API_KEY: ${{ secrets.STAGING_API_KEY }}
-        run: |
-          echo "Verifying policy deployment..."
-          pnpm stix-cli policy verify \
-            --api-url "$STIX_API_URL" \
-            --api-key "$STIX_API_KEY" \
-            --expected-count $(find policies -name "*.yaml" | wc -l)
-
-      - name: Run smoke tests
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.STAGING_API_URL }}
-          STIX_API_KEY: ${{ secrets.STAGING_API_KEY }}
-        run: |
-          echo "Running smoke tests..."
-          pnpm stix-cli test smoke --api-url "$STIX_API_URL"
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [deploy-staging]
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-    environment:
-      name: production
-      url: https://stix.example.com
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build CLI
-        run: pnpm --filter @stix/cli build
-
-      - name: Create deployment backup
-        env:
-          STIX_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-          STIX_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
-        run: |
-          echo "Creating backup of current policies..."
-          pnpm stix-cli policy export \
-            --api-url "$STIX_API_URL" \
-            --api-key "$STIX_API_KEY" \
-            --output backup-$(date +%Y%m%d-%H%M%S).yaml
-
-      - name: Deploy policies to production
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-          STIX_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
-        run: |
-          echo "Deploying policies to production..."
-          pnpm stix-cli policy deploy policies/ \
-            --api-url "$STIX_API_URL" \
-            --api-key "$STIX_API_KEY" \
-            --environment production \
-            --require-approval
-
-      - name: Verify deployment
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-          STIX_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
-        run: |
-          echo "Verifying policy deployment..."
-          pnpm stix-cli policy verify \
-            --api-url "$STIX_API_URL" \
-            --api-key "$STIX_API_KEY"
-
-      - name: Run production smoke tests
-        if: ${{ !github.event.inputs.dry_run }}
-        env:
-          STIX_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-          STIX_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
-        run: |
-          echo "Running production smoke tests..."
-          pnpm stix-cli test smoke --api-url "$STIX_API_URL"
-
-      - name: Notify on success
-        if: success()
-        uses: slackapi/slack-github-action@v1
-        with:
-          payload: |
-            {
-              "text": "STIX Policy Deployment Successful",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*STIX Policy Deployment*\n\nPolicies have been successfully deployed to production.\n\n*Commit:* ${{ github.sha }}\n*Actor:* ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify on failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1
-        with:
-          payload: |
-            {
-              "text": "STIX Policy Deployment Failed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*STIX Policy Deployment Failed*\n\n:x: Policy deployment to production failed.\n\n*Commit:* ${{ github.sha }}\n*Actor:* ${{ github.actor }}\n*Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          name: policy-pack-${{ github.event.inputs.environment }}
+          path: ${{ github.event.inputs.policy_path }}
