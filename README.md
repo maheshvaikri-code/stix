@@ -358,6 +358,12 @@ pnpm ops:replay-smoke
 pnpm ops:slo-signoff -- --month YYYY-MM --output artifacts/ops/slo-signoff-YYYY-MM.md
 ```
 
+- Local quarterly attestation packet generation:
+
+```bash
+pnpm ops:attestation-packet -- --quarter YYYY-QN --output artifacts/ops/STIX_Quarterly_Attestation_YYYY-QN.md
+```
+
 ## Enterprise Readiness Status
 
 Current status is documented in `_Development_Notes/STIX_Enterprise_Readiness.md`.
@@ -385,6 +391,8 @@ High-level summary:
 - Key rotation runbook: `_Development_Notes/STIX_Key_Rotation_Runbook.md`
 - Branch protection checklist: `_Development_Notes/STIX_Branch_Protection_Checklist.md`
 - Operational cadence runbook: `_Development_Notes/STIX_Operational_Cadence_Runbook.md`
+- Monthly sign-off packet (example): `_Development_Notes/operations/2026-02/STIX_Monthly_SLO_Signoff_2026-02.md`
+- Quarterly attestation packet (example): `_Development_Notes/operations/2026-Q1/STIX_Quarterly_Attestation_2026-Q1.md`
 
 ## Contributing
 

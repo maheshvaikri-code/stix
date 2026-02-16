@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 9 * * 1'
     - cron: '0 10 1 * *'
+    - cron: '0 11 1 */3 *'
   workflow_dispatch:
     inputs:
       run_perf:
@@ -23,6 +24,11 @@ on:
         description: Concurrency for perf run
         required: false
         default: '50'
+      run_attestation:
+        description: Generate quarterly attestation packet
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -180,3 +186,44 @@ jobs:
         with:
           name: perf-certification
           path: artifacts/
+
+  quarterly-attestation-packet:
+    name: Quarterly Attestation Packet
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_attestation == true) || github.event.schedule == '0 11 1 */3 *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate quarterly attestation packet
+        run: |
+          year="$(date +'%Y')"
+          month="$(date +'%m')"
+          quarter=$(( (10#$month - 1) / 3 + 1 ))
+          packet_quarter="${year}-Q${quarter}"
+          mkdir -p artifacts/ops
+          node scripts/ops/generate-attestation-packet.mjs \
+            --quarter "$packet_quarter" \
+            --output "artifacts/ops/STIX_Quarterly_Attestation_${packet_quarter}.md"
+
+      - name: Upload quarterly attestation packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarterly-attestation-packet
+          path: artifacts/ops/
