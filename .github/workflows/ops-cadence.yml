@@ -65,19 +65,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build replay and verify tools
+      - name: Verify evidence chain fixture
         run: |
           rm -f packages/shared/tsconfig.tsbuildinfo
           rm -rf packages/shared/dist
           pnpm --filter @stix/shared build
-          pnpm --filter @stix/replay build
           pnpm --filter @stix/verify build
-
-      - name: Verify evidence chain fixture
-        run: pnpm --filter @stix/verify exec node dist/cli.js chain ../../tests/fixtures/ops/replay-events.json
+          test -f packages/shared/dist/constants/index.js
+          pnpm --filter @stix/verify exec node dist/cli.js chain ../../tests/fixtures/ops/replay-events.json
 
       - name: Replay strict drift check fixture
         run: |
+          if [ ! -f packages/shared/dist/constants/index.js ]; then
+            rm -f packages/shared/tsconfig.tsbuildinfo
+            rm -rf packages/shared/dist
+            pnpm --filter @stix/shared build
+          fi
+          pnpm --filter @stix/replay build
           mkdir -p artifacts/ops
           pnpm --filter @stix/replay exec node dist/cli.js run \
             --bundles ../../tests/fixtures/ops/replay-bundle.json \
