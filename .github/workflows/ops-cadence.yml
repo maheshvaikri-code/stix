@@ -32,6 +32,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: ops-cadence-${{ github.ref }}-${{ github.event_name }}
@@ -51,24 +52,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure latest main SHA
+        id: ensure-latest-main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_SHA: ${{ github.sha }}
+        run: |
+          main_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          echo "main_sha=$main_sha" >> "$GITHUB_OUTPUT"
+          if [ "$GH_SHA" = "$main_sha" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Detected stale workflow SHA: $GH_SHA (latest main: $main_sha)."
+          echo "Dispatching a fresh Ops Cadence run on main..."
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GH_REPO/actions/workflows/ops-cadence.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+
+      - name: Skip stale replay run
+        if: steps.ensure-latest-main.outputs.skip == 'true'
+        run: |
+          echo "Stale workflow SHA detected and rerun dispatched on main." >> "$GITHUB_STEP_SUMMARY"
+          echo "This stale run is intentionally skipped." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Setup pnpm
+        if: steps.ensure-latest-main.outputs.skip != 'true'
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
+        if: steps.ensure-latest-main.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.ensure-latest-main.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Replay and verify smoke run
+        if: steps.ensure-latest-main.outputs.skip != 'true'
         run: pnpm ops:replay-smoke
 
       - name: Upload replay and verify artifacts
+        if: steps.ensure-latest-main.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: replay-verify-cadence
