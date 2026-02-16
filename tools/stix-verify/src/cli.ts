@@ -11,15 +11,49 @@ import chalk from 'chalk';
 import ora from 'ora';
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  type EvidenceEvent,
+import { execSync } from 'node:child_process';
+import type { EvidenceEvent } from '@stix/shared';
+
+type SharedModule = typeof import('@stix/shared');
+
+function isMissingSharedDist(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const moduleError = error as { code?: string; url?: string; message?: string };
+  if (moduleError.code !== 'ERR_MODULE_NOT_FOUND') return false;
+
+  const details = `${moduleError.url ?? ''} ${moduleError.message ?? ''}`;
+  return /(?:@stix[\\/])?shared[\\/]dist/i.test(details) || details.includes('packages/shared/dist');
+}
+
+async function loadSharedModule(): Promise<SharedModule> {
+  try {
+    return await import('@stix/shared');
+  } catch (error) {
+    if (!isMissingSharedDist(error)) {
+      throw error;
+    }
+
+    console.warn(
+      chalk.yellow(
+        'Shared dist artifacts were missing. Running `pnpm --filter @stix/shared build` and retrying...'
+      )
+    );
+
+    execSync('pnpm --filter @stix/shared build', { stdio: 'inherit' });
+    return import('@stix/shared');
+  }
+}
+
+const shared = await loadSharedModule();
+const {
   verifyHashChain,
   verifyEvidenceSignature,
   loadPublicKey,
   canonicalize,
   sha256,
   ZERO_HASH,
-} from '@stix/shared';
+} = shared;
 
 const program = new Command();
 
