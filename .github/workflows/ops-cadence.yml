@@ -67,6 +67,8 @@ jobs:
 
       - name: Build replay and verify tools
         run: |
+          rm -f packages/shared/tsconfig.tsbuildinfo
+          rm -rf packages/shared/dist
           pnpm --filter @stix/shared build
           pnpm --filter @stix/replay build
           pnpm --filter @stix/verify build

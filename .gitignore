@@ -42,6 +42,8 @@ Thumbs.db
 .tmp*
 *.tmp
 artifacts/
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 # python cache (subprojects)
 __pycache__/
