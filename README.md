@@ -364,6 +364,28 @@ pnpm ops:slo-signoff -- --month YYYY-MM --output artifacts/ops/slo-signoff-YYYY-
 pnpm ops:attestation-packet -- --quarter YYYY-QN --output artifacts/ops/STIX_Quarterly_Attestation_YYYY-QN.md
 ```
 
+### GitHub Actions verification checklist
+
+Run a fresh cadence check from latest `main`:
+
+1. Open `Actions` in `https://github.com/STIX-Govern/stix`.
+2. Select workflow `Ops Cadence`.
+3. Click `Run workflow`.
+4. Choose branch `main`.
+5. Click `Run workflow`.
+
+Expected result for a standard manual run:
+
+- `Replay and Verify Cadence Check`: success
+- `Monthly SLO Sign-off Packet`: success
+- `Performance Certification (Optional)`: skipped unless `run_perf=true`
+- `Quarterly Attestation Packet`: skipped unless `run_attestation=true`
+- Artifacts: `replay-verify-cadence` and `slo-signoff-packet`
+
+Stale rerun behavior:
+
+- If a run starts from an older commit SHA, `ops-cadence.yml` auto-dispatches a fresh run on latest `main` and skips the stale replay step.
+
 ## Enterprise Readiness Status
 
 Current status is documented in `_Development_Notes/STIX_Enterprise_Readiness.md`.
