@@ -6,6 +6,7 @@ Date: 2026-02-14
 
 - New dashboard page: `/governance`
 - Navigation link added in sidebar.
+- 2026-02-16 update: lifecycle board now API-backed from policy service and governance snapshot can be exported as Markdown.
 
 ## Implemented Workflows
 
@@ -15,6 +16,8 @@ Date: 2026-02-14
    - action class to primary/backup approver mapping + SLA.
 3. Reporting cadence panel:
    - daily/weekly/monthly governance tasks.
+4. Exportable governance snapshot:
+   - one-click Markdown download for audit/governance packet assembly.
 
 ## Files
 
@@ -23,7 +26,5 @@ Date: 2026-02-14
 
 ## Next UX Iteration (Optional)
 
-1. Bind lifecycle cards to real policy APIs.
-2. Add approver delegation CRUD with RBAC.
-3. Add exportable governance reports.
-
+1. Add approver delegation CRUD with RBAC.
+2. Add API-backed governance report history view.

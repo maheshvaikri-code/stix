@@ -1,0 +1,30 @@
+[
+  {
+    "schema_version": "1.0.0",
+    "event_id": "evt_ops_0001",
+    "trace_id": "stix_ops_00000000-0000-0000-0000-000000000001",
+    "timestamp": "2026-02-15T10:00:00.000Z",
+    "event_type": "DECISION",
+    "decision": "ALLOW",
+    "reason_code": "OPS_READ_ALLOWED",
+    "integrity": {
+      "event_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "prev_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "dGVzdA",
+      "key_id": "ops-key"
+    }
+  },
+  {
+    "schema_version": "1.0.0",
+    "event_id": "evt_ops_0002",
+    "trace_id": "stix_ops_00000000-0000-0000-0000-000000000001",
+    "timestamp": "2026-02-15T10:00:01.000Z",
+    "event_type": "OUTCOME",
+    "integrity": {
+      "event_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "prev_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "signature": "dGVzdA",
+      "key_id": "ops-key"
+    }
+  }
+]

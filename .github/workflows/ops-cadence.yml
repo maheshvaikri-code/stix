@@ -1,0 +1,182 @@
+name: Ops Cadence
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+    - cron: '0 10 1 * *'
+  workflow_dispatch:
+    inputs:
+      run_perf:
+        description: Run performance certification profile
+        required: false
+        type: boolean
+        default: false
+      perf_url:
+        description: Base URL for enforcer (required when run_perf=true)
+        required: false
+        default: ''
+      perf_requests:
+        description: Number of requests for perf run
+        required: false
+        default: '2000'
+      perf_concurrency:
+        description: Concurrency for perf run
+        required: false
+        default: '50'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-cadence-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8.12.0'
+
+jobs:
+  replay-verify:
+    name: Replay and Verify Cadence Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build replay and verify tools
+        run: |
+          pnpm --filter @stix/shared build
+          pnpm --filter @stix/replay build
+          pnpm --filter @stix/verify build
+
+      - name: Verify evidence chain fixture
+        run: pnpm --filter @stix/verify exec node dist/cli.js chain ../../tests/fixtures/ops/replay-events.json
+
+      - name: Replay strict drift check fixture
+        run: |
+          mkdir -p artifacts/ops
+          pnpm --filter @stix/replay exec node dist/cli.js run \
+            --bundles ../../tests/fixtures/ops/replay-bundle.json \
+            --policies ../../tests/fixtures/ops/replay-policy.yaml \
+            --strict \
+            --strict-obligations \
+            --format markdown \
+            --output ../../artifacts/ops/replay-report.md
+
+      - name: Upload replay and verify artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-verify-cadence
+          path: artifacts/ops/
+
+  monthly-slo-packet:
+    name: Monthly SLO Sign-off Packet
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 10 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate monthly sign-off template
+        run: |
+          month="$(date +'%Y-%m')"
+          mkdir -p artifacts/ops
+          node scripts/ops/generate-slo-signoff.mjs \
+            --month "$month" \
+            --output "artifacts/ops/slo-signoff-${month}.md"
+
+      - name: Upload SLO sign-off packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: slo-signoff-packet
+          path: artifacts/ops/
+
+  perf-certification:
+    name: Performance Certification (Optional)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_perf == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run performance profile
+        env:
+          PERF_URL: ${{ inputs.perf_url }}
+          PERF_REQUESTS: ${{ inputs.perf_requests }}
+          PERF_CONCURRENCY: ${{ inputs.perf_concurrency }}
+        run: |
+          if [ -z "$PERF_URL" ]; then
+            echo "perf_url is required when run_perf=true"
+            exit 1
+          fi
+          mkdir -p artifacts/perf artifacts/ops
+          pnpm perf:load -- \
+            --url "$PERF_URL" \
+            --requests "$PERF_REQUESTS" \
+            --concurrency "$PERF_CONCURRENCY" \
+            --output artifacts/perf/load-result.json
+          pnpm perf:report -- \
+            --input artifacts/perf/load-result.json \
+            --output artifacts/ops/STIX_Performance_Certification.md
+
+      - name: Generate SLO packet with perf summary
+        run: |
+          month="$(date +'%Y-%m')"
+          node scripts/ops/generate-slo-signoff.mjs \
+            --month "$month" \
+            --perf-input artifacts/perf/load-result.json \
+            --output "artifacts/ops/slo-signoff-${month}.md"
+
+      - name: Upload performance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-certification
+          path: artifacts/

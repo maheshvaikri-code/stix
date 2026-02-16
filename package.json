@@ -34,6 +34,8 @@
     "dr:verify": "powershell -ExecutionPolicy Bypass -File scripts/dr/verify-dr.ps1",
     "perf:load": "node scripts/perf/stix-load.mjs",
     "perf:report": "node scripts/perf/generate-capacity-report.mjs",
+    "ops:slo-signoff": "node scripts/ops/generate-slo-signoff.mjs",
+    "ops:replay-smoke": "pnpm --filter @stix/verify build && pnpm --filter @stix/replay build && pnpm --filter @stix/verify exec node dist/cli.js chain ../../tests/fixtures/ops/replay-events.json && pnpm --filter @stix/replay exec node dist/cli.js run --bundles ../../tests/fixtures/ops/replay-bundle.json --policies ../../tests/fixtures/ops/replay-policy.yaml --strict --strict-obligations --format markdown --output ../../artifacts/ops/replay-report.md",
     "test:all": "pnpm test:unit && pnpm test:integration",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

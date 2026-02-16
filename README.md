@@ -343,6 +343,21 @@ pnpm --filter @stix/verify start -- signature ./path/to/evidence.json --key ./ke
 pnpm --filter @stix/replay start -- --help
 ```
 
+### Operational cadence automation
+
+- Scheduled workflow: `.github/workflows/ops-cadence.yml`
+- Local replay/verify cadence smoke:
+
+```bash
+pnpm ops:replay-smoke
+```
+
+- Local monthly SLO sign-off packet generation:
+
+```bash
+pnpm ops:slo-signoff -- --month YYYY-MM --output artifacts/ops/slo-signoff-YYYY-MM.md
+```
+
 ## Enterprise Readiness Status
 
 Current status is documented in `_Development_Notes/STIX_Enterprise_Readiness.md`.
@@ -369,6 +384,7 @@ High-level summary:
 - Transport security runbook: `_Development_Notes/STIX_Transport_Security_Runbook.md`
 - Key rotation runbook: `_Development_Notes/STIX_Key_Rotation_Runbook.md`
 - Branch protection checklist: `_Development_Notes/STIX_Branch_Protection_Checklist.md`
+- Operational cadence runbook: `_Development_Notes/STIX_Operational_Cadence_Runbook.md`
 
 ## Contributing
 

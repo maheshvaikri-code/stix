@@ -1,0 +1,23 @@
+policy_id: ops-allow-read-service
+version: "1.0.0"
+priority: 10
+description: Allow authenticated internal services to read internal reports.
+scope:
+  actor_type: SERVICE
+  action: "read_*"
+  resource_type: internal_service
+conditions:
+  require_actor_attr:
+    authenticated: true
+    internal: true
+decision: ALLOW
+reason_code: OPS_READ_ALLOWED
+obligations:
+  - type: LOG_LEVEL
+    params:
+      level: info
+controls:
+  - "SOC2:CC6.1"
+regulations:
+  - "INTERNAL:OPS"
+active: true

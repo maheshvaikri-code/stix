@@ -1,6 +1,6 @@
 # STIX Execution Board
 
-Date: 2026-02-15
+Date: 2026-02-16
 
 ## Open Items (v0.1.1 Post-Release Backlog)
 
@@ -8,10 +8,10 @@ Date: 2026-02-15
 |---|---|---|---|---|---|
 | STIX-011-001 | Run full resilience drill (key rotation + evidence outage + restart recovery + strict replay verify) | Platform SRE + Security Platform | 2026-03-06 | DR drill report + key rotation drill log + replay verify output bundle | open |
 | STIX-011-002 | Complete quarterly compliance attestation checklist and sign-off | Compliance + Security + Platform | 2026-03-13 | `_Development_Notes/compliance/STIX_Compliance_Attestation_Checklist.md` updated to done + signatures | open |
-| STIX-011-003 | Publish first monthly SLO/error-budget sign-off packet | Platform SRE | 2026-03-03 | Monthly SLO report with burn-rate summary and sign-off record | open |
-| STIX-011-004 | Execute performance certification on baseline/elevated/saturation profiles in production-like topology | Performance Engineering | 2026-03-10 | `_Development_Notes/STIX_Performance_Certification.md` + `artifacts/perf/load-result.json` | open |
-| STIX-011-005 | Operationalize scheduled replay/verify sample run and drift triage handoff | Platform + Compliance | 2026-03-17 | Scheduled job definition + sample replay report set + drift triage SOP note | open |
-| STIX-011-006 | Governance UX iteration: bind lifecycle/delegation/reporting cards to live APIs and exportable report output | Product + Platform | 2026-03-20 | Updated `dashboard/src/app/governance/page.tsx` + governance API integration notes | open |
+| STIX-011-003 | Publish first monthly SLO/error-budget sign-off packet | Platform SRE | 2026-03-03 | `.github/workflows/ops-cadence.yml`, `scripts/ops/generate-slo-signoff.mjs`, signed packet artifact | in_progress |
+| STIX-011-004 | Execute performance certification on baseline/elevated/saturation profiles in production-like topology | Performance Engineering | 2026-03-10 | `.github/workflows/ops-cadence.yml` perf job + `_Development_Notes/STIX_Performance_Certification.md` + `artifacts/perf/load-result.json` | in_progress |
+| STIX-011-005 | Operationalize scheduled replay/verify sample run and drift triage handoff | Platform + Compliance | 2026-03-17 | `.github/workflows/ops-cadence.yml`, `tests/fixtures/ops/*`, `_Development_Notes/STIX_Operational_Cadence_Runbook.md` | done |
+| STIX-011-006 | Governance UX iteration: bind lifecycle/delegation/reporting cards to live APIs and exportable report output | Product + Platform | 2026-03-20 | `dashboard/src/app/governance/page.tsx` + export snapshot action | done |
 
 ## Closed Items (P0)
 

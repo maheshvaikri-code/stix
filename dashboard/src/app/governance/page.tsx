@@ -1,9 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { Download } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useApprovals, useEvidenceStats, usePolicies } from '@/lib/hooks';
+import type { Policy } from '@/lib/api';
 
 type LifecycleState = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'DEPLOYED';
 
@@ -15,13 +19,6 @@ interface PolicyLifecycleItem {
   state: LifecycleState;
 }
 
-const initialItems: PolicyLifecycleItem[] = [
-  { policyId: 'HIPAA-021', title: 'PHI outbound masking', owner: 'Policy Team', updatedAt: '2026-02-14T10:00:00Z', state: 'DRAFT' },
-  { policyId: 'HIPAA-042', title: 'External recipient quarantine', owner: 'Compliance', updatedAt: '2026-02-14T09:30:00Z', state: 'REVIEW' },
-  { policyId: 'SOC2-007', title: 'Service token strict auth', owner: 'Security', updatedAt: '2026-02-13T19:00:00Z', state: 'APPROVED' },
-  { policyId: 'HIPAA-000', title: 'Default deny baseline', owner: 'Platform', updatedAt: '2026-02-13T16:45:00Z', state: 'DEPLOYED' },
-];
-
 const states: LifecycleState[] = ['DRAFT', 'REVIEW', 'APPROVED', 'DEPLOYED'];
 
 const stateVariant: Record<LifecycleState, 'default' | 'warning' | 'info' | 'success'> = {
@@ -32,40 +29,150 @@ const stateVariant: Record<LifecycleState, 'default' | 'warning' | 'info' | 'suc
 };
 
 function fmtIso(iso: string): string {
-  return new Date(iso).toLocaleString();
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? 'Unknown time' : parsed.toLocaleString();
+}
+
+function deriveLifecycleState(policy: Policy): LifecycleState {
+  if (!policy.enabled) {
+    return policy.updated_at === policy.created_at ? 'DRAFT' : 'REVIEW';
+  }
+
+  const updatedAt = Date.parse(policy.updated_at);
+  if (!Number.isNaN(updatedAt)) {
+    const daysSinceUpdate = (Date.now() - updatedAt) / (1000 * 60 * 60 * 24);
+    if (daysSinceUpdate <= 7) {
+      return 'APPROVED';
+    }
+  }
+
+  return 'DEPLOYED';
+}
+
+function policyToLifecycleItem(policy: Policy): PolicyLifecycleItem {
+  const title = policy.description?.trim()
+    ? policy.description
+    : `${policy.scope.action} -> ${policy.scope.resource_type}`;
+
+  return {
+    policyId: policy.policy_id,
+    title,
+    owner: policy.regulation || 'Policy Team',
+    updatedAt: policy.updated_at || policy.created_at || new Date().toISOString(),
+    state: deriveLifecycleState(policy),
+  };
+}
+
+function downloadText(filename: string, content: string): void {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 export default function GovernancePage() {
-  const [items, setItems] = useState<PolicyLifecycleItem[]>(initialItems);
+  const { data: policyData, isLoading: policyLoading, error: policyError } = usePolicies({
+    page: 1,
+    page_size: 200,
+  });
+  const { data: approvalData } = useApprovals({
+    status: 'PENDING',
+    page: 1,
+    page_size: 200,
+  });
+  const { data: evidenceStats } = useEvidenceStats();
+
+  const items = useMemo(
+    () => (policyData?.data ?? []).map(policyToLifecycleItem),
+    [policyData]
+  );
 
   const grouped = useMemo(() => {
     return states.map((state) => ({
       state,
-      items: items.filter(i => i.state === state).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+      items: items
+        .filter((item) => item.state === state)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     }));
   }, [items]);
 
-  const advance = (policyId: string) => {
-    setItems(prev =>
-      prev.map(item => {
-        if (item.policyId !== policyId) return item;
-        const idx = states.indexOf(item.state);
-        const next = idx < states.length - 1 ? states[idx + 1] : item.state;
-        return { ...item, state: next, updatedAt: new Date().toISOString() };
-      })
-    );
+  const governanceSnapshot = useMemo(() => {
+    const pendingApprovals = approvalData?.data?.length ?? 0;
+    const byDecision = evidenceStats?.by_decision ?? {};
+
+    return {
+      policyTotal: items.length,
+      pendingApprovals,
+      evidenceTotal: evidenceStats?.total ?? 0,
+      denied: byDecision.DENY ?? 0,
+      quarantined: byDecision.QUARANTINE ?? 0,
+      updatedAt: new Date().toISOString(),
+    };
+  }, [approvalData, evidenceStats, items.length]);
+
+  const exportGovernanceReport = () => {
+    const lines = [
+      `# STIX Governance Snapshot`,
+      ``,
+      `Generated: ${governanceSnapshot.updatedAt}`,
+      ``,
+      `## Summary`,
+      ``,
+      `- Policies tracked: ${governanceSnapshot.policyTotal}`,
+      `- Pending approvals: ${governanceSnapshot.pendingApprovals}`,
+      `- Evidence records observed: ${governanceSnapshot.evidenceTotal}`,
+      `- DENY decisions: ${governanceSnapshot.denied}`,
+      `- QUARANTINE decisions: ${governanceSnapshot.quarantined}`,
+      ``,
+      `## Lifecycle Distribution`,
+      ``,
+      ...grouped.map((group) => `- ${group.state}: ${group.items.length}`),
+      ``,
+      `## Recent Policies`,
+      ``,
+      ...items.slice(0, 20).map((item) => `- ${item.policyId} | ${item.state} | ${item.owner} | ${item.updatedAt}`),
+      '',
+    ];
+
+    const stamp = governanceSnapshot.updatedAt.slice(0, 10);
+    downloadText(`stix-governance-snapshot-${stamp}.md`, lines.join('\n'));
   };
+
+  if (policyLoading) {
+    return (
+      <div className="p-6">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Governance</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Policy lifecycle, approval delegation, and reporting cadence.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Governance</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Policy lifecycle, approval delegation, and reporting cadence.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={exportGovernanceReport}>
+          <Download className="h-4 w-4 mr-2" />
+          Export Snapshot
+        </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      {policyError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          Failed to load policy lifecycle from API: {policyError instanceof Error ? policyError.message : 'Unknown error'}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {grouped.map((group) => (
           <Card key={group.state} className="!p-4">
             <div className="flex items-center justify-between mb-3">
@@ -81,16 +188,8 @@ export default function GovernancePage() {
                   </div>
                   <p className="text-sm text-gray-700 mt-1">{item.title}</p>
                   <p className="text-xs text-gray-500 mt-2">
-                    {item.owner} • {fmtIso(item.updatedAt)}
+                    {item.owner} | {fmtIso(item.updatedAt)}
                   </p>
-                  <Button
-                    className="mt-3 w-full"
-                    variant="secondary"
-                    disabled={item.state === 'DEPLOYED'}
-                    onClick={() => advance(item.policyId)}
-                  >
-                    {item.state === 'DEPLOYED' ? 'Final State' : 'Advance State'}
-                  </Button>
                 </div>
               ))}
               {group.items.length === 0 && (
@@ -101,7 +200,7 @@ export default function GovernancePage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader title="Approval Delegation Matrix" />
           <div className="overflow-x-auto">
@@ -143,15 +242,17 @@ export default function GovernancePage() {
           <div className="space-y-3 text-sm">
             <div className="rounded-lg border border-gray-200 p-3">
               <p className="font-medium">Daily</p>
-              <p className="text-gray-600">Decision volume, denies, quarantines, pending approvals.</p>
+              <p className="text-gray-600">
+                Evidence volume: {governanceSnapshot.evidenceTotal}, denies: {governanceSnapshot.denied}, quarantines: {governanceSnapshot.quarantined}, pending approvals: {governanceSnapshot.pendingApprovals}.
+              </p>
             </div>
             <div className="rounded-lg border border-gray-200 p-3">
               <p className="font-medium">Weekly</p>
-              <p className="text-gray-600">Policy drift/replay checks, key usage by `key_id`, evidence integrity summary.</p>
+              <p className="text-gray-600">Run replay and verification cadence workflow and review drift report artifacts.</p>
             </div>
             <div className="rounded-lg border border-gray-200 p-3">
               <p className="font-medium">Monthly</p>
-              <p className="text-gray-600">RTO/RPO drill outcomes, control attestations, capacity envelope review.</p>
+              <p className="text-gray-600">Generate SLO sign-off packet and attach DR, attestation, and capacity evidence.</p>
             </div>
           </div>
         </Card>
