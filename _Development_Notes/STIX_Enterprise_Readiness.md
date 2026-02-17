@@ -41,11 +41,15 @@ STIX core control-path hardening is complete in-repo; remaining work is operatio
 - 2026-02-14: Added SLO/DR assets (targets, DR runbook, backup/restore/verification scripts).
 - 2026-02-14: Added reproducible performance harness and capacity report generator.
 - 2026-02-14: Added governance UX page and specification for policy lifecycle/delegation/reporting workflows.
+- 2026-02-17: Added multi-profile performance certification suite automation (`scripts/perf/run-profile-suite.mjs`) and upgraded capacity report generation for baseline/elevated/saturation outputs.
+- 2026-02-17: Added resilience drill automation (`scripts/ops/run-resilience-drill.mjs`) with outage simulation + strict replay verification evidence packet output.
+- 2026-02-17: Hardened Docker deployment path for monorepo workspace installs/builds and added compose host-port overrides for conflict-free local enterprise drill execution.
+- 2026-02-17: Completed v0.1.1 post-release execution-board items with generated monthly packet, quarterly attestation packet, resilience drill report, and profile-suite performance report.
 
 ## Current Remaining Gaps
 
 - No open code or documentation backlog items remain on the execution board.
-- Remaining work is operational execution cadence (running recurring drills/reports), not missing implementation artifacts.
+- Remaining work is recurring operational cadence and signature governance cycles, not missing implementation artifacts.
 
 ## Must-Have Before Broad Enterprise Production
 

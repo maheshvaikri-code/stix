@@ -29,6 +29,15 @@ on:
         required: false
         type: boolean
         default: false
+      run_resilience:
+        description: Run resilience drill packet generation (manual only)
+        required: false
+        type: boolean
+        default: false
+      resilience_outage_seconds:
+        description: Simulated evidence outage duration in seconds
+        required: false
+        default: '15'
 
 permissions:
   contents: read
@@ -182,22 +191,24 @@ jobs:
             echo "perf_url is required when run_perf=true"
             exit 1
           fi
-          mkdir -p artifacts/perf artifacts/ops
-          pnpm perf:load -- \
+          mkdir -p artifacts/perf artifacts/ops _Development_Notes
+          pnpm perf:suite -- \
             --url "$PERF_URL" \
-            --requests "$PERF_REQUESTS" \
-            --concurrency "$PERF_CONCURRENCY" \
-            --output artifacts/perf/load-result.json
+            --baseline-requests "$PERF_REQUESTS" \
+            --baseline-concurrency "$PERF_CONCURRENCY" \
+            --output-dir artifacts/perf
           pnpm perf:report -- \
-            --input artifacts/perf/load-result.json \
-            --output artifacts/ops/STIX_Performance_Certification.md
+            --input artifacts/perf/profile-suite.json \
+            --output _Development_Notes/STIX_Performance_Certification.md
+          cp _Development_Notes/STIX_Performance_Certification.md artifacts/ops/STIX_Performance_Certification.md
 
       - name: Generate SLO packet with perf summary
         run: |
           month="$(date +'%Y-%m')"
           node scripts/ops/generate-slo-signoff.mjs \
             --month "$month" \
-            --perf-input artifacts/perf/load-result.json \
+            --perf-input artifacts/perf/profile-suite.json \
+            --replay-input artifacts/ops/replay-report.md \
             --output "artifacts/ops/slo-signoff-${month}.md"
 
       - name: Upload performance artifacts
@@ -239,6 +250,9 @@ jobs:
           mkdir -p artifacts/ops
           node scripts/ops/generate-attestation-packet.mjs \
             --quarter "$packet_quarter" \
+            --monthly-packet "artifacts/ops/slo-signoff-$(date +'%Y-%m').md" \
+            --replay-report "artifacts/ops/replay-report.md" \
+            --performance-report "artifacts/ops/STIX_Performance_Certification.md" \
             --output "artifacts/ops/STIX_Quarterly_Attestation_${packet_quarter}.md"
 
       - name: Upload quarterly attestation packet
@@ -246,3 +260,49 @@ jobs:
         with:
           name: quarterly-attestation-packet
           path: artifacts/ops/
+
+  resilience-drill:
+    name: Resilience Drill Packet (Optional)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_resilience == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start compose stack
+        run: pnpm docker:up
+
+      - name: Run resilience drill
+        run: |
+          mkdir -p artifacts/ops
+          pnpm ops:resilience-drill -- \
+            --output artifacts/ops/resilience-drill-report.md \
+            --environment "github-actions-ubuntu" \
+            --build-tag "${GITHUB_SHA}" \
+            --outage-seconds "${{ inputs.resilience_outage_seconds }}"
+
+      - name: Upload resilience drill artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: resilience-drill-packet
+          path: artifacts/ops/
+
+      - name: Stop compose stack
+        if: always()
+        run: pnpm docker:down

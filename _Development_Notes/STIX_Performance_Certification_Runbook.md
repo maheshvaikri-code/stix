@@ -8,10 +8,10 @@ Produce reproducible load metrics and a capacity envelope for enterprise plannin
 
 ## Commands
 
-1. Run load test:
-   - `pnpm perf:load -- --url http://localhost:3001 --requests 2000 --concurrency 50 --output artifacts/perf/load-result.json`
+1. Run profile suite:
+   - `pnpm perf:suite -- --url http://localhost:3101 --baseline-requests 2000 --baseline-concurrency 50 --elevated-requests 5000 --elevated-concurrency 100 --saturation-requests 4000 --saturation-start-concurrency 150 --saturation-max-concurrency 250 --output-dir artifacts/perf`
 2. Generate report:
-   - `pnpm perf:report -- --input artifacts/perf/load-result.json --output _Development_Notes/STIX_Performance_Certification.md`
+   - `pnpm perf:report -- --input artifacts/perf/profile-suite.json --output _Development_Notes/STIX_Performance_Certification.md`
 
 ## Required Profiles
 
@@ -24,4 +24,3 @@ Produce reproducible load metrics and a capacity envelope for enterprise plannin
 - p95 authorization latency <= 150ms at baseline.
 - Error rate <= 0.5% at baseline.
 - Documented throughput and recommended sustained/burst envelope.
-

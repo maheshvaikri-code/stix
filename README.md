@@ -145,6 +145,18 @@ pnpm docker:up
 pnpm docker:logs
 ```
 
+If local host ports `3001-3004` are already in use, override published ports:
+
+```bash
+STIX_ENFORCER_PORT=3101 STIX_POLICY_PORT=3102 STIX_EVIDENCE_PORT=3103 STIX_APPROVALS_PORT=3104 pnpm docker:up
+```
+
+PowerShell:
+
+```powershell
+$env:STIX_ENFORCER_PORT='3101'; $env:STIX_POLICY_PORT='3102'; $env:STIX_EVIDENCE_PORT='3103'; $env:STIX_APPROVALS_PORT='3104'; pnpm docker:up
+```
+
 ### Stop stack
 
 ```bash
@@ -327,7 +339,14 @@ pnpm dr:verify
 
 ```bash
 pnpm perf:load -- --url http://localhost:3001 --requests 1000 --concurrency 50
+pnpm perf:suite -- --url http://localhost:3101 --baseline-requests 2000 --baseline-concurrency 50 --output-dir artifacts/perf
 pnpm perf:report
+```
+
+### Resilience drill automation
+
+```bash
+pnpm ops:resilience-drill -- --enforcer-url http://localhost:3101 --policy-url http://localhost:3102 --evidence-url http://localhost:3103 --approvals-url http://localhost:3104 --evidence-container stix-evidence --outage-seconds 10 --output artifacts/ops/resilience-drill-report.md
 ```
 
 ### Evidence verification CLI

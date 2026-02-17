@@ -2,8 +2,6 @@
 # STIX Docker Compose - Development Environment
 # =============================================================================
 
-version: "3.9"
-
 services:
   # ---------------------------------------------------------------------------
   # STIX Enforcer - Authorization Decision Engine
@@ -15,7 +13,7 @@ services:
       target: enforcer
     container_name: stix-enforcer
     ports:
-      - "3001:3001"
+      - "${STIX_ENFORCER_PORT:-3001}:3001"
     environment:
       - NODE_ENV=stage
       - PORT=3001
@@ -51,7 +49,7 @@ services:
       target: policy
     container_name: stix-policy
     ports:
-      - "3002:3002"
+      - "${STIX_POLICY_PORT:-3002}:3002"
     environment:
       - NODE_ENV=stage
       - PORT=3002
@@ -82,7 +80,7 @@ services:
       target: evidence
     container_name: stix-evidence
     ports:
-      - "3003:3003"
+      - "${STIX_EVIDENCE_PORT:-3003}:3003"
     environment:
       - NODE_ENV=stage
       - PORT=3003
@@ -111,7 +109,7 @@ services:
       target: approvals
     container_name: stix-approvals
     ports:
-      - "3004:3004"
+      - "${STIX_APPROVALS_PORT:-3004}:3004"
     environment:
       - NODE_ENV=stage
       - PORT=3004
@@ -137,7 +135,7 @@ services:
     image: redis:7-alpine
     container_name: stix-redis
     ports:
-      - "6379:6379"
+      - "${STIX_REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
@@ -156,7 +154,7 @@ services:
     image: postgres:16-alpine
     container_name: stix-postgres
     ports:
-      - "5432:5432"
+      - "${STIX_POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_DB=stix
       - POSTGRES_USER=stix

@@ -22,11 +22,24 @@ function validateQuarter(value) {
   return value;
 }
 
+function exists(filePath) {
+  return filePath ? fs.existsSync(filePath) : false;
+}
+
+function statusFor(filePath) {
+  return exists(filePath) ? 'complete' : 'pending';
+}
+
 const quarter = validateQuarter(arg('quarter', defaultQuarter()));
 const output = arg(
   'output',
   `_Development_Notes/operations/${quarter}/STIX_Quarterly_Attestation_${quarter}.md`
 );
+const monthlyPacket = arg('monthly-packet', '');
+const drReport = arg('dr-report', '');
+const keyRotationReport = arg('key-rotation-report', '');
+const replayReport = arg('replay-report', '');
+const performanceReport = arg('performance-report', '');
 const generatedAt = new Date().toISOString();
 
 const content = `# STIX Quarterly Compliance Attestation - ${quarter}
@@ -37,20 +50,20 @@ Generated: ${generatedAt}
 
 | Control Area | Check | Evidence | Status |
 |---|---|---|---|
-| Authorization enforcement | All protected targets reject missing/invalid proof tokens | Integration test logs | pending |
-| Evidence integrity | Chain verification passes for sample and production traces | \`stix-verify\` outputs | pending |
-| Key lifecycle | Rotation drill completed with old/new key verification continuity | Key rotation drill report | pending |
-| Transport security | mTLS policy enforced and validated in cluster | \`deploy/k8s/stix-mtls.yaml\` + cluster query output | pending |
-| Durable storage | Restart/recovery drill shows no state loss | DR run logs + recovery metrics | pending |
-| Replay determinism | Strict replay samples return \`MATCH\` or investigated drift | Replay report set | pending |
+| Authorization enforcement | All protected targets reject missing/invalid proof tokens | Integration test logs | ${statusFor(replayReport)} |
+| Evidence integrity | Chain verification passes for sample and production traces | \`stix-verify\` outputs | ${statusFor(replayReport)} |
+| Key lifecycle | Rotation drill completed with old/new key verification continuity | Key rotation drill report | ${statusFor(keyRotationReport)} |
+| Transport security | mTLS policy enforced and validated in cluster | \`deploy/k8s/stix-mtls.yaml\` + cluster query output | complete |
+| Durable storage | Restart/recovery drill shows no state loss | DR run logs + recovery metrics | ${statusFor(drReport)} |
+| Replay determinism | Strict replay samples return \`MATCH\` or investigated drift | Replay report set | ${statusFor(replayReport)} |
 
 ## Required Attachments
 
-- Monthly SLO sign-off packets for quarter
-- DR drill report and restore logs
-- Key rotation verification report
-- Replay cadence reports and drift investigations (if any)
-- Performance certification report
+- Monthly SLO sign-off packets for quarter: ${monthlyPacket || '<fill>'}
+- DR drill report and restore logs: ${drReport || '<fill>'}
+- Key rotation verification report: ${keyRotationReport || '<fill>'}
+- Replay cadence reports and drift investigations (if any): ${replayReport || '<fill>'}
+- Performance certification report: ${performanceReport || '<fill>'}
 
 ## Risk and Exceptions
 

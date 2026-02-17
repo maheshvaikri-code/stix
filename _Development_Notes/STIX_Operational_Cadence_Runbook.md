@@ -22,10 +22,12 @@ Operationalize recurring replay/verify, monthly SLO packets, and performance cer
 ## Local Dry-Run Commands
 
 - `pnpm ops:replay-smoke`
+- `pnpm ops:resilience-drill -- --enforcer-url http://localhost:3101 --policy-url http://localhost:3102 --evidence-url http://localhost:3103 --approvals-url http://localhost:3104 --evidence-container stix-evidence --outage-seconds 10 --output artifacts/ops/resilience-drill-report.md`
 - `pnpm ops:slo-signoff -- --month YYYY-MM --output artifacts/ops/slo-signoff-YYYY-MM.md`
 - `pnpm ops:attestation-packet -- --quarter YYYY-QN --output artifacts/ops/STIX_Quarterly_Attestation_YYYY-QN.md`
 - `pnpm perf:load -- --url http://localhost:3001 --requests 2000 --concurrency 50 --output artifacts/perf/load-result.json`
-- `pnpm perf:report -- --input artifacts/perf/load-result.json --output _Development_Notes/STIX_Performance_Certification.md`
+- `pnpm perf:suite -- --url http://localhost:3101 --baseline-requests 2000 --baseline-concurrency 50 --output-dir artifacts/perf`
+- `pnpm perf:report -- --input artifacts/perf/profile-suite.json --output _Development_Notes/STIX_Performance_Certification.md`
 
 ## Drift Triage Handoff
 

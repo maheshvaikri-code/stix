@@ -1,6 +1,6 @@
 # STIX Monthly SLO Sign-off - 2026-02
 
-Generated: 2026-02-16T00:10:22.637Z
+Generated: 2026-02-17T00:07:04.565Z
 
 ## SLO Summary
 
@@ -18,8 +18,13 @@ Generated: 2026-02-16T00:10:22.637Z
 
 ## Capacity Snapshot
 
-- No performance artifact attached in this run.
-- Attach `artifacts/perf/load-result.json` for baseline certification.
+- Performance suite artifact attached.
+- Baseline: 2000 requests @ concurrency 50
+- Baseline throughput (rps): 1617.74
+- Baseline p95 latency (ms): 44.04
+- Elevated throughput (rps): 3445.9
+- Elevated p95 latency (ms): 46.67
+- Max verified concurrency: 100
 ## Replay/Verify Snapshot
 
 - Replay report artifact attached.

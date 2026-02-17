@@ -51,7 +51,8 @@ STIX is an enterprise control plane for AI-agent actions. It enforces determinis
 
 - P0 control-path engineering items: complete
 - P2 artifacts (compliance, DR/SLO, perf certification, governance UX): delivered
-- Remaining work is recurring operational cadence, not missing platform capability
+- v0.1.1 post-release execution-board items: completed in-repo (resilience drill packet, monthly SLO packet, quarterly attestation packet, profile-suite performance certification)
+- Remaining work is recurring operational cadence and human governance signatures, not missing platform capability
 
 ## Best-Fit Enterprise Use Cases
 
@@ -67,4 +68,3 @@ STIX is an enterprise control plane for AI-agent actions. It enforces determinis
 - Key lifecycle: `_Development_Notes/STIX_Key_Rotation_Runbook.md`
 - Compliance mapping: `_Development_Notes/compliance/STIX_Control_Mapping.md`
 - Audit SOP: `_Development_Notes/compliance/STIX_Audit_Export_SOP.md`
-

@@ -26,7 +26,7 @@ COPY services/approvals/package.json ./services/approvals/
 
 # Install pnpm and dependencies
 RUN npm install -g pnpm
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # -----------------------------------------------------------------------------
 # Stage 2: Build
@@ -37,8 +37,11 @@ FROM base AS builder
 COPY packages/ ./packages/
 COPY services/ ./services/
 
+# Re-link workspace bins after source copy (COPY can replace pnpm symlinks)
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
 # Build all packages
-RUN pnpm run build
+RUN pnpm --filter @stix/shared --filter @stix/enforcer --filter @stix/policy --filter @stix/evidence --filter @stix/approvals build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production - Enforcer
@@ -49,6 +52,8 @@ WORKDIR /app
 
 # Copy built files
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/services/enforcer/node_modules ./services/enforcer/node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/enforcer/dist ./services/enforcer/dist
@@ -73,6 +78,8 @@ FROM node:20-alpine AS policy
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/services/policy/node_modules ./services/policy/node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/policy/dist ./services/policy/dist
@@ -96,6 +103,8 @@ FROM node:20-alpine AS evidence
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/services/evidence/node_modules ./services/evidence/node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/evidence/dist ./services/evidence/dist
@@ -119,6 +128,8 @@ FROM node:20-alpine AS approvals
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/services/approvals/node_modules ./services/approvals/node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/approvals/dist ./services/approvals/dist

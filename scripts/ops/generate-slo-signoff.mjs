@@ -30,19 +30,35 @@ const replay = replayInput && fs.existsSync(replayInput)
   : '';
 
 const generatedAt = new Date().toISOString();
+const perfBaseline = perf?.profiles?.baseline;
+const perfElevated = perf?.profiles?.elevated;
+
 const perfSection = perf
-  ? [
-      '## Capacity Snapshot',
-      '',
-      `- Requests: ${perf.requests}`,
-      `- Concurrency: ${perf.concurrency}`,
-      `- Throughput (rps): ${perf.throughput_rps}`,
-      `- Success: ${perf.success}`,
-      `- Failed: ${perf.failed}`,
-      `- p95 latency (ms): ${perf.latency_ms?.p95 ?? 'n/a'}`,
-      `- p99 latency (ms): ${perf.latency_ms?.p99 ?? 'n/a'}`,
-      '',
-    ].join('\n')
+  ? perfBaseline
+    ? [
+        '## Capacity Snapshot',
+        '',
+        '- Performance suite artifact attached.',
+        `- Baseline: ${perfBaseline.requests} requests @ concurrency ${perfBaseline.concurrency}`,
+        `- Baseline throughput (rps): ${perfBaseline.throughput_rps}`,
+        `- Baseline p95 latency (ms): ${perfBaseline.latency_ms?.p95 ?? 'n/a'}`,
+        `- Elevated throughput (rps): ${perfElevated?.throughput_rps ?? 'n/a'}`,
+        `- Elevated p95 latency (ms): ${perfElevated?.latency_ms?.p95 ?? 'n/a'}`,
+        `- Max verified concurrency: ${perf?.recommended?.max_verified_concurrency ?? 'n/a'}`,
+        '',
+      ].join('\n')
+    : [
+        '## Capacity Snapshot',
+        '',
+        `- Requests: ${perf.requests}`,
+        `- Concurrency: ${perf.concurrency}`,
+        `- Throughput (rps): ${perf.throughput_rps}`,
+        `- Success: ${perf.success}`,
+        `- Failed: ${perf.failed}`,
+        `- p95 latency (ms): ${perf.latency_ms?.p95 ?? 'n/a'}`,
+        `- p99 latency (ms): ${perf.latency_ms?.p99 ?? 'n/a'}`,
+        '',
+      ].join('\n')
   : [
       '## Capacity Snapshot',
       '',
