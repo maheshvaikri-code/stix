@@ -295,7 +295,12 @@ jobs:
             --output artifacts/ops/resilience-drill-report.md \
             --environment "github-actions-ubuntu" \
             --build-tag "${GITHUB_SHA}" \
+            --enforcer-url "http://127.0.0.1:3001" \
+            --policy-url "http://127.0.0.1:3002" \
+            --evidence-url "http://127.0.0.1:3003" \
+            --approvals-url "http://127.0.0.1:3004" \
             --preflight-timeout-seconds "180" \
+            --preflight-request-timeout-ms "3000" \
             --outage-seconds "${{ inputs.resilience_outage_seconds }}"
 
       - name: Upload resilience drill artifacts

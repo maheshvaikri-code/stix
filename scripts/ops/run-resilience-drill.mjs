@@ -34,19 +34,27 @@ async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function checkHealth(url) {
+async function checkHealth(url, requestTimeoutMs = 3000) {
   try {
-    const res = await fetch(url, { method: 'GET' });
+    const timeoutSignal =
+      typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(requestTimeoutMs)
+        : undefined;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      signal: timeoutSignal,
+    });
     return res.ok;
   } catch {
     return false;
   }
 }
 
-async function waitForHealthy(url, timeoutMs, pollMs) {
+async function waitForHealthy(url, timeoutMs, pollMs, requestTimeoutMs = 3000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    if (await checkHealth(url)) return true;
+    if (await checkHealth(url, requestTimeoutMs)) return true;
     await sleep(pollMs);
   }
   return false;
@@ -72,6 +80,7 @@ const drillId = arg('drill-id', `STIX-DR-${dateStamp.replace(/-/g, '')}`);
 const output = arg('output', 'artifacts/ops/resilience-drill-report.md');
 const outageSeconds = intArg('outage-seconds', 15);
 const preflightTimeoutSeconds = intArg('preflight-timeout-seconds', 120);
+const preflightRequestTimeoutMs = intArg('preflight-request-timeout-ms', 3000);
 const rtoTargetMin = intArg('rto-target-min', 60);
 const rpoTargetMin = intArg('rpo-target-min', 15);
 const observedRpoMin = intArg('observed-rpo-min', 0);
@@ -129,7 +138,12 @@ pushStep(
 
 const preflightChecks = await Promise.all(
   healthChecks.map((service) =>
-    waitForHealthy(service.url, preflightTimeoutSeconds * 1000, 2000)
+    waitForHealthy(
+      service.url,
+      preflightTimeoutSeconds * 1000,
+      2000,
+      preflightRequestTimeoutMs
+    )
   )
 );
 
