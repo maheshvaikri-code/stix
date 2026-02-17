@@ -71,6 +71,7 @@ const dateStamp = new Date().toISOString().slice(0, 10);
 const drillId = arg('drill-id', `STIX-DR-${dateStamp.replace(/-/g, '')}`);
 const output = arg('output', 'artifacts/ops/resilience-drill-report.md');
 const outageSeconds = intArg('outage-seconds', 15);
+const preflightTimeoutSeconds = intArg('preflight-timeout-seconds', 120);
 const rtoTargetMin = intArg('rto-target-min', 60);
 const rpoTargetMin = intArg('rpo-target-min', 15);
 const observedRpoMin = intArg('observed-rpo-min', 0);
@@ -114,16 +115,30 @@ if (runComposeBootstrap) {
   pushStep('Bootstrap compose stack', 'complete');
 }
 
-const preflightChecks = await Promise.all([
-  checkHealth(`${enforcerUrl}/health`),
-  checkHealth(`${policyUrl}/health`),
-  checkHealth(`${evidenceUrl}/health`),
-  checkHealth(`${approvalsUrl}/health`),
-]);
+const healthChecks = [
+  { name: 'enforcer', url: `${enforcerUrl}/health` },
+  { name: 'policy', url: `${policyUrl}/health` },
+  { name: 'evidence', url: `${evidenceUrl}/health` },
+  { name: 'approvals', url: `${approvalsUrl}/health` },
+];
+
+pushStep(
+  'Wait for service health',
+  `up to ${preflightTimeoutSeconds}s for all health endpoints`
+);
+
+const preflightChecks = await Promise.all(
+  healthChecks.map((service) =>
+    waitForHealthy(service.url, preflightTimeoutSeconds * 1000, 2000)
+  )
+);
 
 if (!preflightChecks.every(Boolean)) {
+  const failedServices = healthChecks
+    .filter((_, index) => !preflightChecks[index])
+    .map((service) => service.name);
   throw new Error(
-    'Preflight health checks failed. Ensure all services are running before executing resilience drill.'
+    `Preflight health checks failed for: ${failedServices.join(', ')}. Ensure all services are running before executing resilience drill.`
   );
 }
 pushStep('Preflight health checks', 'all services healthy');

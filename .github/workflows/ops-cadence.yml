@@ -295,9 +295,11 @@ jobs:
             --output artifacts/ops/resilience-drill-report.md \
             --environment "github-actions-ubuntu" \
             --build-tag "${GITHUB_SHA}" \
+            --preflight-timeout-seconds "180" \
             --outage-seconds "${{ inputs.resilience_outage_seconds }}"
 
       - name: Upload resilience drill artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: resilience-drill-packet
