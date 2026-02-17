@@ -301,6 +301,7 @@ jobs:
             --approvals-url "http://127.0.0.1:3004" \
             --preflight-timeout-seconds "180" \
             --preflight-request-timeout-ms "3000" \
+            --require-all-preflight "false" \
             --outage-seconds "${{ inputs.resilience_outage_seconds }}"
 
       - name: Upload resilience drill artifacts

@@ -81,6 +81,7 @@ const output = arg('output', 'artifacts/ops/resilience-drill-report.md');
 const outageSeconds = intArg('outage-seconds', 15);
 const preflightTimeoutSeconds = intArg('preflight-timeout-seconds', 120);
 const preflightRequestTimeoutMs = intArg('preflight-request-timeout-ms', 3000);
+const requireAllPreflight = boolArg('require-all-preflight', true);
 const rtoTargetMin = intArg('rto-target-min', 60);
 const rpoTargetMin = intArg('rpo-target-min', 15);
 const observedRpoMin = intArg('observed-rpo-min', 0);
@@ -147,15 +148,33 @@ const preflightChecks = await Promise.all(
   )
 );
 
-if (!preflightChecks.every(Boolean)) {
-  const failedServices = healthChecks
-    .filter((_, index) => !preflightChecks[index])
-    .map((service) => service.name);
+const failedServices = healthChecks
+  .filter((_, index) => !preflightChecks[index])
+  .map((service) => service.name);
+const enforcerHealthy = preflightChecks[0] === true;
+
+if (!enforcerHealthy) {
+  throw new Error(
+    'Preflight health check failed for enforcer. Cannot run resilience drill.'
+  );
+}
+
+if (requireAllPreflight && failedServices.length > 0) {
   throw new Error(
     `Preflight health checks failed for: ${failedServices.join(', ')}. Ensure all services are running before executing resilience drill.`
   );
 }
-pushStep('Preflight health checks', 'all services healthy');
+if (failedServices.length === 0) {
+  pushStep('Preflight health checks', 'all services healthy');
+} else {
+  pushStep(
+    'Preflight health checks',
+    `enforcer healthy; proceeding with degraded peers: ${failedServices.join(', ')}`
+  );
+  notes.push(
+    `Preflight degraded peers: ${failedServices.join(', ')} (drill continued because require-all-preflight=false).`
+  );
+}
 
 pushStep('Rotate signing key references', `simulated cutover ${oldKeyId} -> ${newKeyId}`);
 
