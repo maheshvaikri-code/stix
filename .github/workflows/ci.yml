@@ -56,3 +56,9 @@ jobs:
 
       - name: Policy YAML validation
         run: node scripts/ci/validate-policies.mjs
+
+      - name: Combined adapter dry-run checks
+        run: |
+          pnpm integration:combined-adapter -- --provider bedrock --provider-input tests/fixtures/integrations/bedrock-safety.json --stix-request tests/fixtures/integrations/base-authorize-request.json --dry-run true
+          pnpm integration:combined-adapter -- --provider azure --provider-input tests/fixtures/integrations/azure-safety.json --stix-request tests/fixtures/integrations/base-authorize-request.json --dry-run true
+          pnpm integration:combined-adapter -- --provider vertex --provider-input tests/fixtures/integrations/vertex-safety.json --stix-request tests/fixtures/integrations/base-authorize-request.json --dry-run true
