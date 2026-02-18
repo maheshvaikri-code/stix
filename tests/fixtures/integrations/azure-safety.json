@@ -1,0 +1,12 @@
+{
+  "promptShield": {
+    "attackDetected": false
+  },
+  "contentSafety": {
+    "blocked": false,
+    "severity": "medium"
+  },
+  "pii": {
+    "detected": false
+  }
+}

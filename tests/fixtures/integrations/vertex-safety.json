@@ -1,0 +1,13 @@
+{
+  "safetyRatings": [
+    {
+      "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "probability": "LOW",
+      "blocked": false
+    }
+  ],
+  "promptFeedback": {
+    "blockReason": ""
+  },
+  "piiDetected": false
+}

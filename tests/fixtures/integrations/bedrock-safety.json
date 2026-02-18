@@ -1,0 +1,8 @@
+{
+  "guardrail": {
+    "action": "NONE",
+    "score": 0.42,
+    "piiDetected": true,
+    "promptInjection": false
+  }
+}

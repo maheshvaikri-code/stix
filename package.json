@@ -35,6 +35,7 @@
     "perf:load": "node scripts/perf/stix-load.mjs",
     "perf:suite": "node scripts/perf/run-profile-suite.mjs",
     "perf:report": "node scripts/perf/generate-capacity-report.mjs",
+    "integration:combined-adapter": "node scripts/integrations/combined-architecture-adapter.mjs",
     "ops:slo-signoff": "node scripts/ops/generate-slo-signoff.mjs",
     "ops:attestation-packet": "node scripts/ops/generate-attestation-packet.mjs",
     "ops:resilience-drill": "node scripts/ops/run-resilience-drill.mjs",

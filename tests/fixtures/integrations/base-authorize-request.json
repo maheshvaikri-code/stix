@@ -1,0 +1,29 @@
+{
+  "actor": {
+    "id": "agent-support-01",
+    "type": "AI_AGENT",
+    "tenant": "acme"
+  },
+  "action": "SEND_EMAIL",
+  "resource": {
+    "type": "EMAIL",
+    "id": "msg-123"
+  },
+  "context": {
+    "env": "prod",
+    "purpose": "customer_support",
+    "signals": {
+      "piiDetected": false,
+      "custom": {}
+    },
+    "tags": [
+      "channel:chat"
+    ],
+    "attributes": {}
+  },
+  "tool_call": {
+    "tool": "email.send",
+    "risk_tier": "MEDIUM",
+    "args_summary": "customer support email"
+  }
+}

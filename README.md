@@ -21,6 +21,7 @@ It evaluates each action against policy before execution, returns a deterministi
 - [Run Full End-to-End Locally (Real Services)](#run-full-end-to-end-locally-real-services)
 - [How to Use STIX](#how-to-use-stix)
 - [Deploying STIX](#deploying-stix)
+- [Combined Architecture Integration](#combined-architecture-integration)
 - [Regulated Industry Playbooks](#regulated-industry-playbooks)
 - [Enterprise Hardening Checklist](#enterprise-hardening-checklist)
 - [Operations and Verification](#operations-and-verification)
@@ -274,6 +275,41 @@ kubectl apply -f deploy/k8s/stix-mtls.yaml
 - `SIGNING_ENABLED=true`
 - `SIGNING_KEY_ID` + (`SIGNING_KEY_PATH` or `SIGNING_KEY_PEM`)
 
+## Combined Architecture Integration
+
+Use STIX as the execution-governance layer behind a model safety layer (Bedrock/Azure/Vertex/custom):
+
+1. Model safety evaluates prompt/output risk.
+2. Adapter normalizes safety signals.
+3. STIX Enforcer decides `ALLOW` / `DENY` / `QUARANTINE`.
+4. Final gate enforces provider + STIX decision.
+
+Reference guide:
+
+- `docs/COMBINED_ARCHITECTURE_INTEGRATION.md`
+
+Adapter command:
+
+```bash
+pnpm integration:combined-adapter -- \
+  --provider bedrock \
+  --provider-input tests/fixtures/integrations/bedrock-safety.json \
+  --stix-request tests/fixtures/integrations/base-authorize-request.json \
+  --enforcer-url http://localhost:3001 \
+  --output artifacts/integrations/combined-bedrock.json
+```
+
+Dry-run mapping check:
+
+```bash
+pnpm integration:combined-adapter -- \
+  --provider azure \
+  --provider-input tests/fixtures/integrations/azure-safety.json \
+  --stix-request tests/fixtures/integrations/base-authorize-request.json \
+  --dry-run true \
+  --output artifacts/integrations/combined-azure-dry-run.json
+```
+
 ## Regulated Industry Playbooks
 
 Policy packs are in `policies/examples/` and `policies/default/`.
@@ -419,6 +455,7 @@ High-level summary:
 
 - Architecture and overview: `STIX_Comprehensive_Documentation.md`
 - Enterprise deployment guide: `docs/ENTERPRISE_DEPLOYMENT.md`
+- Combined integration guide: `docs/COMBINED_ARCHITECTURE_INTEGRATION.md`
 - Enterprise readiness brief: `_Development_Notes/STIX_Enterprise_Readiness_Brief.md`
 - Enterprise readiness (detailed): `_Development_Notes/STIX_Enterprise_Readiness.md`
 - Enterprise guardrail system: `_Development_Notes/STIX_Enterprise_Guardrail_System.md`
