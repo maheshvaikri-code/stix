@@ -70,14 +70,14 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: getEnv('SERVICE_NAME', 'stix-target-http'),
-      version: getEnv('SERVICE_VERSION', '0.1.0'),
+      version: getEnv('SERVICE_VERSION', '0.1.1'),
       env: getEnv('NODE_ENV', 'dev') as Config['service']['env'],
       port: getEnvNumber('PORT', 3081),
       host: getEnv('HOST', '0.0.0.0'),
     },
 
     stix: {
-      enforcerUrl: getEnv('STIX_ENFORCER_URL', 'http://localhost:3000'),
+      enforcerUrl: getEnv('STIX_ENFORCER_URL', 'http://localhost:3001'),
       publicKeyPem: getEnv('STIX_PUBLIC_KEY', ''),
       publicKeyPath: getEnv('STIX_PUBLIC_KEY_PATH', ''),
       keyId: getEnv('STIX_KEY_ID', 'stix-enforcer-key-1'),

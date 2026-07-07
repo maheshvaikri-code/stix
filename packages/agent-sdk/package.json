@@ -1,6 +1,6 @@
 {
   "name": "@stix/agent-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "STIX Agent SDK - Enterprise policy enforcement for AI agents",
   "license": "MIT",
   "main": "dist/index.js",
@@ -26,14 +26,19 @@
       "types": "./dist/integrations/anthropic.d.ts",
       "import": "./dist/integrations/anthropic.mjs",
       "require": "./dist/integrations/anthropic.js"
+    },
+    "./gitlab": {
+      "types": "./dist/integrations/gitlab.d.ts",
+      "import": "./dist/integrations/gitlab.mjs",
+      "require": "./dist/integrations/gitlab.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/integrations/*.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts src/integrations/*.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/integrations/anthropic.ts src/integrations/gitlab.ts src/integrations/langchain.ts src/integrations/openai.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts src/integrations/anthropic.ts src/integrations/gitlab.ts src/integrations/langchain.ts src/integrations/openai.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src --ext .ts",

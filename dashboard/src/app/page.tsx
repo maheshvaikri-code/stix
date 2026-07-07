@@ -15,7 +15,18 @@ import {
   TrendingDown,
   ArrowRight,
   RefreshCw,
+  Leaf,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { useDashboardStats, useDecisionTimeSeries, useAllServicesHealth, useApprovals } from '@/lib/hooks';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -146,6 +157,97 @@ export default function DashboardPage() {
           />
         </div>
       )}
+
+      {/* Decision Timeline (Recharts) */}
+      <Card>
+        <CardHeader
+          title="Decision Timeline"
+          description={`Authorization decisions over the last ${timeRange}`}
+        />
+        <div className="h-72 px-2">
+          {timeSeriesLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <LoadingSpinner />
+            </div>
+          ) : timeSeries && timeSeries.allowed?.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={mergeTimeSeries(timeSeries)} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="colorAllowed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorDenied" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorQuarantined" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="timestamp"
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickFormatter={(v: string) => {
+                    const d = new Date(v);
+                    return timeRange === '24h'
+                      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                  }}
+                />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#f8fafc',
+                    fontSize: '12px',
+                  }}
+                  labelFormatter={(v: string) => new Date(v).toLocaleString()}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: '12px' }}
+                  iconType="circle"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="allowed"
+                  name="Allowed"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  fill="url(#colorAllowed)"
+                  stackId="1"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="denied"
+                  name="Denied"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  fill="url(#colorDenied)"
+                  stackId="1"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="quarantined"
+                  name="Quarantined"
+                  stroke="#eab308"
+                  strokeWidth={2}
+                  fill="url(#colorQuarantined)"
+                  stackId="1"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+              No time series data available
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Main Content */}
       <div className="grid grid-cols-3 gap-6">
@@ -288,7 +390,108 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {/* Sustainability Metrics (Green Agent Prize) */}
+      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+        <CardHeader
+          title="Sustainability Metrics"
+          description="AI compute savings from local policy evaluation vs. LLM-based compliance checking"
+        />
+        {stats && (
+          <div className="grid grid-cols-4 gap-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-700">
+                {Math.round(((stats.decisions.total - (stats.decisions.quarantined || 0)) / Math.max(stats.decisions.total, 1)) * 100)}%
+              </p>
+              <p className="text-sm text-green-600 mt-1">Decisions Without LLM</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Local policy engine evaluation
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-700">
+                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 1200).toLocaleString()}
+              </p>
+              <p className="text-sm text-green-600 mt-1">Tokens Saved</p>
+              <p className="text-xs text-gray-500 mt-1">
+                ~1,200 tokens/decision avoided
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-700">
+                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 0.003).toFixed(2)}
+              </p>
+              <p className="text-sm text-green-600 mt-1">USD Saved</p>
+              <p className="text-xs text-gray-500 mt-1">
+                vs. sending every diff to LLM
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-green-700">
+                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 0.8).toFixed(1)}s
+              </p>
+              <p className="text-sm text-green-600 mt-1">Compute Time Saved</p>
+              <p className="text-xs text-gray-500 mt-1">
+                ~0.8s per avoided LLM call
+              </p>
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
+  );
+}
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+interface TimeSeriesPoint {
+  timestamp: string;
+  value: number;
+}
+
+interface MergedTimeSeriesPoint {
+  timestamp: string;
+  allowed: number;
+  denied: number;
+  quarantined: number;
+}
+
+/**
+ * Merge separate allowed/denied/quarantined time series arrays
+ * into a single flat array for Recharts
+ */
+function mergeTimeSeries(data: {
+  allowed: TimeSeriesPoint[];
+  denied: TimeSeriesPoint[];
+  quarantined: TimeSeriesPoint[];
+}): MergedTimeSeriesPoint[] {
+  const byTimestamp = new Map<string, MergedTimeSeriesPoint>();
+
+  for (const point of data.allowed) {
+    if (!byTimestamp.has(point.timestamp)) {
+      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+    }
+    byTimestamp.get(point.timestamp)!.allowed = point.value;
+  }
+
+  for (const point of data.denied) {
+    if (!byTimestamp.has(point.timestamp)) {
+      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+    }
+    byTimestamp.get(point.timestamp)!.denied = point.value;
+  }
+
+  for (const point of data.quarantined) {
+    if (!byTimestamp.has(point.timestamp)) {
+      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+    }
+    byTimestamp.get(point.timestamp)!.quarantined = point.value;
+  }
+
+  return Array.from(byTimestamp.values()).sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 }
 

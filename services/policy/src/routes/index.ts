@@ -434,7 +434,15 @@ export async function policyRoutes(
         },
       },
       response: {
-        200: { type: 'object' },
+        200: {
+          type: 'object',
+          properties: {
+            decision: { type: 'string' },
+            matched_policy: { type: 'string' },
+            reason_code: { type: 'string' },
+            scope_match: { type: 'boolean' },
+          },
+        },
       },
     },
   }, async (request: FastifyRequest<{ Body: { policy?: PolicyArtifact; request: { actor: { id: string; type: string }; action: string; resource: { type: string }; context: Record<string, unknown> } } }>, reply: FastifyReply) => {

@@ -1,0 +1,41 @@
+# STIX Guardian - External Agent Configuration
+# This YAML defines the execution environment for the STIX Guardian agent.
+#
+# Registration: Create the agent via GitLab UI at
+#   Automate > Agents > New Agent (or AI Catalog > Agents > New Agent)
+#   then paste this YAML into the "Configuration" field.
+#
+# Required setup:
+# 1. Create a service account with PAT scopes: write_repository, api, ai_features
+# 2. Assign Developer role to the service account in your project
+# 3. Set CI/CD variables: STIX_API_KEY, ANTHROPIC_API_KEY
+# 4. Ensure runners have the `gitlab-duo` tag
+
+# Use GitLab AI Gateway token for Claude access
+injectGatewayToken: true
+
+# Execution environment
+image: node:20-slim
+
+# Commands executed sequentially when the agent is invoked
+commands:
+  - echo "STIX Guardian - AI Compliance Agent"
+  - npm install -g pnpm
+  - pnpm install --frozen-lockfile
+  - pnpm build
+  - |
+    node scripts/gitlab/guardian-ci.mjs \
+      --enforcer-url "${STIX_ENFORCER_URL:-http://localhost:3001}" \
+      --policy-pack "${STIX_POLICY_PACK:-default}" \
+      --mr-iid "$CI_MERGE_REQUEST_IID" \
+      --project-path "$CI_PROJECT_PATH" \
+      --gitlab-url "$CI_SERVER_URL" \
+      --gitlab-token "$GITLAB_TOKEN"
+
+# Environment variables the agent needs (set in CI/CD settings)
+variables:
+  - STIX_ENFORCER_URL
+  - STIX_API_KEY
+  - STIX_POLICY_PACK
+  - GITLAB_TOKEN
+  - ANTHROPIC_API_KEY

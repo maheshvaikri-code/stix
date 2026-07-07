@@ -68,7 +68,7 @@ const noopLogger: Logger = {
  * @example
  * ```typescript
  * const stix = new StixClient({
- *   enforcerUrl: 'https://stix-enforcer.internal:8080',
+ *   enforcerUrl: 'https://stix-enforcer.internal:3001',
  *   apiKey: process.env.STIX_API_KEY,
  *   defaultActor: {
  *     id: 'agent-001',
@@ -138,7 +138,7 @@ export class StixClient {
 
     try {
       const response = await this.sendRequest<AuthorizeResponse>(
-        `${this.config.enforcerUrl}/v1/authorize`,
+        `${this.config.enforcerUrl}/api/v1/authorize`,
         request
       );
 
@@ -219,7 +219,7 @@ export class StixClient {
 
     try {
       await this.sendRequest<{ success: boolean }>(
-        `${this.config.evidenceUrl}/v1/outcome`,
+        `${this.config.enforcerUrl}/api/v1/outcome`,
         {
           trace_id: traceId,
           status,
@@ -244,7 +244,7 @@ export class StixClient {
    */
   async getApprovalStatus(ticketId: string): Promise<ApprovalRequest> {
     const response = await this.sendRequest<{ data: ApprovalRequest }>(
-      `${this.config.approvalsUrl}/v1/approvals/${ticketId}`,
+      `${this.config.approvalsUrl}/api/v1/approvals/tickets/${ticketId}`,
       undefined,
       'GET'
     );
@@ -552,7 +552,7 @@ export function createClientFromEnv(
   overrides?: Partial<StixClientConfig>
 ): StixClient {
   const config: StixClientConfig = {
-    enforcerUrl: process.env.STIX_ENFORCER_URL ?? 'http://localhost:8080',
+    enforcerUrl: process.env.STIX_ENFORCER_URL ?? 'http://localhost:3001',
     evidenceUrl: process.env.STIX_EVIDENCE_URL,
     approvalsUrl: process.env.STIX_APPROVALS_URL,
     apiKey: process.env.STIX_API_KEY,

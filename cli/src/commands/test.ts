@@ -27,16 +27,23 @@ testCommand
   }) => {
     const apiKey = options.apiKey || process.env.STIX_API_KEY;
     const timeout = parseInt(options.timeout, 10);
+    const enforcerUrl = normalizeServiceUrl(options.apiUrl);
+    const policyUrl = normalizeServiceUrl(
+      process.env.STIX_POLICY_URL ?? deriveSiblingServiceUrl(enforcerUrl, 3002)
+    );
+    const evidenceUrl = normalizeServiceUrl(
+      process.env.STIX_EVIDENCE_URL ?? deriveSiblingServiceUrl(enforcerUrl, 3003)
+    );
 
     console.log(chalk.cyan('\n=== STIX Smoke Tests ===\n'));
-    console.log(`Target: ${options.apiUrl}\n`);
+    console.log(`Target: ${enforcerUrl}\n`);
 
     let passed = 0;
     let failed = 0;
 
     // Test 1: Health check
     const healthResult = await runTest('Health Check', async () => {
-      const response = await request(`${options.apiUrl}/health`, {
+      const response = await request(`${enforcerUrl}/health`, {
         method: 'GET',
         headersTimeout: timeout,
       });
@@ -53,7 +60,7 @@ testCommand
 
     // Test 2: Policy list
     const policyResult = await runTest('List Policies', async () => {
-      const response = await request(`${options.apiUrl}/v1/policies`, {
+      const response = await request(`${policyUrl}/api/v1/policies`, {
         method: 'GET',
         headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {},
         headersTimeout: timeout,
@@ -68,7 +75,7 @@ testCommand
 
     // Test 3: Simple authorization request
     const authResult = await runTest('Authorization Request', async () => {
-      const response = await request(`${options.apiUrl}/v1/authorize`, {
+      const response = await request(`${enforcerUrl}/api/v1/authorize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +100,7 @@ testCommand
 
     // Test 4: Evidence endpoint
     const evidenceResult = await runTest('Evidence Endpoint', async () => {
-      const response = await request(`${options.apiUrl.replace(':8080', ':8081')}/v1/evidence?limit=1`, {
+      const response = await request(`${evidenceUrl}/api/v1/evidence?limit=1`, {
         method: 'GET',
         headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {},
         headersTimeout: timeout,
@@ -108,7 +115,7 @@ testCommand
 
     // Test 5: Metrics endpoint
     const metricsResult = await runTest('Metrics Endpoint', async () => {
-      const response = await request(`${options.apiUrl}/metrics`, {
+      const response = await request(`${enforcerUrl}/metrics`, {
         method: 'GET',
         headersTimeout: timeout,
       });
@@ -147,6 +154,7 @@ testCommand
     apiKey?: string;
   }) => {
     const apiKey = options.apiKey || process.env.STIX_API_KEY;
+    const enforcerUrl = normalizeServiceUrl(options.apiUrl);
 
     console.log(chalk.cyan('\n=== STIX Integration Tests ===\n'));
 
@@ -156,7 +164,7 @@ testCommand
     // Test 1: Full authorization flow
     const flowResult = await runTest('Full Authorization Flow', async () => {
       // Request authorization
-      const authResponse = await request(`${options.apiUrl}/v1/authorize`, {
+      const authResponse = await request(`${enforcerUrl}/api/v1/authorize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +189,7 @@ testCommand
       }
 
       // Record outcome
-      const outcomeResponse = await request(`${options.apiUrl}/v1/outcome`, {
+      const outcomeResponse = await request(`${enforcerUrl}/api/v1/outcome`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,7 +213,7 @@ testCommand
     // Test 2: Policy evaluation consistency
     const consistencyResult = await runTest('Policy Consistency', async () => {
       const requests = Array(5).fill(null).map(() =>
-        request(`${options.apiUrl}/v1/authorize`, {
+        request(`${enforcerUrl}/api/v1/authorize`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -240,7 +248,7 @@ testCommand
     const rateLimitResult = await runTest('Rate Limiting', async () => {
       // Send many requests quickly
       const requests = Array(20).fill(null).map(() =>
-        request(`${options.apiUrl}/v1/authorize`, {
+        request(`${enforcerUrl}/api/v1/authorize`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -274,7 +282,7 @@ testCommand
     // Test 4: Error handling
     const errorResult = await runTest('Error Handling', async () => {
       // Send malformed request
-      const response = await request(`${options.apiUrl}/v1/authorize`, {
+      const response = await request(`${enforcerUrl}/api/v1/authorize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -329,12 +337,13 @@ testCommand
     duration: string;
   }) => {
     const apiKey = options.apiKey || process.env.STIX_API_KEY;
+    const enforcerUrl = normalizeServiceUrl(options.apiUrl);
     const totalRequests = parseInt(options.requests, 10);
     const concurrency = parseInt(options.concurrency, 10);
     const duration = parseInt(options.duration, 10) * 1000;
 
     console.log(chalk.cyan('\n=== STIX Load Test ===\n'));
-    console.log(`Target: ${options.apiUrl}`);
+    console.log(`Target: ${enforcerUrl}`);
     console.log(`Requests: ${totalRequests}`);
     console.log(`Concurrency: ${concurrency}`);
     console.log(`Duration: ${options.duration}s\n`);
@@ -350,7 +359,7 @@ testCommand
     const sendRequest = async (): Promise<void> => {
       const reqStart = Date.now();
       try {
-        const response = await request(`${options.apiUrl}/v1/authorize`, {
+        const response = await request(`${enforcerUrl}/api/v1/authorize`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -435,6 +444,22 @@ interface TestResult {
   passed: boolean;
   message?: string;
   error?: string;
+}
+
+function normalizeServiceUrl(url: string): string {
+  return url.replace(/\/$/, '');
+}
+
+function deriveSiblingServiceUrl(baseUrl: string, port: number): string {
+  try {
+    const parsed = new URL(baseUrl);
+    if (parsed.port) {
+      parsed.port = String(port);
+    }
+    return normalizeServiceUrl(parsed.toString());
+  } catch {
+    return normalizeServiceUrl(baseUrl.replace(/:3001(?=\/|$)/, `:${port}`));
+  }
 }
 
 async function runTest(

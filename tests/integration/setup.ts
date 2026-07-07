@@ -13,10 +13,10 @@ export interface TestConfig {
 
 export function getTestConfig(): TestConfig {
   return {
-    enforcerUrl: process.env.STIX_ENFORCER_URL || 'http://localhost:8080',
-    policyUrl: process.env.STIX_POLICY_URL || 'http://localhost:8081',
-    evidenceUrl: process.env.STIX_EVIDENCE_URL || 'http://localhost:8082',
-    approvalsUrl: process.env.STIX_APPROVALS_URL || 'http://localhost:8083',
+    enforcerUrl: process.env.STIX_ENFORCER_URL || 'http://localhost:3001',
+    policyUrl: process.env.STIX_POLICY_URL || 'http://localhost:3002',
+    evidenceUrl: process.env.STIX_EVIDENCE_URL || 'http://localhost:3003',
+    approvalsUrl: process.env.STIX_APPROVALS_URL || 'http://localhost:3004',
     apiKey: process.env.STIX_API_KEY,
     timeout: parseInt(process.env.STIX_TEST_TIMEOUT || '30000', 10),
   };

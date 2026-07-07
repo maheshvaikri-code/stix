@@ -10,7 +10,7 @@
  *
  * // Initialize client
  * const stix = new StixClient({
- *   enforcerUrl: 'https://stix-enforcer.internal:8080',
+ *   enforcerUrl: 'https://stix-enforcer.internal:3001',
  *   apiKey: process.env.STIX_API_KEY,
  *   defaultActor: {
  *     id: 'agent-001',
@@ -136,3 +136,47 @@ export {
   ServiceUnavailableError,
   FailModeTriggeredError,
 } from './types';
+
+// Integrations - GitLab
+export {
+  GitLabGuardian,
+  createGitLabGuardianFromEnv,
+  normalizeGitLabEvent,
+  normalizeMergeRequestEvent,
+  normalizePipelineEvent,
+  normalizeIssueEvent,
+  scanDiff,
+  formatDecisionComment,
+  mapDecisionToGitLabActions,
+} from './integrations/gitlab';
+
+export type {
+  GitLabEvent,
+  GitLabMergeRequestEvent,
+  GitLabPipelineEvent,
+  GitLabIssueEvent,
+  GitLabNoteEvent,
+  GitLabDiffEntry,
+  GitLabUser,
+  GitLabProject,
+  GitLabGuardianConfig,
+  GitLabAuthorizeInput,
+  GitLabResponse,
+  GitLabAction,
+  DiffScanResult,
+  DiffFinding,
+} from './integrations/gitlab';
+
+// Reasoning - Claude-powered compliance analysis
+export {
+  ComplianceAnalyzer,
+  createComplianceAnalyzerFromEnv,
+  formatAnalysisAsComment,
+} from './reasoning/compliance-analyzer';
+
+export type {
+  ComplianceAnalysis,
+  ComplianceViolation,
+  ApprovalSummary,
+  ComplianceAnalyzerConfig,
+} from './reasoning/compliance-analyzer';

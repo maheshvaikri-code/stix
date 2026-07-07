@@ -121,7 +121,14 @@ export async function authorizationRoutes(
             regulations: { type: 'array', items: { type: 'string' } },
           },
         },
-        400: { type: 'object', description: 'Validation error' },
+        400: {
+          type: 'object',
+          description: 'Validation error',
+          properties: {
+            error: { type: 'string' },
+            details: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          },
+        },
         500: { type: 'object', description: 'Internal server error' },
       },
     },

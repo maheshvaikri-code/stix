@@ -208,6 +208,7 @@ export function filterByChangeType(
 export function getDiffStats(results: SimulationResult[]): {
   total: number;
   changed: number;
+  decisionChanged: number;
   unchanged: number;
   byChangeType: Record<string, number>;
   byRiskLevel: Record<RiskLevel, number>;
@@ -216,6 +217,7 @@ export function getDiffStats(results: SimulationResult[]): {
   const stats = {
     total: results.length,
     changed: 0,
+    decisionChanged: 0,
     unchanged: 0,
     byChangeType: {} as Record<string, number>,
     byRiskLevel: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 } as Record<RiskLevel, number>,
@@ -225,6 +227,7 @@ export function getDiffStats(results: SimulationResult[]): {
   for (const result of results) {
     if (result.delta.decision_changed) {
       stats.changed++;
+      stats.decisionChanged++;
       const changeType = result.delta.decision_change_type!;
       stats.byChangeType[changeType] = (stats.byChangeType[changeType] || 0) + 1;
     } else {

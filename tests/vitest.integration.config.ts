@@ -15,10 +15,10 @@ export default defineConfig({
     },
     // Environment variables for tests
     env: {
-      STIX_ENFORCER_URL: process.env.STIX_ENFORCER_URL ?? 'http://localhost:8080',
-      STIX_POLICY_URL: process.env.STIX_POLICY_URL ?? 'http://localhost:8081',
-      STIX_EVIDENCE_URL: process.env.STIX_EVIDENCE_URL ?? 'http://localhost:8082',
-      STIX_APPROVALS_URL: process.env.STIX_APPROVALS_URL ?? 'http://localhost:8083',
+      STIX_ENFORCER_URL: process.env.STIX_ENFORCER_URL ?? 'http://localhost:3001',
+      STIX_POLICY_URL: process.env.STIX_POLICY_URL ?? 'http://localhost:3002',
+      STIX_EVIDENCE_URL: process.env.STIX_EVIDENCE_URL ?? 'http://localhost:3003',
+      STIX_APPROVALS_URL: process.env.STIX_APPROVALS_URL ?? 'http://localhost:3004',
     },
   },
 });

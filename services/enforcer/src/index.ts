@@ -90,12 +90,44 @@ async function createApp(): Promise<AppContext> {
     });
   }
 
+  server.setErrorHandler((error, request, reply) => {
+    if ('validation' in error) {
+      return reply.code(400).send({
+        error: error.message,
+        message: error.message,
+        statusCode: 400,
+        code: error.code ?? 'VALIDATION_ERROR',
+        details: Array.isArray(error.validation) ? error.validation : undefined,
+      });
+    }
+
+    const statusCode =
+      typeof error.statusCode === 'number' && error.statusCode >= 400
+        ? error.statusCode
+        : 500;
+
+    logger.error('Unhandled request error', {
+      request_id: request.id,
+      method: request.method,
+      path: request.url,
+      status_code: statusCode,
+    }, error);
+
+    return reply.code(statusCode).send({
+      success: false,
+      error: {
+        code: error.code ?? (statusCode === 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR'),
+        message: statusCode >= 500 ? 'An unexpected error occurred' : error.message,
+      },
+    });
+  });
+
   // Create service clients
   let policyClient: PolicyClient;
   let evidenceClient: EvidenceClient;
   let approvalsClient: ApprovalsClient;
 
-  if (config.service.env === 'dev' || config.service.env === 'test') {
+  if (config.services.useMockClients) {
     logger.info('Using mock service clients');
     policyClient = new MockPolicyClient(config, logger);
     evidenceClient = new MockEvidenceClient(config, logger);

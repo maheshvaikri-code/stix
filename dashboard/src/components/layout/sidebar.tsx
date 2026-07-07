@@ -12,6 +12,7 @@ import {
   Settings,
   HelpCircle,
   ExternalLink,
+  GitBranch,
 } from 'lucide-react';
 import { useApprovals } from '@/lib/hooks';
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Governance', href: '/governance', icon: ClipboardList },
   { name: 'Evidence', href: '/evidence', icon: Database },
   { name: 'Approvals', href: '/approvals', icon: CheckCircle, badge: true },
+  { name: 'GitLab', href: '/gitlab', icon: GitBranch },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

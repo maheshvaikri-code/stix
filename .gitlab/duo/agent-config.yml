@@ -1,0 +1,19 @@
+# STIX Guardian - Flow Execution Configuration
+# Controls the Docker environment and setup for STIX Guardian flows.
+# Docs: https://docs.gitlab.com/user/duo_agent_platform/flows/execution/
+
+image: node:20-slim
+
+setup_script:
+  - apt-get update -qq && apt-get install -y -qq git curl > /dev/null
+  - npm install -g pnpm@8
+  - pnpm install --frozen-lockfile
+  - pnpm build
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - node_modules/
+    - .pnpm-store/

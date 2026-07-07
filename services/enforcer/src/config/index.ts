@@ -48,6 +48,7 @@ const ConfigSchema = z.object({
     evidenceUrl: z.string(),
     approvalsUrl: z.string(),
     serviceAuthToken: z.string().optional(),
+    useMockClients: z.boolean(),
   }),
 
   // Evidence write behavior
@@ -118,7 +119,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-enforcer',
-      version: getEnv('SERVICE_VERSION', '0.1.0'),
+      version: getEnv('SERVICE_VERSION', '0.1.1'),
       port: getEnvNumber('PORT', SERVICE_PORTS.ENFORCER),
       host: getEnv('HOST', '0.0.0.0'),
       env,
@@ -141,6 +142,7 @@ export function loadConfig(): Config {
       evidenceUrl: getEnv('EVIDENCE_SERVICE_URL', 'http://stix-evidence:3003'),
       approvalsUrl: getEnv('APPROVALS_SERVICE_URL', 'http://stix-approvals:3004'),
       serviceAuthToken: getEnv('SERVICE_AUTH_TOKEN', ''),
+      useMockClients: getEnvBool('USE_MOCK_CLIENTS', env === 'dev' || env === 'test'),
     },
 
     evidence: {

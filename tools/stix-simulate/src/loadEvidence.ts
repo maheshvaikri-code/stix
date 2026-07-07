@@ -78,7 +78,9 @@ async function loadEvidenceFile(
     const parsed = JSON.parse(content);
 
     if (Array.isArray(parsed)) {
-      events = parsed;
+      events = parsed.flatMap((item) =>
+        item?.events && Array.isArray(item.events) ? item.events : [item]
+      );
     } else if (parsed.events && Array.isArray(parsed.events)) {
       // Bundle format
       events = parsed.events;

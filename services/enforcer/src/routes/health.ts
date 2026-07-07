@@ -77,6 +77,7 @@ export async function healthRoutes(
         200: {
           type: 'object',
           properties: {
+            ready: { type: 'boolean' },
             status: { type: 'string' },
             service: { type: 'string' },
             version: { type: 'string' },

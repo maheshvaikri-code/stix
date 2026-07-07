@@ -1,0 +1,103 @@
+# STIX Guardian - GitLab CI/CD Integration
+# Runs the STIX compliance gate on merge requests
+
+stages:
+  - build
+  - compliance
+  - test
+  - deploy
+
+variables:
+  STIX_ENFORCER_URL: "${STIX_ENFORCER_URL:-http://stix-enforcer:3001}"
+  STIX_POLICY_PACK: "${STIX_POLICY_PACK:-default}"
+
+# Build STIX services
+build:
+  stage: build
+  image: node:20-alpine
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - pnpm build
+  artifacts:
+    paths:
+      - packages/*/dist/
+      - sdk/*/dist/
+    expire_in: 1 hour
+
+# Deterministic monorepo lint gate
+lint:
+  stage: test
+  image: node:20-alpine
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - pnpm -r lint
+
+# Unit test gate
+unit-tests:
+  stage: test
+  image: node:20-alpine
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - pnpm test:unit
+
+# STIX Compliance Gate - runs on every MR
+stix-compliance-gate:
+  stage: compliance
+  image: node:20-alpine
+  services:
+    - name: stix-enforcer
+      alias: stix-enforcer
+    - name: stix-policy
+      alias: stix-policy
+    - name: stix-evidence
+      alias: stix-evidence
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - pnpm build
+    - |
+      echo "Running STIX Guardian compliance check..."
+      node scripts/gitlab/guardian-ci.mjs \
+        --enforcer-url "$STIX_ENFORCER_URL" \
+        --policy-pack "$STIX_POLICY_PACK" \
+        --mr-iid "$CI_MERGE_REQUEST_IID" \
+        --project-path "$CI_PROJECT_PATH" \
+        --gitlab-url "$CI_SERVER_URL" \
+        --gitlab-token "$GITLAB_TOKEN"
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+  allow_failure: false
+
+# Policy validation
+validate-policies:
+  stage: compliance
+  image: node:20-alpine
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - node scripts/ci/validate-policies.mjs
+  rules:
+    - changes:
+        - "policies/**/*.yaml"
+        - "policies/**/*.yml"
+
+# Policy drift detection
+policy-drift-check:
+  stage: compliance
+  image: node:20-alpine
+  script:
+    - npm install -g pnpm
+    - pnpm install --frozen-lockfile
+    - pnpm build
+    - pnpm ops:replay-smoke
+  artifacts:
+    paths:
+      - artifacts/ops/
+    expire_in: 7 days
+  rules:
+    - changes:
+        - "policies/**/*.yaml"
+        - "policies/**/*.yml"

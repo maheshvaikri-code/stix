@@ -60,7 +60,7 @@ evidenceCommand
       if (options.decision) params.set('decision', options.decision);
       params.set('limit', '10000');
 
-      const url = `${options.apiUrl}/v1/evidence?${params}`;
+      const url = `${options.apiUrl}/api/v1/evidence?${params}`;
 
       const response = await request(url, {
         method: 'GET',
@@ -130,10 +130,10 @@ evidenceCommand
     const spinner = ora('Verifying evidence chain...').start();
 
     try {
-      let url = `${options.apiUrl}/v1/evidence/verify`;
+      let url = `${options.apiUrl}/api/v1/evidence/verify`;
 
       if (options.traceId) {
-        url = `${options.apiUrl}/v1/evidence/verify/${options.traceId}`;
+        url = `${options.apiUrl}/api/v1/evidence/verify/${options.traceId}`;
       }
 
       const params = new URLSearchParams();
@@ -209,7 +209,7 @@ evidenceCommand
       if (options.decision) params.set('decision', options.decision);
       params.set('limit', options.limit);
 
-      const url = `${options.apiUrl}/v1/evidence?${params}`;
+      const url = `${options.apiUrl}/api/v1/evidence?${params}`;
 
       const response = await request(url, {
         method: 'GET',
@@ -263,7 +263,7 @@ evidenceCommand
         end_time: options.endDate,
       });
 
-      const url = `${options.apiUrl}/v1/evidence/stats?${params}`;
+      const url = `${options.apiUrl}/api/v1/evidence/stats?${params}`;
 
       const response = await request(url, {
         method: 'GET',

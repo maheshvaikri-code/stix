@@ -11,10 +11,10 @@
  *   pnpm test:integration:watch    # Run in watch mode
  *
  * Environment Variables:
- *   STIX_ENFORCER_URL   - Enforcer service URL (default: http://localhost:8080)
- *   STIX_POLICY_URL     - Policy service URL (default: http://localhost:8081)
- *   STIX_EVIDENCE_URL   - Evidence service URL (default: http://localhost:8082)
- *   STIX_APPROVALS_URL  - Approvals service URL (default: http://localhost:8083)
+ *   STIX_ENFORCER_URL   - Enforcer service URL (default: http://localhost:3001)
+ *   STIX_POLICY_URL     - Policy service URL (default: http://localhost:3002)
+ *   STIX_EVIDENCE_URL   - Evidence service URL (default: http://localhost:3003)
+ *   STIX_APPROVALS_URL  - Approvals service URL (default: http://localhost:3004)
  *   STIX_API_KEY        - API key for authentication (optional)
  *   STIX_TEST_TIMEOUT   - Test timeout in ms (default: 30000)
  */
@@ -27,10 +27,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const services = [
-  { name: 'Enforcer', url: process.env.STIX_ENFORCER_URL || 'http://localhost:8080' },
-  { name: 'Policy', url: process.env.STIX_POLICY_URL || 'http://localhost:8081' },
-  { name: 'Evidence', url: process.env.STIX_EVIDENCE_URL || 'http://localhost:8082' },
-  { name: 'Approvals', url: process.env.STIX_APPROVALS_URL || 'http://localhost:8083' },
+  { name: 'Enforcer', url: process.env.STIX_ENFORCER_URL || 'http://localhost:3001' },
+  { name: 'Policy', url: process.env.STIX_POLICY_URL || 'http://localhost:3002' },
+  { name: 'Evidence', url: process.env.STIX_EVIDENCE_URL || 'http://localhost:3003' },
+  { name: 'Approvals', url: process.env.STIX_APPROVALS_URL || 'http://localhost:3004' },
 ];
 
 async function checkService(name: string, url: string): Promise<boolean> {

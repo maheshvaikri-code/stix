@@ -1,6 +1,6 @@
 {
   "name": "@stix/dashboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "STIX Dashboard - Policy management and monitoring UI",
   "private": true,
   "scripts": {

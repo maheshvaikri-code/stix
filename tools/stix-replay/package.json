@@ -1,6 +1,6 @@
 {
   "name": "@stix/replay",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "STIX Replay Tool - Replay and analyze audit trails",
   "type": "module",
   "main": "dist/index.js",

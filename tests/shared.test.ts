@@ -132,7 +132,7 @@ describe('STIX Shared Package', () => {
 
     it('should generate Ed25519 key pairs', () => {
       const keyPair = generateEd25519KeyPair();
-      expect(keyPair.algorithm).toBe('Ed25519');
+      expect(keyPair.algorithm).toBe('EdDSA');
       expect(keyPair.publicKey).toContain('BEGIN PUBLIC KEY');
       expect(keyPair.privateKey).toContain('BEGIN PRIVATE KEY');
     });

@@ -51,7 +51,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-policy',
-      version: getEnv('SERVICE_VERSION', '0.1.0'),
+      version: getEnv('SERVICE_VERSION', '0.1.1'),
       port: getEnvNumber('PORT', SERVICE_PORTS.POLICY),
       host: getEnv('HOST', '0.0.0.0'),
       env,

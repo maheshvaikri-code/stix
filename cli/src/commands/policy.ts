@@ -270,7 +270,7 @@ policyCommand
       for (const file of files) {
         for (const policy of file.policies) {
           try {
-            const response = await request(`${options.apiUrl}/v1/policies`, {
+            const response = await request(`${options.apiUrl}/api/v1/policies`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -327,7 +327,7 @@ policyCommand
     const spinner = ora('Verifying policies...').start();
 
     try {
-      const response = await request(`${options.apiUrl}/v1/policies`, {
+      const response = await request(`${options.apiUrl}/api/v1/policies`, {
         method: 'GET',
         headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {},
       });
@@ -368,7 +368,7 @@ policyCommand
     const spinner = ora('Exporting policies...').start();
 
     try {
-      const response = await request(`${options.apiUrl}/v1/policies`, {
+      const response = await request(`${options.apiUrl}/api/v1/policies`, {
         method: 'GET',
         headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {},
       });

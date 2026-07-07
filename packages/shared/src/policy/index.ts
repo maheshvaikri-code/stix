@@ -363,7 +363,8 @@ function normalizeConditions(conditions: any): PolicyCondition[] | undefined {
  * Compute hash for a single policy
  */
 export function computePolicyHash(policy: Policy): string {
-  const normalized = JSON.stringify(policy, Object.keys(policy).sort());
+  const normalizedPolicy = policy.id ? policy : { ...policy, id: policy.policy_id };
+  const normalized = JSON.stringify(normalizedPolicy, Object.keys(normalizedPolicy).sort());
   return createHash('sha256').update(normalized).digest('hex');
 }
 
@@ -371,7 +372,9 @@ export function computePolicyHash(policy: Policy): string {
  * Compute hash for entire policy pack
  */
 export function computePackHash(policies: Policy[]): string {
-  const sortedPolicies = [...policies].sort((a, b) => a.id.localeCompare(b.id));
+  const sortedPolicies = [...policies].sort((a, b) =>
+    (a.id ?? a.policy_id ?? '').localeCompare(b.id ?? b.policy_id ?? '')
+  );
   const hashes = sortedPolicies.map(p => computePolicyHash(p));
   return createHash('sha256').update(hashes.join('')).digest('hex');
 }
@@ -413,7 +416,9 @@ export function indexByHash(policies: Policy[]): Map<string, Policy> {
  * Filter active policies
  */
 export function filterActive(policies: Policy[]): Policy[] {
-  return policies.filter(p => p.active !== false);
+  return policies
+    .filter(p => p.active !== false)
+    .map(p => p.id ? p : { ...p, id: p.policy_id ?? '' });
 }
 
 /**

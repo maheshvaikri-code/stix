@@ -238,9 +238,20 @@ describe('Evidence Extraction', () => {
 
     const result = validateForReplay(testEvidenceBundle);
 
-    // Should have some warnings about missing policy_hash
-    expect(result.valid).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    const invalidBundle = {
+      ...testEvidenceBundle,
+      events: testEvidenceBundle.events.map((event) => ({
+        ...event,
+        policy: { id: event.policy.id, version: event.policy.version },
+      })),
+    };
+    const invalidResult = validateForReplay(invalidBundle);
+
+    expect(invalidResult.valid).toBe(false);
+    expect(invalidResult.errors).toContain('Missing policy_hash - cannot verify policy match');
   });
 });
 

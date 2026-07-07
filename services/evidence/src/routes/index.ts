@@ -80,8 +80,15 @@ export async function evidenceRoutes(
       });
     }
 
-    // Sort by timestamp descending (newest first)
-    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // Trace lookups and offset pagination should be append-stable so concurrent
+    // writes do not shift records from page 1 into page 2.
+    const sortAscending = Boolean(request.query.trace_id || request.query.page || request.query.page_size);
+    events.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      const timeDelta = sortAscending ? timeA - timeB : timeB - timeA;
+      return timeDelta || a.event_id.localeCompare(b.event_id);
+    });
 
     const total = events.length;
     const start = (page - 1) * pageSize;

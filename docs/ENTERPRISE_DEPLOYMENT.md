@@ -49,10 +49,11 @@ STIX consists of four main services:
 
 | Service | Purpose | Port | Critical Level |
 |---------|---------|------|----------------|
-| **Enforcer** | Policy evaluation, authorization decisions | 8080 | Critical |
-| **Evidence** | Audit trail storage, compliance reporting | 8081 | High |
-| **Approvals** | Human-in-the-loop workflows | 8082 | Medium |
-| **Dashboard** | Web UI for monitoring and management | 3000 | Low |
+| **Enforcer** | Policy evaluation, authorization decisions | 3001 | Critical |
+| **Policy** | YAML policy pack management and simulation | 3002 | Critical |
+| **Evidence** | Audit trail storage, compliance reporting | 3003 | High |
+| **Approvals** | Human-in-the-loop workflows | 3004 | Medium |
+| **Dashboard** | Web UI for monitoring and management | 3100 | Low |
 
 ---
 
@@ -270,7 +271,7 @@ spec:
               service:
                 name: stix-dashboard
                 port:
-                  number: 3000
+                  number: 3100
     - host: api.stix.yourdomain.com
       http:
         paths:
@@ -280,7 +281,7 @@ spec:
               service:
                 name: stix-enforcer
                 port:
-                  number: 8080
+                  number: 3001
 ```
 
 ---
@@ -599,14 +600,14 @@ kubectl logs -l app.kubernetes.io/component=evidence -n stix
 
 # Verify database connectivity
 kubectl exec -it deploy/stix-evidence -n stix -- \
-  wget -q -O- http://localhost:8081/health
+  wget -q -O- http://localhost:3003/health
 ```
 
 #### 4. Approval Timeouts
 
 ```bash
 # Check pending approvals
-curl -s http://localhost:8082/v1/approvals?status=pending | jq '.items | length'
+curl -s http://localhost:3004/api/v1/approvals?status=pending | jq '.data | length'
 
 # Increase timeout or notification frequency
 ```

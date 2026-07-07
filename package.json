@@ -1,6 +1,6 @@
 {
   "name": "@stix/monorepo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "STIX - Shield, Trust & Integrity eXecution Platform",
   "type": "module",
@@ -16,7 +16,7 @@
     "build": "pnpm -r build",
     "build:shared": "pnpm --filter @stix/shared build",
     "build:services": "pnpm --filter './services/*' build",
-    "build:sdk": "pnpm --filter './sdk/*' build",
+    "build:sdk": "pnpm --filter @stix/agent-sdk build && pnpm --filter @stix/target-verifier build",
     "dev": "pnpm -r --parallel dev",
     "dev:enforcer": "pnpm --filter @stix/enforcer dev",
     "dev:policy": "pnpm --filter @stix/policy dev",
@@ -24,11 +24,11 @@
     "dev:approvals": "pnpm --filter @stix/approvals dev",
     "start": "pnpm -r start",
     "test": "pnpm -r test",
-    "test:unit": "vitest run tests/*.test.ts",
+    "test:unit": "vitest run --config vitest.config.ts",
     "test:integration": "npx tsx tests/run-integration.ts",
     "test:integration:watch": "npx tsx tests/run-integration.ts --watch",
-    "test:smoke": "pnpm --filter @stix/cli exec stix test smoke --api-url http://localhost:8080",
-    "test:load": "pnpm --filter @stix/cli exec stix test load --api-url http://localhost:8080",
+    "test:smoke": "pnpm --filter @stix/cli exec node dist/index.js test smoke --api-url http://localhost:3001",
+    "test:load": "pnpm --filter @stix/cli exec node dist/index.js test load --api-url http://localhost:3001",
     "dr:backup": "powershell -ExecutionPolicy Bypass -File scripts/dr/backup-postgres.ps1",
     "dr:restore": "powershell -ExecutionPolicy Bypass -File scripts/dr/restore-postgres.ps1",
     "dr:verify": "powershell -ExecutionPolicy Bypass -File scripts/dr/verify-dr.ps1",
@@ -56,6 +56,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.0.4",
     "prettier": "^3.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5.3.0",
@@ -81,7 +85,7 @@
     "enterprise"
   ],
   "author": "STIX Platform Team",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "yaml": "^2.8.2"
   }
