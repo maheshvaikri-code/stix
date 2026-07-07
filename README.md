@@ -8,12 +8,6 @@
   <strong>Enterprise-Grade Compliance Guardrails for AI Agents and Automated Systems</strong>
 </p>
 
-<p align="center">
-  <em>Built for the <a href="https://gitlab.devpost.com/">GitLab AI Hackathon 2026</a> with Claude Sonnet 4 and the GitLab Duo Agent Platform</em>
-</p>
-
----
-
 STIX is an execution-path control plane for AI-agent and service actions.
 It evaluates each action against policy before execution, returns a deterministic decision (`ALLOW`, `DENY`, `QUARANTINE`), and writes tamper-evident evidence for audit and replay.
 

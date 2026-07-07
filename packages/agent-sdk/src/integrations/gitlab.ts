@@ -2,8 +2,6 @@
  * STIX Agent SDK - GitLab Integration
  * Maps GitLab Duo Agent Platform events to STIX authorization
  * and translates decisions back to GitLab API actions.
- *
- * Designed for the GitLab AI Hackathon - "STIX Guardian" compliance agent.
  */
 
 import type { StixClient } from '../client';
