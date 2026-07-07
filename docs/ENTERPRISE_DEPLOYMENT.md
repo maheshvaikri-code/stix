@@ -53,6 +53,7 @@ STIX consists of four main services:
 | **Policy** | YAML policy pack management and simulation | 3002 | Critical |
 | **Evidence** | Audit trail storage, compliance reporting | 3003 | High |
 | **Approvals** | Human-in-the-loop workflows | 3004 | Medium |
+| **Fabric** | Agent policy fabric registry and control plane | 3005 | Medium |
 | **Dashboard** | Web UI for monitoring and management | 3100 | Low |
 
 ---

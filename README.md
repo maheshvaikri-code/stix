@@ -134,6 +134,7 @@ STIX Core services in this repo:
 | `policy` | `3002` | Policy evaluation and management |
 | `evidence` | `3003` | Evidence storage and verification |
 | `approvals` | `3004` | Approval ticket workflows |
+| `fabric` | `3005` | STIX Fabric registry and control-plane APIs |
 | `redis` | `6379` | Decision/cache support |
 | `postgres` | `5432` | Durable policy/evidence/approvals store |
 
@@ -152,10 +153,13 @@ stix/
 |  |- enforcer/
 |  |- policy/
 |  |- evidence/
-|  \- approvals/
+|  |- approvals/
+|  \- fabric/
 |- sdk/
 |  |- agent-sdk/
 |  \- target-verifier/
+|- packages/
+|  \- fabric-types/
 |- tools/
 |  |- stix-verify/
 |  \- stix-replay/
@@ -200,9 +204,10 @@ curl http://localhost:3001/health
 curl http://localhost:3002/health
 curl http://localhost:3003/health
 curl http://localhost:3004/health
+curl http://localhost:3005/health
 ```
 
-Note: when Enforcer runs with `NODE_ENV=dev` or `NODE_ENV=test`, it uses mock downstream clients by design.
+Note: set `USE_MOCK_CLIENTS=false` when Enforcer should call real downstream services in local `dev` or `test` environments.
 
 ## Run Full End-to-End Locally (Real Services)
 
@@ -216,16 +221,16 @@ pnpm docker:up
 pnpm docker:logs
 ```
 
-If local host ports `3001-3004` are already in use, override published ports:
+If local host ports `3001-3005` are already in use, override published ports:
 
 ```bash
-STIX_ENFORCER_PORT=3101 STIX_POLICY_PORT=3102 STIX_EVIDENCE_PORT=3103 STIX_APPROVALS_PORT=3104 pnpm docker:up
+STIX_ENFORCER_PORT=3101 STIX_POLICY_PORT=3102 STIX_EVIDENCE_PORT=3103 STIX_APPROVALS_PORT=3104 STIX_FABRIC_PORT=3105 pnpm docker:up
 ```
 
 PowerShell:
 
 ```powershell
-$env:STIX_ENFORCER_PORT='3101'; $env:STIX_POLICY_PORT='3102'; $env:STIX_EVIDENCE_PORT='3103'; $env:STIX_APPROVALS_PORT='3104'; pnpm docker:up
+$env:STIX_ENFORCER_PORT='3101'; $env:STIX_POLICY_PORT='3102'; $env:STIX_EVIDENCE_PORT='3103'; $env:STIX_APPROVALS_PORT='3104'; $env:STIX_FABRIC_PORT='3105'; pnpm docker:up
 ```
 
 ### Stop stack

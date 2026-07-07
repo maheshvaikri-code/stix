@@ -24,7 +24,9 @@ It contains:
 - `services/policy` for policy pack loading, evaluation, and simulation.
 - `services/evidence` for hash-chained, signed audit evidence.
 - `services/approvals` for human-in-the-loop workflows.
+- `services/fabric` for the first Fabric control-plane registry APIs.
 - `packages/agent-sdk` for wrapping agent tools and integrations.
+- `packages/fabric-types` for Fabric registry and graph types.
 - `packages/target-verifier` for proof-token validation at protected targets.
 - `tools/stix-verify`, `tools/stix-replay`, and `tools/stix-simulate` for audit, replay, and drift analysis.
 
@@ -60,7 +62,7 @@ STIX Core already supports the storage primitives Fabric needs:
 | Evidence | Memory, Postgres | Postgres for hot evidence, object storage for archives |
 | Approvals | Memory, Postgres | Postgres with routing, SLA, and escalation metadata |
 | Decision cache | Redis or in-memory fallback | Redis for distributed cache and rate-limit state |
-| Agent/tool registries | Not yet first-class | Postgres system of record |
+| Agent/tool registries | STIX Fabric in-memory registry API | Postgres system of record |
 | Reports/exports | Files/artifacts | Object storage or durable artifact backend |
 
 Memory is for development and tests only. Production should use Postgres and Redis.
@@ -89,12 +91,12 @@ services/
   policy/         # STIX Core
   evidence/       # STIX Core
   approvals/      # STIX Core
-  fabric/         # Future STIX Fabric API/control-plane service
+  fabric/         # STIX Fabric API/control-plane service
 
 packages/
   agent-sdk/      # STIX Core integration SDK
   target-verifier/# STIX Core proof verifier
-  fabric-types/   # Future Fabric registry/control-plane types
+  fabric-types/   # Fabric registry/control-plane types
 
 dashboard/        # Evolves into the STIX Fabric console
 ```
@@ -103,13 +105,16 @@ Do not rename package names until the API boundary is stable. Public positioning
 
 ## Near-Term Fabric MVP
 
-The first Fabric milestone should add:
+The first Fabric milestone adds:
 
 - Agent registry.
 - Enforcement point registry.
 - Tool/action registry.
 - Policy channels for dev, stage, and prod.
 - Evidence graph queries.
+
+The next milestone should add:
+
 - Approval routing rules.
 - Webhook/SIEM export hooks.
 - Dashboard views for posture, drift, and agent inventory.

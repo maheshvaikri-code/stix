@@ -129,6 +129,31 @@ services:
       retries: 3
 
   # ---------------------------------------------------------------------------
+  # STIX Fabric Service - Agent Policy Fabric Control Plane
+  # ---------------------------------------------------------------------------
+  fabric:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: fabric
+    container_name: stix-fabric
+    ports:
+      - "${STIX_FABRIC_PORT:-3005}:3005"
+    environment:
+      - NODE_ENV=stage
+      - PORT=3005
+      - LOG_LEVEL=debug
+      - LOG_PRETTY=true
+      - STORAGE_TYPE=memory
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
   # Redis - Caching Layer
   # ---------------------------------------------------------------------------
   redis:

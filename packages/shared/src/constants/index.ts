@@ -15,6 +15,7 @@ export const SERVICE_PORTS = {
   POLICY: 3002,
   EVIDENCE: 3003,
   APPROVALS: 3004,
+  FABRIC: 3005,
   GATEWAY: 3000,
 } as const;
 
@@ -24,6 +25,7 @@ export const SERVICE_NAMES = {
   POLICY: 'stix-policy',
   EVIDENCE: 'stix-evidence',
   APPROVALS: 'stix-approvals',
+  FABRIC: 'stix-fabric',
   GATEWAY: 'stix-gateway',
 } as const;
 
@@ -33,6 +35,7 @@ export const SERVICE_URLS = {
   POLICY: `http://${SERVICE_NAMES.POLICY}:${SERVICE_PORTS.POLICY}`,
   EVIDENCE: `http://${SERVICE_NAMES.EVIDENCE}:${SERVICE_PORTS.EVIDENCE}`,
   APPROVALS: `http://${SERVICE_NAMES.APPROVALS}:${SERVICE_PORTS.APPROVALS}`,
+  FABRIC: `http://${SERVICE_NAMES.FABRIC}:${SERVICE_PORTS.FABRIC}`,
 } as const;
 
 // =============================================================================
@@ -49,6 +52,7 @@ export const API_PATHS = {
   EVIDENCE: '/api/v1/evidence',
   POLICIES: '/api/v1/policies',
   APPROVALS: '/api/v1/approvals',
+  FABRIC: '/api/v1/fabric',
   HEALTH: '/health',
   READY: '/ready',
   METRICS: '/metrics',

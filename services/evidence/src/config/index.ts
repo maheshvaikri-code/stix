@@ -55,7 +55,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-evidence',
-      version: getEnv('SERVICE_VERSION', '0.1.1'),
+      version: getEnv('SERVICE_VERSION', '0.1.2'),
       port: getEnvNumber('PORT', SERVICE_PORTS.EVIDENCE),
       host: getEnv('HOST', '0.0.0.0'),
       env,

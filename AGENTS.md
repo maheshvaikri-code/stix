@@ -15,11 +15,13 @@ STIX (Shield, Trust & Integrity eXecution) is organized as **STIX Core** and **S
 - **Policy** (`services/policy/`, port 3002) - STIX Core YAML policy pack management and evaluation
 - **Evidence** (`services/evidence/`, port 3003) - STIX Core SHA-256 hash-chained, Ed25519-signed audit trail
 - **Approvals** (`services/approvals/`, port 3004) - STIX Core human-in-the-loop approval workflows
+- **Fabric** (`services/fabric/`, port 3005) - STIX Fabric registry and control-plane APIs
 - **Dashboard** (`dashboard/`, port 3100) - Emerging STIX Fabric console for monitoring, policy posture, evidence, approvals, and integrations
 
 ## Key Packages
 
 - `packages/shared/` - Shared types, crypto primitives, policy schemas
+- `packages/fabric-types/` - STIX Fabric registry, graph, and control-plane types
 - `packages/agent-sdk/` - SDK for wrapping AI agent tools with STIX enforcement
 - `packages/agent-sdk/src/integrations/gitlab.ts` - GitLab event normalizer, diff scanner, decision mapper
 - `packages/agent-sdk/src/reasoning/compliance-analyzer.ts` - Claude-powered compliance reasoning
@@ -52,6 +54,7 @@ POST /api/v1/authorize    - Submit action for policy evaluation
 POST /api/v1/outcome      - Record action outcome
 GET  /api/v1/evidence     - Query evidence trail
 GET  /api/v1/approvals    - List pending approvals
+GET  /api/v1/fabric/*     - Query STIX Fabric registries and graph summaries
 ```
 
 ## Conventions

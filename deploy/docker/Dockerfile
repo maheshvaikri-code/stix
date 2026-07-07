@@ -19,10 +19,12 @@ COPY tsconfig.base.json ./
 
 # Copy all package.json files for dependency resolution
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/fabric-types/package.json ./packages/fabric-types/
 COPY services/enforcer/package.json ./services/enforcer/
 COPY services/policy/package.json ./services/policy/
 COPY services/evidence/package.json ./services/evidence/
 COPY services/approvals/package.json ./services/approvals/
+COPY services/fabric/package.json ./services/fabric/
 
 # Install pnpm and dependencies
 RUN npm install -g pnpm
@@ -41,7 +43,7 @@ COPY services/ ./services/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Build all packages
-RUN pnpm --filter @stix/shared --filter @stix/enforcer --filter @stix/policy --filter @stix/evidence --filter @stix/approvals build
+RUN pnpm --filter @stix/shared --filter @stix/fabric-types --filter @stix/enforcer --filter @stix/policy --filter @stix/evidence --filter @stix/approvals --filter @stix/fabric build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production - Enforcer
@@ -144,3 +146,31 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3004/health || exit 1
 
 CMD ["node", "services/approvals/dist/index.js"]
+
+# -----------------------------------------------------------------------------
+# Stage 7: Production - Fabric
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS fabric
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/packages/fabric-types/node_modules ./packages/fabric-types/node_modules
+COPY --from=builder /app/services/fabric/node_modules ./services/fabric/node_modules
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/packages/fabric-types/dist ./packages/fabric-types/dist
+COPY --from=builder /app/packages/fabric-types/package.json ./packages/fabric-types/
+COPY --from=builder /app/services/fabric/dist ./services/fabric/dist
+COPY --from=builder /app/services/fabric/package.json ./services/fabric/
+
+RUN apk add --no-cache curl
+
+USER node
+EXPOSE 3005
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3005/health || exit 1
+
+CMD ["node", "services/fabric/dist/index.js"]

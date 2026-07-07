@@ -1,6 +1,6 @@
 {
   "name": "@stix/agent-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "STIX Agent SDK - Client library for AI agent integration",
   "type": "module",
   "main": "dist/index.js",
