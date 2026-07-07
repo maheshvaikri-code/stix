@@ -2,7 +2,7 @@
   "name": "@stix/monorepo",
   "version": "0.1.1",
   "private": true,
-  "description": "STIX - Shield, Trust & Integrity eXecution Platform",
+  "description": "STIX Core and STIX Fabric - trusted execution and policy fabric for AI agents",
   "type": "module",
   "workspaces": [
     "packages/*",

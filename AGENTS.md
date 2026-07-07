@@ -4,15 +4,18 @@ This file provides context for AI agents (GitLab Duo, Claude, etc.) operating wi
 
 ## Project Overview
 
-STIX (Shield, Trust & Integrity eXecution) is a compliance enforcement platform for AI agents. It evaluates every agent action against YAML policy packs, returns a decision (ALLOW/DENY/QUARANTINE), and records the decision in a tamper-evident audit trail with Ed25519 cryptographic signatures.
+STIX (Shield, Trust & Integrity eXecution) is organized as **STIX Core** and **STIX Fabric**.
+
+- **STIX Core** is the trusted execution engine for AI-agent and service actions. It evaluates every action against YAML policy packs, returns a decision (ALLOW/DENY/QUARANTINE), issues proof tokens, and records the decision in a tamper-evident audit trail with Ed25519 cryptographic signatures.
+- **STIX Fabric** is the broader agent policy fabric direction: the enterprise control plane for coordinating agents, tools, enforcement points, policy rollout, approvals, evidence, and compliance posture across many runtimes.
 
 ## Architecture
 
-- **Enforcer** (`services/enforcer/`, port 3001) - Policy evaluation engine, generates Ed25519 proof tokens
-- **Policy** (`services/policy/`, port 3002) - YAML policy pack management (HIPAA, SOX, PCI-DSS)
-- **Evidence** (`services/evidence/`, port 3003) - SHA-256 hash-chained, Ed25519-signed audit trail
-- **Approvals** (`services/approvals/`, port 3004) - Human-in-the-loop approval workflows
-- **Dashboard** (`dashboard/`, port 3100) - Next.js real-time compliance monitoring
+- **Enforcer** (`services/enforcer/`, port 3001) - STIX Core policy enforcement and proof-token issuance
+- **Policy** (`services/policy/`, port 3002) - STIX Core YAML policy pack management and evaluation
+- **Evidence** (`services/evidence/`, port 3003) - STIX Core SHA-256 hash-chained, Ed25519-signed audit trail
+- **Approvals** (`services/approvals/`, port 3004) - STIX Core human-in-the-loop approval workflows
+- **Dashboard** (`dashboard/`, port 3100) - Emerging STIX Fabric console for monitoring, policy posture, evidence, approvals, and integrations
 
 ## Key Packages
 
@@ -54,7 +57,7 @@ GET  /api/v1/approvals    - List pending approvals
 ## Conventions
 
 - TypeScript monorepo managed with pnpm
-- Services use Express.js
+- Services use Fastify
 - Tests use Vitest
 - Dashboard uses Next.js 14 with Recharts and Tailwind CSS
 - All crypto uses Ed25519 (EdDSA) for signatures and SHA-256 for hash chains

@@ -5,13 +5,19 @@
 </p>
 
 <p align="center">
-  <strong>Enterprise-Grade Compliance Guardrails for AI Agents and Automated Systems</strong>
+  <strong>STIX Core and STIX Fabric: Trusted Execution and Policy Fabric for AI Agents</strong>
 </p>
 
-STIX is an execution-path control plane for AI-agent and service actions.
-It evaluates each action against policy before execution, returns a deterministic decision (`ALLOW`, `DENY`, `QUARANTINE`), and writes tamper-evident evidence for audit and replay.
+STIX is a trusted execution platform for AI-agent and service actions. It is organized as two product layers:
+
+- **STIX Core**: the enforcement engine that evaluates actions, issues proof tokens, records evidence, and supports replay.
+- **STIX Fabric**: the agent policy fabric that coordinates policies, agents, tools, approvals, and audit posture across enterprise workflows.
+
+STIX evaluates each action against policy before execution, returns a deterministic decision (`ALLOW`, `DENY`, `QUARANTINE`), and writes tamper-evident evidence for audit and replay.
 
 > "Trust me, the AI followed policy" is not good enough. STIX proves it.
+
+See `docs/STIX_CORE_AND_FABRIC.md` for the product architecture.
 
 ## STIX Guardian - AI Compliance Agent for GitLab
 
@@ -41,11 +47,11 @@ STIX Enforcer evaluates against HIPAA policy pack
 The Guardian agent is configured via GitLab Duo flows in `.gitlab/duo/flows/`:
 
 - **stix-guardian.yaml** - Custom agent with compliance review tools, triggered on `assign_reviewer` and `@mention`
-- **compliance-gate.yaml** - Custom flow that orchestrates scan → evaluate → decide → record steps on MR open/update
+- **compliance-gate.yaml** - Custom flow that orchestrates scan -> evaluate -> decide -> record steps on MR open/update
 
 CI/CD compliance gate in `.gitlab-ci.yml` runs `scripts/gitlab/guardian-ci.mjs` on every MR pipeline.
 
-### Claude as Compliance Reasoning Engine (Anthropic Track)
+### Claude as Compliance Reasoning Engine
 
 STIX doesn't just "use Claude" - Claude is the **compliance reasoning engine** that feeds into a cryptographically-enforced decision pipeline. The `ComplianceAnalyzer` class (`packages/agent-sdk/src/reasoning/compliance-analyzer.ts`):
 
@@ -54,7 +60,7 @@ STIX doesn't just "use Claude" - Claude is the **compliance reasoning engine** t
 - Summarizes context for human approvers on QUARANTINE decisions
 - Every analysis result is recorded in the Ed25519 signed evidence chain
 
-### Sustainability (Green Agent Track)
+### Efficient Reasoning Model
 
 STIX's policy engine evaluates **locally** with zero LLM calls for 80%+ of decisions. Claude is only invoked for QUARANTINE reasoning, complex diffs, and approval summaries. Result: **98% reduction** in LLM API calls vs. naive approaches. The dashboard tracks tokens saved, USD saved, and compute time savings in real-time.
 
@@ -63,6 +69,7 @@ STIX's policy engine evaluates **locally** with zero LLM calls for 80%+ of decis
 ## Table of Contents
 
 - [Why STIX](#why-stix)
+- [Product Model](#product-model)
 - [Capability Snapshot](#capability-snapshot)
 - [Architecture](#architecture)
 - [Repository Layout](#repository-layout)
@@ -91,21 +98,35 @@ STIX is useful when you need all of the following:
 - replay/simulation to detect policy drift before rollout,
 - regulator-aligned control mapping and evidence export workflows.
 
+## Product Model
+
+| Product Layer | Purpose |
+|---|---|
+| **STIX Core** | Runtime policy enforcement, proof-token issuance, approval workflow, evidence chain, simulation, replay, and verification |
+| **STIX Fabric** | Distributed governance layer for agent identity, enforcement points, tool/action registries, policy rollout, evidence graph, posture, and enterprise integrations |
+
+Short version:
+
+> STIX Core enforces. STIX Fabric governs.
+
+See `docs/STIX_CORE_AND_FABRIC.md` for the product architecture.
+
+
 ## Capability Snapshot
 
 | Domain | STIX Capability |
 |---|---|
-| Enforcement | Policy-based `ALLOW` / `DENY` / `QUARANTINE` decisions |
-| Guardrails | Human-in-the-loop approval workflows |
-| Evidence | Hash-chained, signed evidence events |
-| Verification | Chain and signature verification tooling |
-| Replay | Replay and drift analysis tooling |
-| Integrations | Agent SDK and target verifier SDK |
-| Governance | Policy lifecycle docs, runbooks, and dashboard support |
+| STIX Core Enforcement | Policy-based `ALLOW` / `DENY` / `QUARANTINE` decisions |
+| STIX Core Guardrails | Human-in-the-loop approval workflows |
+| STIX Core Evidence | Hash-chained, signed evidence events |
+| STIX Core Verification | Chain and signature verification tooling |
+| STIX Core Replay | Replay and drift analysis tooling |
+| STIX Core Integrations | Agent SDK and target verifier SDK |
+| STIX Fabric Governance | Policy lifecycle, dashboard posture, GitOps-ready policy packs, and future agent/tool registries |
 
 ## Architecture
 
-STIX services in this repo:
+STIX Core services in this repo:
 
 | Service | Default Port | Purpose |
 |---|---:|---|
@@ -502,6 +523,7 @@ High-level summary:
 
 ## Documentation Index
 
+- STIX Core and Fabric product architecture: `docs/STIX_CORE_AND_FABRIC.md`
 - Architecture and overview: `STIX_Comprehensive_Documentation.md`
 - Enterprise deployment guide: `docs/ENTERPRISE_DEPLOYMENT.md`
 - Combined integration guide: `docs/COMBINED_ARCHITECTURE_INTEGRATION.md`
