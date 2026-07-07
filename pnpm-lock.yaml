@@ -423,6 +423,9 @@ importers:
       fastify:
         specifier: ^4.25.0
         version: 4.29.1
+      pg:
+        specifier: ^8.11.3
+        version: 8.17.2
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -430,6 +433,9 @@ importers:
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.30
+      '@types/pg':
+        specifier: ^8.10.9
+        version: 8.16.0
       tsx:
         specifier: ^4.7.0
         version: 4.21.0

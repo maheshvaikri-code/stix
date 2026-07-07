@@ -144,7 +144,10 @@ services:
       - PORT=3005
       - LOG_LEVEL=debug
       - LOG_PRETTY=true
-      - STORAGE_TYPE=memory
+      - STORAGE_TYPE=postgres
+      - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
+    depends_on:
+      - postgres
     networks:
       - stix-network
     healthcheck:

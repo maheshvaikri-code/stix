@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp, type AppContext } from '@stix/fabric';
+import { loadConfig } from '../services/fabric/src/config/index.js';
 
 const originalEnv = { ...process.env };
 
@@ -171,5 +172,21 @@ describe('STIX Fabric service', () => {
       headers: { 'x-stix-service-token': 'fabric-test-token' },
     });
     expect(authenticated.statusCode).toBe(200);
+  });
+
+  it('requires durable storage in production mode', () => {
+    process.env.NODE_ENV = 'prod';
+    process.env.STORAGE_TYPE = 'memory';
+    process.env.SERVICE_TOKEN_AUTH_ENABLED = 'false';
+
+    expect(() => loadConfig()).toThrow(/durable registry backend/);
+  });
+
+  it('requires POSTGRES_URL when postgres storage is enabled', () => {
+    process.env.NODE_ENV = 'test';
+    process.env.STORAGE_TYPE = 'postgres';
+    process.env.POSTGRES_URL = '';
+
+    expect(() => loadConfig()).toThrow(/POSTGRES_URL/);
   });
 });

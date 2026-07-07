@@ -18,7 +18,8 @@ const ConfigSchema = z.object({
     pretty: z.boolean(),
   }),
   storage: z.object({
-    type: z.enum(['memory']),
+    type: z.enum(['memory', 'postgres']),
+    postgresUrl: z.string().optional(),
   }),
   auth: z.object({
     serviceTokenAuthEnabled: z.boolean(),
@@ -47,6 +48,7 @@ export function loadConfig(): Config {
     },
     storage: {
       type: getEnv('STORAGE_TYPE', 'memory') as Config['storage']['type'],
+      postgresUrl: getEnv('POSTGRES_URL', ''),
     },
     auth: {
       serviceTokenAuthEnabled: getEnvBool('SERVICE_TOKEN_AUTH_ENABLED', env === 'prod'),
@@ -58,6 +60,10 @@ export function loadConfig(): Config {
 
   if (parsed.service.env === 'prod' && parsed.storage.type === 'memory') {
     throw new Error('STIX Fabric production mode requires a durable registry backend.');
+  }
+
+  if (parsed.storage.type === 'postgres' && !parsed.storage.postgresUrl) {
+    throw new Error('STORAGE_TYPE=postgres requires POSTGRES_URL for stix-fabric.');
   }
 
   if (parsed.auth.serviceTokenAuthEnabled && !parsed.auth.serviceToken) {

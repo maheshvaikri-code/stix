@@ -21,7 +21,7 @@ This guide provides comprehensive instructions for deploying STIX (Shield Trust 
 
 ## Architecture Overview
 
-STIX consists of four main services:
+STIX consists of five backend services plus the dashboard:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

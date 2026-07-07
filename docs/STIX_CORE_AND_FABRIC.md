@@ -24,9 +24,7 @@ It contains:
 - `services/policy` for policy pack loading, evaluation, and simulation.
 - `services/evidence` for hash-chained, signed audit evidence.
 - `services/approvals` for human-in-the-loop workflows.
-- `services/fabric` for the first Fabric control-plane registry APIs.
 - `packages/agent-sdk` for wrapping agent tools and integrations.
-- `packages/fabric-types` for Fabric registry and graph types.
 - `packages/target-verifier` for proof-token validation at protected targets.
 - `tools/stix-verify`, `tools/stix-replay`, and `tools/stix-simulate` for audit, replay, and drift analysis.
 
@@ -62,7 +60,7 @@ STIX Core already supports the storage primitives Fabric needs:
 | Evidence | Memory, Postgres | Postgres for hot evidence, object storage for archives |
 | Approvals | Memory, Postgres | Postgres with routing, SLA, and escalation metadata |
 | Decision cache | Redis or in-memory fallback | Redis for distributed cache and rate-limit state |
-| Agent/tool registries | STIX Fabric in-memory registry API | Postgres system of record |
+| Agent/tool registries | STIX Fabric memory or Postgres registry API | Postgres system of record, graph expansion, and inventory history |
 | Reports/exports | Files/artifacts | Object storage or durable artifact backend |
 
 Memory is for development and tests only. Production should use Postgres and Redis.
@@ -111,10 +109,12 @@ The first Fabric milestone adds:
 - Enforcement point registry.
 - Tool/action registry.
 - Policy channels for dev, stage, and prod.
-- Evidence graph queries.
+- Durable Postgres-backed registry storage.
+- Registry graph summary API.
 
 The next milestone should add:
 
+- Evidence and approval graph joins.
 - Approval routing rules.
 - Webhook/SIEM export hooks.
 - Dashboard views for posture, drift, and agent inventory.

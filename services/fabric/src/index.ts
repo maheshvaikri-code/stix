@@ -40,7 +40,7 @@ async function createApp(): Promise<AppContext> {
   });
   await server.register(helmet, { contentSecurityPolicy: false });
 
-  const store = await createFabricStore(logger);
+  const store = await createFabricStore(config, logger);
   const startTime = Date.now();
 
   server.addHook('onRequest', async (request, reply) => {
@@ -118,7 +118,7 @@ async function start(): Promise<void> {
 
 export { createApp, start };
 export type { AppContext };
-export { createFabricStore, InMemoryFabricStore, type FabricStore } from './store/index.js';
+export { createFabricStore, InMemoryFabricStore, PostgresFabricStore, type FabricStore } from './store/index.js';
 export { fabricRoutes, healthRoutes } from './routes/index.js';
 export type { Config } from './config/index.js';
 

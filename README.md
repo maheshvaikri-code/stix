@@ -122,7 +122,7 @@ See `docs/STIX_CORE_AND_FABRIC.md` for the product architecture.
 | STIX Core Verification | Chain and signature verification tooling |
 | STIX Core Replay | Replay and drift analysis tooling |
 | STIX Core Integrations | Agent SDK and target verifier SDK |
-| STIX Fabric Governance | Policy lifecycle, dashboard posture, GitOps-ready policy packs, and future agent/tool registries |
+| STIX Fabric Governance | Policy lifecycle, dashboard posture, GitOps-ready policy packs, and durable agent/tool registries |
 
 ## Architecture
 
@@ -136,7 +136,7 @@ STIX Core services in this repo:
 | `approvals` | `3004` | Approval ticket workflows |
 | `fabric` | `3005` | STIX Fabric registry and control-plane APIs |
 | `redis` | `6379` | Decision/cache support |
-| `postgres` | `5432` | Durable policy/evidence/approvals store |
+| `postgres` | `5432` | Durable policy/evidence/approvals/Fabric store |
 
 Core request flow:
 
@@ -211,7 +211,7 @@ Note: set `USE_MOCK_CLIENTS=false` when Enforcer should call real downstream ser
 
 ## Run Full End-to-End Locally (Real Services)
 
-Use this when you want real Policy/Evidence/Approvals calls and durable Postgres-backed stores.
+Use this when you want real Policy/Evidence/Approvals/Fabric calls and durable Postgres-backed stores.
 
 ### Build and run Docker Compose stack
 
@@ -337,7 +337,7 @@ kubectl apply -f deploy/k8s/stix-mtls.yaml
 - `EVIDENCE_WRITE_MODE=strict`
 - `SIGNING_KEY_ID` + (`SIGNING_KEY_PATH` or `SIGNING_KEY_PEM`)
 
-`policy`, `evidence`, `approvals`:
+`policy`, `evidence`, `approvals`, `fabric`:
 
 - `NODE_ENV=prod`
 - `STORAGE_TYPE=postgres`
@@ -426,7 +426,7 @@ Use them as source material, then convert to current STIX policy schema before r
 ## Enterprise Hardening Checklist
 
 - Run all services in `prod` mode.
-- Use Postgres-backed durable storage for policy/evidence/approvals.
+- Use Postgres-backed durable storage for policy/evidence/approvals/Fabric.
 - Enforce service token auth between services.
 - Enforce enforcer ingress API key auth.
 - Use managed secret store for signing keys.
