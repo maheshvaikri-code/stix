@@ -288,7 +288,7 @@ import { StixClient } from '@stix/agent-sdk';
 const stix = new StixClient({
   enforcerUrl: 'http://localhost:3001',
   defaultActor: { id: 'agent-1', type: 'AI_AGENT', tenant: 'acme' },
-  defaultEnv: 'stage',
+  defaultContext: { env: 'stage' },
 });
 
 const decision = await stix.authorize({
@@ -301,6 +301,39 @@ if (decision.allowed) {
   // execute protected action
 }
 ```
+
+### Join STIX Fabric from an Agent
+
+Use the Fabric-aware SDK helper when an agent should self-register its identity, SDK enforcement point, and tool/action surface before running through STIX Core authorization.
+
+```ts
+import { createStixAgent } from '@stix/agent-sdk';
+
+const agent = await createStixAgent({
+  enforcerUrl: 'http://localhost:3001',
+  fabricUrl: 'http://localhost:3005',
+  serviceToken: process.env.STIX_SERVICE_TOKEN,
+  agent: {
+    agent_id: 'agent-claims-assistant',
+    display_name: 'Claims Assistant Agent',
+    owner: 'compliance-ops',
+    runtime: 'nodejs',
+    environment: 'stage',
+    risk_tier: 'HIGH',
+  },
+  tools: [{
+    name: 'read_claim',
+    action: 'read_claim',
+    resourceType: 'claim_record',
+    riskTier: 'MEDIUM',
+    execute: async ({ claimId }: { claimId: string }) => ({ claimId }),
+  }],
+});
+
+const result = await agent.execute('read_claim', { claimId: 'claim-123' });
+```
+
+Full example: `examples/fabric-agent-sdk.ts`
 
 ## Deploying STIX
 

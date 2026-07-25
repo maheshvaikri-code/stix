@@ -111,6 +111,7 @@ The first Fabric milestone adds:
 - Policy channels for dev, stage, and prod.
 - Durable Postgres-backed registry storage.
 - Registry graph summary API.
+- Fabric-aware Agent SDK bridge for self-registration.
 
 The next milestone should add:
 

@@ -1,6 +1,6 @@
 {
   "name": "@stix/cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "STIX CLI - Command line tools for STIX management",
   "license": "MIT",
   "type": "module",

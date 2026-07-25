@@ -11,7 +11,7 @@
  * // Quick setup with createObservability
  * const { metrics, tracing } = await createObservability({
  *   serviceName: 'stix-enforcer',
- *   serviceVersion: '0.1.2',
+ *   serviceVersion: '0.1.3',
  *   environment: 'production',
  *   otlpEndpoint: 'http://otel-collector:4318',
  * });
@@ -175,7 +175,7 @@ export async function createObservability(
 export async function createObservabilityFromEnv(): Promise<Observability> {
   return createObservability({
     serviceName: process.env.SERVICE_NAME ?? process.env.OTEL_SERVICE_NAME ?? 'stix',
-    serviceVersion: process.env.SERVICE_VERSION ?? '0.1.2',
+    serviceVersion: process.env.SERVICE_VERSION ?? '0.1.3',
     environment: process.env.NODE_ENV ?? process.env.ENVIRONMENT ?? 'production',
     otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
     tracingSampleRate: parseFloat(process.env.TRACING_SAMPLE_RATE ?? '0.1'),

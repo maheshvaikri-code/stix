@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-db",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "STIX Target DB - Protected database access service",
   "type": "module",
   "main": "dist/index.js",

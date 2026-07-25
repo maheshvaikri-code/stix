@@ -64,7 +64,7 @@ const program = new Command();
 program
   .name('stix-verify')
   .description('STIX Evidence Verification CLI')
-  .version('0.1.2');
+  .version('0.1.3');
 
 // =============================================================================
 // VERIFY CHAIN COMMAND

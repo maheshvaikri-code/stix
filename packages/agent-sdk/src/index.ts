@@ -78,6 +78,15 @@
 // Core client
 export { StixClient, createClientFromEnv } from './client';
 
+// Fabric-aware agent runtime
+export {
+  FabricClient,
+  StixFabricAgent,
+  createFabricClientFromEnv,
+  createStixAgent,
+  createStixAgentFromEnv,
+} from './fabric';
+
 // Tool wrappers
 export {
   wrapTool,
@@ -127,6 +136,26 @@ export type {
   RiskTier,
   ToolCall,
 } from './types';
+
+export type {
+  FabricClientConfig,
+  FabricToolRegistrationOptions,
+  StixFabricAgentConfig,
+  StixFabricAgentRuntime,
+} from './fabric';
+
+export type {
+  CreateFabricAgentInput,
+  CreateFabricEnforcementPointInput,
+  CreateFabricPolicyChannelInput,
+  CreateFabricToolActionInput,
+  FabricAgent,
+  FabricEnforcementPoint,
+  FabricGraphSummary,
+  FabricPolicyChannel,
+  FabricRegistryStats,
+  FabricToolAction,
+} from '@stix/fabric-types';
 
 // Errors
 export {
