@@ -54,3 +54,15 @@ __pycache__/
 _Development_Notes/*.log
 _Development_Notes/*.err.log
 nul
+
+# doctrine state plane (machine-local only)
+.doctrine-state/local/
+
+# Doctrine local agent runtime/install artifacts
+.Doctrine/
+.Doctrine.md
+.cursor/rules/doctrine.mdc
+CLAUDE.md
+Makefile
+tests/test_doctrine_*.py
+tools/doctrine_*.py
