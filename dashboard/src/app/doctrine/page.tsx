@@ -15,7 +15,7 @@ import {
   Sparkles,
   Workflow,
 } from "lucide-react";
-import { useFabricInventory } from "@/lib/hooks";
+import { useFabricInventory, useFabricReadiness } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -41,8 +41,20 @@ const gates = [
 
 export default function DoctrinePage() {
   const { data, isLoading, error, refetch, isFetching } = useFabricInventory();
+  const {
+    data: readiness,
+    refetch: refetchReadiness,
+    isFetching: isReadinessFetching,
+  } = useFabricReadiness();
   const doctrine = useMemo(() => getDoctrineInventory(data), [data]);
-  const posture = useMemo(() => buildDoctrinePosture(data), [data]);
+  const posture = useMemo(
+    () => readiness?.doctrine ?? buildDoctrinePosture(data),
+    [data, readiness?.doctrine],
+  );
+  const refreshDoctrine = () => {
+    void refetch();
+    void refetchReadiness();
+  };
 
   return (
     <div className="relative z-10 min-h-screen space-y-6 p-4 sm:p-6">
@@ -74,8 +86,8 @@ export default function DoctrinePage() {
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
                 variant="secondary"
-                onClick={() => refetch()}
-                loading={isFetching}
+                onClick={refreshDoctrine}
+                loading={isFetching || isReadinessFetching}
                 className="border-white/10 bg-white/10 text-white hover:bg-white/20"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />

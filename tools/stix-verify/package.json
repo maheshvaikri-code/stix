@@ -1,6 +1,6 @@
 {
   "name": "@stix/verify",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "STIX Evidence Verification CLI - Verify hash chains and signatures",
   "type": "module",
   "main": "dist/index.js",

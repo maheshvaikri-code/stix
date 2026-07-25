@@ -111,6 +111,20 @@ export interface FabricRegistryStats {
   critical_tool_actions: number;
 }
 
+export interface FabricCollection<T> {
+  data: T[];
+  total: number;
+}
+
+export interface FabricInventory {
+  agents: FabricCollection<FabricAgent>;
+  enforcementPoints: FabricCollection<FabricEnforcementPoint>;
+  toolActions: FabricCollection<FabricToolAction>;
+  policyChannels: FabricCollection<FabricPolicyChannel>;
+  stats: FabricRegistryStats;
+  graph: FabricGraphSummary;
+}
+
 export interface FabricGraphSummary {
   nodes: Array<{
     id: string;
@@ -126,3 +140,5 @@ export interface FabricGraphSummary {
   }>;
   stats: FabricRegistryStats;
 }
+
+export * from './readiness.js';

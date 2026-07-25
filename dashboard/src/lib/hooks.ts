@@ -28,6 +28,7 @@ export const queryKeys = {
   approvalsByTrace: (traceId: string) => ['approvals', 'trace', traceId] as const,
 
   fabricInventory: ['fabric', 'inventory'] as const,
+  fabricReadiness: ['fabric', 'readiness'] as const,
   fabricStats: ['fabric', 'stats'] as const,
   fabricGraph: ['fabric', 'graph', 'summary'] as const,
   fabricAgents: ['fabric', 'agents'] as const,
@@ -312,6 +313,15 @@ export function useFabricInventory() {
   return useQuery({
     queryKey: queryKeys.fabricInventory,
     queryFn: () => api.getFabricInventory(),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+}
+
+export function useFabricReadiness() {
+  return useQuery({
+    queryKey: queryKeys.fabricReadiness,
+    queryFn: () => api.getFabricReadiness(),
     staleTime: 30000,
     refetchInterval: 60000,
   });

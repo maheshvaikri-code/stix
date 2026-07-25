@@ -2,6 +2,20 @@
 
 All notable changes to STIX are documented here.
 
+## [0.1.8] - 2026-07-25
+
+### Added
+
+- Promoted Fabric readiness calculation into `@stix/fabric-types` as shared control-plane logic.
+- Added `GET /api/v1/fabric/readiness` to return Fabric and Doctrine readiness from the Fabric service.
+- Added dashboard API client and React Query hook support for backend readiness.
+- Added Fabric service test coverage for the readiness endpoint.
+
+### Changed
+
+- `/fabric` and `/doctrine` now prefer the backend readiness report while retaining local fallback calculation.
+- Bumped the monorepo and STIX package versions to `0.1.8`.
+
 ## [0.1.7] - 2026-07-25
 
 ### Added

@@ -36,7 +36,7 @@ This integration is registry-level today. STIX does not execute Doctrine tools d
 
 ## Readiness Controls
 
-The dashboard computes Doctrine readiness from Fabric registry records. The current controls are:
+The Fabric service returns Doctrine readiness from registry records at `GET /api/v1/fabric/readiness`, and the dashboard uses that backend report when available. The current controls are:
 
 | Control | Source |
 |---|---|

@@ -4,11 +4,14 @@
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { buildFabricReadinessReport } from '@stix/fabric-types';
 import type {
   FabricAgent,
   FabricEnforcementPoint,
   FabricGraphSummary,
+  FabricInventory,
   FabricPolicyChannel,
+  FabricReadinessReport,
   FabricRegistryStats,
   FabricToolAction,
 } from '@stix/fabric-types';
@@ -156,6 +159,11 @@ export async function fabricRoutes(
     const data = await store.getGraphSummary();
     return reply.code(200).send(data);
   });
+
+  fastify.get('/api/v1/fabric/readiness', async (_request, reply) => {
+    const data = await buildInventory(store);
+    return reply.code(200).send(buildFabricReadinessReport(data));
+  });
 }
 
 export async function healthRoutes(
@@ -190,6 +198,27 @@ export async function healthRoutes(
 
 function collection<T>(data: T[]): { data: T[]; total: number } {
   return { data, total: data.length };
+}
+
+async function buildInventory(store: FabricStore): Promise<FabricInventory> {
+  const [agents, enforcementPoints, toolActions, policyChannels, stats, graph] =
+    await Promise.all([
+      store.listAgents(),
+      store.listEnforcementPoints(),
+      store.listToolActions(),
+      store.listPolicyChannels(),
+      store.getStats(),
+      store.getGraphSummary(),
+    ]);
+
+  return {
+    agents: collection(agents),
+    enforcementPoints: collection(enforcementPoints),
+    toolActions: collection(toolActions),
+    policyChannels: collection(policyChannels),
+    stats,
+    graph,
+  };
 }
 
 function parseBody<T extends z.ZodTypeAny>(
@@ -229,4 +258,5 @@ export type {
   FabricPolicyChannel,
   FabricRegistryStats,
   FabricGraphSummary,
+  FabricReadinessReport,
 };

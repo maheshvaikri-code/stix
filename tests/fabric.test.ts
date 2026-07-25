@@ -134,6 +134,21 @@ describe('STIX Fabric service', () => {
         { from: 'agent_test_001', to: 'channel_prod', relation: 'governed_by' },
       ])
     );
+
+    const readinessResponse = await app.server.inject({
+      method: 'GET',
+      url: '/api/v1/fabric/readiness',
+    });
+    expect(readinessResponse.statusCode).toBe(200);
+    expect(readinessResponse.json()).toMatchObject({
+      fabric: {
+        score: 100,
+        level: 'ready',
+      },
+      doctrine: {
+        registered: false,
+      },
+    });
   });
 
   it('rejects invalid registry payloads', async () => {

@@ -3,12 +3,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { FabricInventory } from '../dashboard/src/lib/api';
+import type { FabricInventory } from '@stix/fabric-types';
 import {
   buildDoctrinePosture,
   buildFabricPosture,
   getDoctrineInventory,
-} from '../dashboard/src/lib/fabric-readiness';
+} from '@stix/fabric-types';
 
 const now = '2026-07-25T00:00:00.000Z';
 
@@ -165,7 +165,7 @@ function createReadyInventory(): FabricInventory {
           display_name: 'Doctrine Gold Build Gate',
           environment: 'prod',
           rollout_state: 'ACTIVE',
-          active_bundle_id: 'bundle_0_1_7_doctrine',
+          active_bundle_id: 'bundle_0_1_8_doctrine',
           metadata: {
             coverage: 'g0-g7',
           },

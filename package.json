@@ -1,6 +1,6 @@
 {
   "name": "@stix/monorepo",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "STIX Core and STIX Fabric - trusted execution and policy fabric for AI agents",
   "type": "module",

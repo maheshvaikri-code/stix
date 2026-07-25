@@ -21,7 +21,7 @@ import {
   TerminalSquare,
   Workflow,
 } from "lucide-react";
-import { useFabricInventory } from "@/lib/hooks";
+import { useFabricInventory, useFabricReadiness } from "@/lib/hooks";
 import type {
   FabricAgent,
   FabricEnforcementPoint,
@@ -83,6 +83,11 @@ const motionTransition = { duration: 0.45, ease: "easeOut" as const };
 export default function FabricPage() {
   const [activeTab, setActiveTab] = useState<FabricTab>("posture");
   const { data, isLoading, error, refetch, isFetching } = useFabricInventory();
+  const {
+    data: readiness,
+    refetch: refetchReadiness,
+    isFetching: isReadinessFetching,
+  } = useFabricReadiness();
 
   const stats = data?.stats ?? emptyStats;
   const hasInventory = Boolean(
@@ -93,7 +98,15 @@ export default function FabricPage() {
       data.policyChannels.total),
   );
 
-  const posture = useMemo(() => buildFabricPosture(data), [data]);
+  const posture = useMemo(
+    () => readiness?.fabric ?? buildFabricPosture(data),
+    [data, readiness?.fabric],
+  );
+
+  const refreshFabric = () => {
+    void refetch();
+    void refetchReadiness();
+  };
 
   return (
     <div className="relative z-10 min-h-screen space-y-6 p-4 sm:p-6">
@@ -125,8 +138,8 @@ export default function FabricPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 variant="secondary"
-                onClick={() => refetch()}
-                loading={isFetching}
+                onClick={refreshFabric}
+                loading={isFetching || isReadinessFetching}
                 className="bg-white/10 text-white hover:bg-white/20 focus:ring-cyan-400"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />

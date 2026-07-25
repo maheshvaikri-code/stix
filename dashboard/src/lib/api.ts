@@ -4,10 +4,13 @@
 
 import type {
   FabricAgent,
+  FabricCollection,
   FabricEnforcementPoint,
   FabricGraphSummary,
+  FabricInventory,
   FabricPolicyChannel,
   FabricRegistryStats,
+  FabricReadinessReport,
   FabricToolAction,
 } from '@stix/fabric-types';
 
@@ -155,26 +158,14 @@ export interface DecisionTimeSeries {
   quarantined: TimeSeriesPoint[];
 }
 
-export interface FabricCollection<T> {
-  data: T[];
-  total: number;
-}
-
-export interface FabricInventory {
-  agents: FabricCollection<FabricAgent>;
-  enforcementPoints: FabricCollection<FabricEnforcementPoint>;
-  toolActions: FabricCollection<FabricToolAction>;
-  policyChannels: FabricCollection<FabricPolicyChannel>;
-  stats: FabricRegistryStats;
-  graph: FabricGraphSummary;
-}
-
 export type {
   FabricAgent,
   FabricEnforcementPoint,
   FabricGraphSummary,
+  FabricInventory,
   FabricPolicyChannel,
   FabricRegistryStats,
+  FabricReadinessReport,
   FabricToolAction,
 };
 
@@ -590,6 +581,10 @@ class ApiClient {
 
   async getFabricGraphSummary(): Promise<FabricGraphSummary> {
     return this.fetch<FabricGraphSummary>('fabric', '/api/v1/fabric/graph/summary');
+  }
+
+  async getFabricReadiness(): Promise<FabricReadinessReport> {
+    return this.fetch<FabricReadinessReport>('fabric', '/api/v1/fabric/readiness');
   }
 
   async getFabricInventory(): Promise<FabricInventory> {
