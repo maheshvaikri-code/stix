@@ -122,7 +122,7 @@ See `docs/STIX_CORE_AND_FABRIC.md` for the product architecture.
 | STIX Core Verification | Chain and signature verification tooling |
 | STIX Core Replay | Replay and drift analysis tooling |
 | STIX Core Integrations | Agent SDK and target verifier SDK |
-| STIX Fabric Governance | Policy lifecycle, dashboard posture, GitOps-ready policy packs, and durable agent/tool registries |
+| STIX Fabric Governance | Policy lifecycle, Fabric dashboard posture/graph/inventory views, GitOps-ready policy packs, and durable agent/tool registries |
 
 ## Architecture
 
@@ -334,6 +334,13 @@ const result = await agent.execute('read_claim', { claimId: 'claim-123' });
 ```
 
 Full example: `examples/fabric-agent-sdk.ts`
+
+### View the Fabric Console
+
+The dashboard includes a dedicated Fabric view at `/fabric` for registry posture,
+graph relationships, and agent/tool/channel inventory. Set
+`NEXT_PUBLIC_FABRIC_URL` when the Fabric API is not running on
+`http://localhost:3005`.
 
 ## Deploying STIX
 

@@ -112,13 +112,14 @@ The first Fabric milestone adds:
 - Durable Postgres-backed registry storage.
 - Registry graph summary API.
 - Fabric-aware Agent SDK bridge for self-registration.
+- Fabric console dashboard views for registry posture, graph summary, and agent/tool inventory.
 
 The next milestone should add:
 
 - Evidence and approval graph joins.
 - Approval routing rules.
 - Webhook/SIEM export hooks.
-- Dashboard views for posture, drift, and agent inventory.
+- Drift detection and policy rollout guardrails in the Fabric console.
 
 ## Positioning
 

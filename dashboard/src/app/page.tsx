@@ -16,6 +16,7 @@ import {
   ArrowRight,
   RefreshCw,
   Leaf,
+  Network,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -84,8 +85,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Service Status */}
-      <div className="grid grid-cols-4 gap-4">
-        {['enforcer', 'policy', 'evidence', 'approvals'].map((service) => {
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {['enforcer', 'policy', 'evidence', 'approvals', 'fabric'].map((service) => {
           const serviceHealth = health?.[service as keyof typeof health];
           const status = serviceHealth?.status || 'unknown';
           const icons = {
@@ -93,6 +94,7 @@ export default function DashboardPage() {
             policy: FileText,
             evidence: Database,
             approvals: CheckCircle,
+            fabric: Network,
           };
           const Icon = icons[service as keyof typeof icons];
 

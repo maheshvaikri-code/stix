@@ -156,6 +156,12 @@ function ApiSettings() {
               disabled
               helperText="Set via NEXT_PUBLIC_APPROVALS_URL environment variable"
             />
+            <Input
+              label="Fabric URL"
+              value={API_CONFIG.fabric}
+              disabled
+              helperText="Set via NEXT_PUBLIC_FABRIC_URL environment variable"
+            />
           </div>
         </CardContent>
       </Card>
@@ -175,6 +181,7 @@ function ServicesSettings() {
     { key: 'policy', name: 'Policy', description: 'Policy management and evaluation' },
     { key: 'evidence', name: 'Evidence', description: 'Immutable audit trail storage' },
     { key: 'approvals', name: 'Approvals', description: 'Human-in-the-loop workflow' },
+    { key: 'fabric', name: 'Fabric', description: 'Agent policy fabric registry and graph' },
   ];
 
   return (

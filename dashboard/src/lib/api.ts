@@ -2,6 +2,15 @@
  * STIX Dashboard - API Client
  */
 
+import type {
+  FabricAgent,
+  FabricEnforcementPoint,
+  FabricGraphSummary,
+  FabricPolicyChannel,
+  FabricRegistryStats,
+  FabricToolAction,
+} from '@stix/fabric-types';
+
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -11,7 +20,10 @@ export const API_CONFIG = {
   policy: process.env.NEXT_PUBLIC_POLICY_URL || 'http://localhost:3002',
   evidence: process.env.NEXT_PUBLIC_EVIDENCE_URL || 'http://localhost:3003',
   approvals: process.env.NEXT_PUBLIC_APPROVALS_URL || 'http://localhost:3004',
+  fabric: process.env.NEXT_PUBLIC_FABRIC_URL || 'http://localhost:3005',
 };
+
+export type ApiService = keyof typeof API_CONFIG;
 
 // =============================================================================
 // TYPES
@@ -22,6 +34,16 @@ export interface ServiceHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   uptime_ms: number;
   version: string;
+  checks?: Record<string, { status: string; latency_ms: number }>;
+}
+
+interface RawServiceHealth {
+  name?: string;
+  service?: string;
+  status?: 'healthy' | 'degraded' | 'unhealthy';
+  uptime?: number;
+  uptime_ms?: number;
+  version?: string;
   checks?: Record<string, { status: string; latency_ms: number }>;
 }
 
@@ -127,6 +149,29 @@ export interface DecisionTimeSeries {
   quarantined: TimeSeriesPoint[];
 }
 
+export interface FabricCollection<T> {
+  data: T[];
+  total: number;
+}
+
+export interface FabricInventory {
+  agents: FabricCollection<FabricAgent>;
+  enforcementPoints: FabricCollection<FabricEnforcementPoint>;
+  toolActions: FabricCollection<FabricToolAction>;
+  policyChannels: FabricCollection<FabricPolicyChannel>;
+  stats: FabricRegistryStats;
+  graph: FabricGraphSummary;
+}
+
+export type {
+  FabricAgent,
+  FabricEnforcementPoint,
+  FabricGraphSummary,
+  FabricPolicyChannel,
+  FabricRegistryStats,
+  FabricToolAction,
+};
+
 // =============================================================================
 // API CLIENT
 // =============================================================================
@@ -139,7 +184,7 @@ class ApiClient {
   }
 
   private async fetch<T>(
-    service: keyof typeof API_CONFIG,
+    service: ApiService,
     path: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -170,9 +215,16 @@ class ApiClient {
   // Health
   // ---------------------------------------------------------------------------
 
-  async getServiceHealth(service: keyof typeof API_CONFIG): Promise<ServiceHealth> {
+  async getServiceHealth(service: ApiService): Promise<ServiceHealth> {
     try {
-      return await this.fetch<ServiceHealth>(service, '/health');
+      const health = await this.fetch<RawServiceHealth>(service, '/health');
+      return {
+        name: health.name ?? health.service ?? service,
+        status: health.status ?? 'unhealthy',
+        uptime_ms: health.uptime_ms ?? (health.uptime ?? 0) * 1000,
+        version: health.version ?? 'unknown',
+        checks: health.checks,
+      };
     } catch {
       return {
         name: service,
@@ -183,15 +235,18 @@ class ApiClient {
     }
   }
 
-  async getAllServicesHealth(): Promise<Record<string, ServiceHealth>> {
-    const services = Object.keys(API_CONFIG) as (keyof typeof API_CONFIG)[];
+  async getAllServicesHealth(): Promise<Record<ApiService, ServiceHealth>> {
+    const services = Object.keys(API_CONFIG) as ApiService[];
     const results = await Promise.all(
       services.map(async (service) => ({
         service,
         health: await this.getServiceHealth(service),
       }))
     );
-    return Object.fromEntries(results.map((r) => [r.service, r.health]));
+    return Object.fromEntries(results.map((r) => [r.service, r.health])) as Record<
+      ApiService,
+      ServiceHealth
+    >;
   }
 
   // ---------------------------------------------------------------------------
@@ -422,6 +477,60 @@ class ApiClient {
 
   async getApprovalsByTrace(traceId: string): Promise<ApprovalRequest[]> {
     return this.fetch<ApprovalRequest[]>('approvals', `/api/v1/approvals/trace/${traceId}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // STIX Fabric
+  // ---------------------------------------------------------------------------
+
+  async listFabricAgents(): Promise<FabricCollection<FabricAgent>> {
+    return this.fetch<FabricCollection<FabricAgent>>('fabric', '/api/v1/fabric/agents');
+  }
+
+  async listFabricEnforcementPoints(): Promise<FabricCollection<FabricEnforcementPoint>> {
+    return this.fetch<FabricCollection<FabricEnforcementPoint>>(
+      'fabric',
+      '/api/v1/fabric/enforcement-points'
+    );
+  }
+
+  async listFabricToolActions(): Promise<FabricCollection<FabricToolAction>> {
+    return this.fetch<FabricCollection<FabricToolAction>>('fabric', '/api/v1/fabric/tool-actions');
+  }
+
+  async listFabricPolicyChannels(): Promise<FabricCollection<FabricPolicyChannel>> {
+    return this.fetch<FabricCollection<FabricPolicyChannel>>(
+      'fabric',
+      '/api/v1/fabric/policy-channels'
+    );
+  }
+
+  async getFabricStats(): Promise<FabricRegistryStats> {
+    return this.fetch<FabricRegistryStats>('fabric', '/api/v1/fabric/stats');
+  }
+
+  async getFabricGraphSummary(): Promise<FabricGraphSummary> {
+    return this.fetch<FabricGraphSummary>('fabric', '/api/v1/fabric/graph/summary');
+  }
+
+  async getFabricInventory(): Promise<FabricInventory> {
+    const [agents, enforcementPoints, toolActions, policyChannels, stats, graph] = await Promise.all([
+      this.listFabricAgents(),
+      this.listFabricEnforcementPoints(),
+      this.listFabricToolActions(),
+      this.listFabricPolicyChannels(),
+      this.getFabricStats(),
+      this.getFabricGraphSummary(),
+    ]);
+
+    return {
+      agents,
+      enforcementPoints,
+      toolActions,
+      policyChannels,
+      stats,
+      graph,
+    };
   }
 }
 

@@ -3,7 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type Policy, type EvidenceRecord, type ApprovalRequest } from './api';
+import { api, type ApiService, type Policy, type EvidenceRecord, type ApprovalRequest } from './api';
 
 // =============================================================================
 // QUERY KEYS
@@ -26,6 +26,14 @@ export const queryKeys = {
   approvals: (params: Record<string, unknown>) => ['approvals', params] as const,
   approval: (id: string) => ['approvals', 'detail', id] as const,
   approvalsByTrace: (traceId: string) => ['approvals', 'trace', traceId] as const,
+
+  fabricInventory: ['fabric', 'inventory'] as const,
+  fabricStats: ['fabric', 'stats'] as const,
+  fabricGraph: ['fabric', 'graph', 'summary'] as const,
+  fabricAgents: ['fabric', 'agents'] as const,
+  fabricEnforcementPoints: ['fabric', 'enforcement-points'] as const,
+  fabricToolActions: ['fabric', 'tool-actions'] as const,
+  fabricPolicyChannels: ['fabric', 'policy-channels'] as const,
 };
 
 // =============================================================================
@@ -35,7 +43,7 @@ export const queryKeys = {
 export function useServiceHealth(service: string) {
   return useQuery({
     queryKey: queryKeys.health(service),
-    queryFn: () => api.getServiceHealth(service as 'enforcer' | 'policy' | 'evidence' | 'approvals'),
+    queryFn: () => api.getServiceHealth(service as ApiService),
     refetchInterval: 30000,
     staleTime: 10000,
   });
@@ -293,5 +301,68 @@ export function useRejectRequest() {
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
     },
+  });
+}
+
+// =============================================================================
+// FABRIC HOOKS
+// =============================================================================
+
+export function useFabricInventory() {
+  return useQuery({
+    queryKey: queryKeys.fabricInventory,
+    queryFn: () => api.getFabricInventory(),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+}
+
+export function useFabricStats() {
+  return useQuery({
+    queryKey: queryKeys.fabricStats,
+    queryFn: () => api.getFabricStats(),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+}
+
+export function useFabricGraphSummary() {
+  return useQuery({
+    queryKey: queryKeys.fabricGraph,
+    queryFn: () => api.getFabricGraphSummary(),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+}
+
+export function useFabricAgents() {
+  return useQuery({
+    queryKey: queryKeys.fabricAgents,
+    queryFn: () => api.listFabricAgents(),
+    staleTime: 30000,
+  });
+}
+
+export function useFabricEnforcementPoints() {
+  return useQuery({
+    queryKey: queryKeys.fabricEnforcementPoints,
+    queryFn: () => api.listFabricEnforcementPoints(),
+    staleTime: 30000,
+  });
+}
+
+export function useFabricToolActions() {
+  return useQuery({
+    queryKey: queryKeys.fabricToolActions,
+    queryFn: () => api.listFabricToolActions(),
+    staleTime: 30000,
+  });
+}
+
+export function useFabricPolicyChannels() {
+  return useQuery({
+    queryKey: queryKeys.fabricPolicyChannels,
+    queryFn: () => api.listFabricPolicyChannels(),
+    staleTime: 30000,
   });
 }

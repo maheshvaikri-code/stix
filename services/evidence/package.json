@@ -1,6 +1,6 @@
 {
   "name": "@stix/evidence",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "STIX Evidence Service - Tamper-evident audit trail",
   "type": "module",
   "main": "dist/index.js",

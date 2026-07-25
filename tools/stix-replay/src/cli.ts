@@ -36,7 +36,7 @@ const program = new Command();
 program
   .name('stix-replay')
   .description('STIX Replay Tool - Replay recorded decisions for verification')
-  .version('0.1.3');
+  .version('0.1.4');
 
 // =============================================================================
 // REPLAY COMMAND
