@@ -58,7 +58,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-approvals',
-      version: getEnv('SERVICE_VERSION', '0.1.6'),
+      version: getEnv('SERVICE_VERSION', '0.1.7'),
       port: getEnvNumber('PORT', SERVICE_PORTS.APPROVALS),
       host: getEnv('HOST', '0.0.0.0'),
       env,

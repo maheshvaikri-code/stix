@@ -3,7 +3,7 @@
  * Verify proof tokens before executing protected actions
  *
  * @module @stix/target-verifier
- * @version 0.1.6
+ * @version 0.1.7
  *
  * @example
  * ```typescript
@@ -86,5 +86,5 @@ export {
 // VERSION
 // =============================================================================
 
-export const VERSION = '0.1.6';
+export const VERSION = '0.1.7';
 export const PACKAGE_NAME = '@stix/target-verifier';

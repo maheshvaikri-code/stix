@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import {
   Activity,
@@ -15,12 +16,17 @@ import {
   Workflow,
 } from "lucide-react";
 import { useFabricInventory } from "@/lib/hooks";
-import type { FabricInventory } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  buildDoctrinePosture,
+  getDoctrineInventory,
+  type DoctrinePosture,
+  type FabricReadinessIssue,
+} from "@/lib/fabric-readiness";
 
 const gates = [
   { id: "G0", label: "Intake", owner: "Product", state: "Ready" },
@@ -35,7 +41,8 @@ const gates = [
 
 export default function DoctrinePage() {
   const { data, isLoading, error, refetch, isFetching } = useFabricInventory();
-  const doctrine = data ? getDoctrineInventory(data) : null;
+  const doctrine = useMemo(() => getDoctrineInventory(data), [data]);
+  const posture = useMemo(() => buildDoctrinePosture(data), [data]);
 
   return (
     <div className="relative z-10 min-h-screen space-y-6 p-4 sm:p-6">
@@ -122,33 +129,66 @@ export default function DoctrinePage() {
             }
           />
         </Card>
-      ) : doctrine ? (
+      ) : posture.registered ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DoctrineMetric
-              label="Doctrine Agents"
-              value={doctrine.agents.length}
+              label="Readiness Score"
+              value={posture.score}
               icon={<Command className="h-5 w-5" />}
               tone="amber"
+              suffix="%"
             />
             <DoctrineMetric
-              label="Gatekeepers"
-              value={doctrine.enforcementPoints.length}
+              label="Gate Coverage"
+              value={posture.counts.gates}
               icon={<ShieldCheck className="h-5 w-5" />}
               tone="cyan"
+              suffix="/8"
             />
             <DoctrineMetric
               label="Governed Actions"
-              value={doctrine.actions.length}
+              value={posture.counts.actions}
               icon={<Workflow className="h-5 w-5" />}
               tone="emerald"
             />
             <DoctrineMetric
               label="Release Channels"
-              value={doctrine.channels.length}
+              value={posture.counts.channels}
               icon={<GitBranch className="h-5 w-5" />}
               tone="blue"
             />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+            <Card className="border-0 bg-slate-950 text-white shadow-xl shadow-slate-300/40">
+              <CardHeader
+                title="Doctrine Readiness Controls"
+                description={posture.summary}
+              />
+              <div className="grid gap-3 md:grid-cols-2">
+                {posture.controls.map((control) => (
+                  <DoctrineControlCard key={control.id} control={control} />
+                ))}
+              </div>
+            </Card>
+
+            <Card className="bg-white/90">
+              <CardHeader
+                title="Readiness Exceptions"
+                description="What must be fixed before Doctrine enforcement wrapping"
+              />
+              <div className="space-y-3">
+                {posture.issues.map((issue) => (
+                  <DoctrineIssueCard key={issue.id} issue={issue} />
+                ))}
+                {!posture.issues.length && (
+                  <p className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">
+                    No Doctrine registry exceptions detected.
+                  </p>
+                )}
+              </div>
+            </Card>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
@@ -201,12 +241,12 @@ export default function DoctrinePage() {
                 <BoundaryItem
                   icon={<Network className="h-4 w-4" />}
                   title="Wired now"
-                  text="Doctrine is visible as Fabric inventory and graph data."
+                  text="Doctrine has read-only Fabric readiness computed from registry data."
                 />
                 <BoundaryItem
                   icon={<Activity className="h-4 w-4" />}
                   title="Next adapter"
-                  text="Expose read-only Doctrine gate and state-plane summaries."
+                  text="Expose signed, read-only Doctrine gate and state-plane summaries."
                 />
                 <BoundaryItem
                   icon={<FileCheck2 className="h-4 w-4" />}
@@ -235,11 +275,13 @@ function DoctrineMetric({
   value,
   icon,
   tone,
+  suffix = "",
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   tone: "amber" | "cyan" | "emerald" | "blue";
+  suffix?: string;
 }) {
   const styles = {
     amber: "from-amber-50 to-orange-50 text-amber-700 ring-amber-100",
@@ -255,6 +297,7 @@ function DoctrineMetric({
           <p className="text-sm text-slate-500">{label}</p>
           <p className="mt-2 text-3xl font-bold text-slate-950">
             {value.toLocaleString()}
+            {suffix}
           </p>
         </div>
         <div className={`rounded-2xl bg-gradient-to-br p-3 ring-1 ${styles[tone]}`}>
@@ -262,6 +305,59 @@ function DoctrineMetric({
         </div>
       </div>
     </Card>
+  );
+}
+
+function DoctrineControlCard({
+  control,
+}: {
+  control: DoctrinePosture["controls"][number];
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+      <div className="flex items-start gap-3">
+        <div
+          className={`rounded-xl p-2 ${
+            control.passed
+              ? "bg-emerald-300/15 text-emerald-100"
+              : "bg-amber-300/15 text-amber-100"
+          }`}
+        >
+          {control.passed ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <AlertTriangle className="h-4 w-4" />
+          )}
+        </div>
+        <div>
+          <p className="font-semibold text-white">{control.label}</p>
+          <p className="mt-1 text-sm text-slate-400">{control.detail}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DoctrineIssueCard({ issue }: { issue: FabricReadinessIssue }) {
+  const styles = {
+    info: "border-cyan-100 bg-cyan-50 text-cyan-800",
+    warning: "border-amber-100 bg-amber-50 text-amber-800",
+    critical: "border-red-100 bg-red-50 text-red-800",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${styles[issue.severity]}`}>
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+        <div>
+          <p className="font-semibold">{issue.title}</p>
+          <p className="mt-1 text-sm opacity-80">{issue.detail}</p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+            {issue.remediation}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -287,46 +383,4 @@ function BoundaryItem({
       </div>
     </div>
   );
-}
-
-function getDoctrineInventory(data: FabricInventory) {
-  const agents = data.agents.data.filter((agent) =>
-    [agent.agent_id, agent.runtime, ...agent.labels].some((value) =>
-      value.toLowerCase().includes("doctrine"),
-    ),
-  );
-  const enforcementPoints = data.enforcementPoints.data.filter((point) =>
-    [point.enforcement_point_id, point.display_name]
-      .join(" ")
-      .toLowerCase()
-      .includes("doctrine"),
-  );
-  const actions = data.toolActions.data.filter((action) =>
-    [action.action_id, action.action, action.display_name]
-      .join(" ")
-      .toLowerCase()
-      .includes("doctrine"),
-  );
-  const channels = data.policyChannels.data.filter((channel) =>
-    [channel.channel_id, channel.display_name]
-      .join(" ")
-      .toLowerCase()
-      .includes("doctrine"),
-  );
-
-  if (
-    !agents.length &&
-    !enforcementPoints.length &&
-    !actions.length &&
-    !channels.length
-  ) {
-    return null;
-  }
-
-  return {
-    agents,
-    enforcementPoints,
-    actions,
-    channels,
-  };
 }

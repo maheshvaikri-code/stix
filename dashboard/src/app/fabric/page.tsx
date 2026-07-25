@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   Activity,
+  AlertTriangle,
   Boxes,
   CheckCircle,
   CircuitBoard,
@@ -36,6 +37,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { FabricOrbit } from "@/components/fabric/fabric-orbit";
+import {
+  buildFabricPosture,
+  type FabricPosture,
+  type FabricReadinessIssue,
+} from "@/lib/fabric-readiness";
 import {
   Table,
   TableBody,
@@ -87,7 +93,7 @@ export default function FabricPage() {
       data.policyChannels.total),
   );
 
-  const posture = useMemo(() => buildPosture(data), [data]);
+  const posture = useMemo(() => buildFabricPosture(data), [data]);
 
   return (
     <div className="relative z-10 min-h-screen space-y-6 p-4 sm:p-6">
@@ -145,6 +151,7 @@ export default function FabricPage() {
               totalNodes={data?.graph.nodes.length ?? 0}
               totalEdges={data?.graph.edges.length ?? 0}
               postureScore={posture.score}
+              postureLevel={posture.level}
             />
           </div>
         </div>
@@ -259,10 +266,12 @@ function FabricSignalPanel({
   totalNodes,
   totalEdges,
   postureScore,
+  postureLevel,
 }: {
   totalNodes: number;
   totalEdges: number;
   postureScore: number;
+  postureLevel: FabricPosture["level"];
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur">
@@ -291,6 +300,13 @@ function FabricSignalPanel({
               className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-emerald-300 to-blue-300"
             />
           </div>
+          <p className="mt-2 text-xs uppercase tracking-[0.22em] text-slate-400">
+            {postureLevel === "ready"
+              ? "Ready"
+              : postureLevel === "watch"
+                ? "Watch"
+                : "Blocked"}
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-slate-900/60 p-4">
@@ -352,7 +368,7 @@ function PostureView({
   posture,
 }: {
   data: FabricInventory;
-  posture: ReturnType<typeof buildPosture>;
+  posture: FabricPosture;
 }) {
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -375,7 +391,10 @@ function PostureView({
             >
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="text-slate-300">{signal.label}</span>
-                <span className="font-semibold">{signal.value}%</span>
+                <span className="flex items-center gap-2 font-semibold">
+                  <ReadinessDot level={signal.status} />
+                  {signal.value}%
+                </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div
@@ -385,12 +404,30 @@ function PostureView({
                   className={signal.className}
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-400">{signal.summary}</p>
             </motion.div>
           ))}
         </div>
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Card className="bg-white/90 md:col-span-2">
+          <CardHeader
+            title="Readiness Exceptions"
+            description="Release-impacting gaps computed from Fabric registry data"
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            {posture.issues.slice(0, 6).map((issue) => (
+              <ReadinessIssueCard key={issue.id} issue={issue} />
+            ))}
+            {!posture.issues.length && (
+              <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700 md:col-span-2">
+                No readiness exceptions detected in the Fabric registry.
+              </p>
+            )}
+          </div>
+        </Card>
+
         <Card className="bg-white/90">
           <CardHeader
             title="Risk Watch"
@@ -476,6 +513,40 @@ function PostureView({
       </div>
     </div>
   );
+}
+
+function ReadinessIssueCard({ issue }: { issue: FabricReadinessIssue }) {
+  const styles = {
+    info: "border-cyan-100 bg-cyan-50 text-cyan-800",
+    warning: "border-amber-100 bg-amber-50 text-amber-800",
+    critical: "border-red-100 bg-red-50 text-red-800",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${styles[issue.severity]}`}>
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+        <div>
+          <p className="font-semibold">{issue.title}</p>
+          <p className="mt-1 text-sm opacity-80">{issue.detail}</p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+            {issue.remediation}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReadinessDot({ level }: { level: FabricPosture["level"] }) {
+  const color =
+    level === "ready"
+      ? "bg-emerald-300"
+      : level === "watch"
+        ? "bg-amber-300"
+        : "bg-red-300";
+
+  return <span className={`h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
 function InventoryView({ data }: { data: FabricInventory }) {
@@ -944,84 +1015,6 @@ function RolloutBadge({ state }: { state: string }) {
       {formatToken(state)}
     </Badge>
   );
-}
-
-function buildPosture(data?: FabricInventory) {
-  const stats = data?.stats ?? emptyStats;
-  const agents = data?.agents.data ?? [];
-  const channels = data?.policyChannels.data ?? [];
-  const actions = data?.toolActions.data ?? [];
-
-  const agentCoverage = percent(stats.active_agents, stats.agents);
-  const guardCoverage = percent(
-    stats.active_enforcement_points,
-    stats.enforcement_points,
-  );
-  const channelCoverage = percent(
-    channels.filter((channel) => channel.rollout_state === "ACTIVE").length,
-    channels.length,
-  );
-  const highRiskActions = actions.filter(
-    (action) => action.risk_tier === "HIGH" || action.risk_tier === "CRITICAL",
-  );
-  const approvalCoverage = highRiskActions.length
-    ? percent(
-        highRiskActions.filter((action) => action.approval_required).length,
-        highRiskActions.length,
-      )
-    : 100;
-  const productionAgents = agents.filter(
-    (agent) => agent.environment === "prod",
-  );
-  const prodRiskCoverage = productionAgents.length
-    ? percent(
-        productionAgents.filter(
-          (agent) =>
-            agent.status === "ACTIVE" && agent.risk_tier !== "CRITICAL",
-        ).length,
-        productionAgents.length,
-      )
-    : 100;
-
-  const signals = [
-    {
-      label: "Active agent coverage",
-      value: agentCoverage,
-      className: "h-full rounded-full bg-cyan-300",
-    },
-    {
-      label: "Active enforcement coverage",
-      value: guardCoverage,
-      className: "h-full rounded-full bg-emerald-300",
-    },
-    {
-      label: "Active policy channels",
-      value: channelCoverage,
-      className: "h-full rounded-full bg-blue-300",
-    },
-    {
-      label: "High-risk approval coverage",
-      value: approvalCoverage,
-      className: "h-full rounded-full bg-amber-300",
-    },
-    {
-      label: "Production agent posture",
-      value: prodRiskCoverage,
-      className: "h-full rounded-full bg-indigo-300",
-    },
-  ];
-
-  return {
-    score: Math.round(
-      signals.reduce((sum, signal) => sum + signal.value, 0) / signals.length,
-    ),
-    signals,
-  };
-}
-
-function percent(value: number, total: number) {
-  if (total <= 0) return 0;
-  return Math.round((value / total) * 100);
 }
 
 function formatToken(value: string) {

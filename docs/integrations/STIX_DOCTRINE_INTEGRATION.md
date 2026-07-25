@@ -33,3 +33,18 @@ The seeded records make Doctrine visible in the Fabric UI as a governed agent ru
 ## Boundary
 
 This integration is registry-level today. STIX does not execute Doctrine tools directly from the dashboard yet. The safe next step is a small adapter service that exposes read-only Doctrine gate/state summaries, then later adds signed STIX authorization around write actions such as checkpoint or promotion.
+
+## Readiness Controls
+
+The dashboard computes Doctrine readiness from Fabric registry records. The current controls are:
+
+| Control | Source |
+|---|---|
+| Doctrine runtime registered | `agent_doctrine_os` or another Doctrine-labeled agent |
+| Gatekeeper active | Active Doctrine enforcement point |
+| Verify action modeled | Doctrine verify tool action |
+| Checkpoint action modeled | Doctrine checkpoint tool action |
+| Gold build channel active | Active Doctrine policy channel |
+| G0-G7 gate coverage | Gate metadata on the Doctrine agent or channel |
+
+These controls are read-only posture signals. They show whether Doctrine is represented well enough for future enforcement wrapping.

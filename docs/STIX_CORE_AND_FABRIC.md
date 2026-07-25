@@ -142,6 +142,8 @@ The seed command writes stable demo agents, enforcement points, tool actions, an
 
 The demo seed includes Doctrine as a governed engineering-runtime integration. See `docs/integrations/STIX_DOCTRINE_INTEGRATION.md` for the current registry-level boundary and the safe adapter path.
 
+The Fabric and Doctrine pages compute readiness from registry records. `/fabric` shows graph coverage, approval coverage, policy-channel posture, and remediation cards. `/doctrine` shows whether Doctrine is represented as a runtime, gatekeeper, verify/checkpoint action pair, active release channel, and G0-G7 gate set.
+
 ## Positioning
 
 Recommended public language:

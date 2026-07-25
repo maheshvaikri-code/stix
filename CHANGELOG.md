@@ -2,6 +2,20 @@
 
 All notable changes to STIX are documented here.
 
+## [0.1.7] - 2026-07-25
+
+### Added
+
+- Added a reusable dashboard Fabric readiness model that computes posture score, readiness level, exceptions, and remediation guidance from existing Fabric registry data.
+- Added Doctrine readiness controls for runtime registration, gatekeeper activation, verify/checkpoint action modeling, active gold-build channel, and G0-G7 coverage.
+- Added unit coverage for Fabric and Doctrine readiness calculations.
+
+### Changed
+
+- `/fabric` now shows readiness exceptions and remediation cards instead of only raw posture bars.
+- `/doctrine` now shows a computed readiness score, gate coverage, control checklist, and missing-control exceptions.
+- Bumped the monorepo and STIX package versions to `0.1.7`.
+
 ## [0.1.6] - 2026-07-25
 
 ### Added
