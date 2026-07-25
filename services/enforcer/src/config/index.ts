@@ -119,7 +119,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-enforcer',
-      version: getEnv('SERVICE_VERSION', '0.1.5'),
+      version: getEnv('SERVICE_VERSION', '0.1.6'),
       port: getEnvNumber('PORT', SERVICE_PORTS.ENFORCER),
       host: getEnv('HOST', '0.0.0.0'),
       env,

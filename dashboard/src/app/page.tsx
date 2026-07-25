@@ -68,6 +68,7 @@ export default function DashboardPage() {
     refetchStats();
     refetchHealth();
   };
+  const degradedServices = stats?.degraded_services ?? [];
 
   return (
     <div className="relative z-10 space-y-6 p-4 sm:p-6">
@@ -160,6 +161,28 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {degradedServices.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/90">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="rounded-2xl bg-amber-100 p-2 text-amber-700">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-950">
+                Command center is showing partial data
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                {degradedServices
+                  .map((item) => item.service)
+                  .join(", ")}{" "}
+                did not return dashboard stats. The remaining live services are
+                still rendered so operators can keep working.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       {statsLoading ? (
         <div className="py-8">
@@ -181,7 +204,7 @@ export default function DashboardPage() {
               icon={<CheckCircle className="h-6 w-6" />}
               iconColor="text-green-600"
               iconBg="bg-green-50"
-              subtitle={`${((stats.decisions.allowed / stats.decisions.total) * 100).toFixed(1)}% of total`}
+              subtitle={`${formatPercent(stats.decisions.allowed, stats.decisions.total)}% of total`}
             />
             <StatsCard
               title="Denied"
@@ -189,7 +212,7 @@ export default function DashboardPage() {
               icon={<XCircle className="h-6 w-6" />}
               iconColor="text-red-600"
               iconBg="bg-red-50"
-              subtitle={`${((stats.decisions.denied / stats.decisions.total) * 100).toFixed(1)}% of total`}
+              subtitle={`${formatPercent(stats.decisions.denied, stats.decisions.total)}% of total`}
             />
             <StatsCard
               title="Pending Approvals"
@@ -266,7 +289,9 @@ export default function DashboardPage() {
                     color: "#f8fafc",
                     fontSize: "12px",
                   }}
-                  labelFormatter={(v: string) => new Date(v).toLocaleString()}
+                  labelFormatter={(v: unknown) =>
+                    new Date(String(v)).toLocaleString()
+                  }
                 />
                 <Legend wrapperStyle={{ fontSize: "12px" }} iconType="circle" />
                 <Area
@@ -669,29 +694,35 @@ function DecisionChart({
   };
 }) {
   const total = stats.decisions.total;
-  const allowedPercent = (stats.decisions.allowed / total) * 100;
-  const deniedPercent = (stats.decisions.denied / total) * 100;
-  const quarantinedPercent = (stats.decisions.quarantined / total) * 100;
+  const allowedPercent = percentOf(stats.decisions.allowed, total);
+  const deniedPercent = percentOf(stats.decisions.denied, total);
+  const quarantinedPercent = percentOf(stats.decisions.quarantined, total);
 
   return (
     <div className="space-y-4">
       {/* Bar Chart */}
-      <div className="h-4 flex rounded-full overflow-hidden">
-        <div
-          className="bg-green-500"
-          style={{ width: `${allowedPercent}%` }}
-          title={`Allowed: ${allowedPercent.toFixed(1)}%`}
-        />
-        <div
-          className="bg-red-500"
-          style={{ width: `${deniedPercent}%` }}
-          title={`Denied: ${deniedPercent.toFixed(1)}%`}
-        />
-        <div
-          className="bg-yellow-500"
-          style={{ width: `${quarantinedPercent}%` }}
-          title={`Quarantined: ${quarantinedPercent.toFixed(1)}%`}
-        />
+      <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">
+        {total > 0 ? (
+          <>
+            <div
+              className="bg-green-500"
+              style={{ width: `${allowedPercent}%` }}
+              title={`Allowed: ${allowedPercent.toFixed(1)}%`}
+            />
+            <div
+              className="bg-red-500"
+              style={{ width: `${deniedPercent}%` }}
+              title={`Denied: ${deniedPercent.toFixed(1)}%`}
+            />
+            <div
+              className="bg-yellow-500"
+              style={{ width: `${quarantinedPercent}%` }}
+              title={`Quarantined: ${quarantinedPercent.toFixed(1)}%`}
+            />
+          </>
+        ) : (
+          <div className="h-full w-full bg-slate-200" title="No decisions yet" />
+        )}
       </div>
 
       {/* Legend */}
@@ -733,6 +764,14 @@ function DecisionChart({
       </div>
     </div>
   );
+}
+
+function percentOf(value: number, total: number): number {
+  return total > 0 ? (value / total) * 100 : 0;
+}
+
+function formatPercent(value: number, total: number): string {
+  return percentOf(value, total).toFixed(1);
 }
 
 function formatTimeAgo(dateString: string): string {

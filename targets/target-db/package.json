@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-db",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "STIX Target DB - Protected database access service",
   "type": "module",
   "main": "dist/index.js",
@@ -20,10 +20,10 @@
   "dependencies": {
     "@stix/shared": "workspace:*",
     "@stix/target-verifier": "workspace:*",
-    "fastify": "^4.25.0",
-    "@fastify/cors": "^8.5.0",
-    "@fastify/helmet": "^11.1.1",
-    "@fastify/rate-limit": "^9.1.0",
+    "fastify": "^5.10.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.0",
+    "@fastify/rate-limit": "^11.1.0",
     "pg": "^8.11.3",
     "mysql2": "^3.7.0",
     "better-sqlite3": "^9.3.0",

@@ -121,6 +121,27 @@ The next milestone should add:
 - Webhook/SIEM export hooks.
 - Drift detection and policy rollout guardrails in the Fabric console.
 
+## Local Fabric Console Demo
+
+To view the emerging STIX Fabric console with live registry data:
+
+```bash
+pnpm --filter @stix/fabric start
+pnpm demo:fabric:seed
+pnpm --filter @stix/dashboard start
+```
+
+Then open:
+
+```text
+http://localhost:3100/fabric
+http://localhost:3100/doctrine
+```
+
+The seed command writes stable demo agents, enforcement points, tool actions, and policy channels to the running Fabric API at `http://localhost:3005` by default. Override with `STIX_FABRIC_URL` when the Fabric service is running elsewhere.
+
+The demo seed includes Doctrine as a governed engineering-runtime integration. See `docs/integrations/STIX_DOCTRINE_INTEGRATION.md` for the current registry-level boundary and the safe adapter path.
+
 ## Positioning
 
 Recommended public language:

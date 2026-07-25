@@ -4,7 +4,7 @@
  */
 
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import {
   SEMRESATTRS_SERVICE_NAME,
   SEMRESATTRS_SERVICE_VERSION,
@@ -92,9 +92,9 @@ export class StixTracing {
       instrumentations.push(new PgInstrumentation());
     }
 
-    const resource = new Resource({
+    const resource = resourceFromAttributes({
       [SEMRESATTRS_SERVICE_NAME]: this.config.serviceName,
-      [SEMRESATTRS_SERVICE_VERSION]: this.config.serviceVersion ?? '0.1.5',
+      [SEMRESATTRS_SERVICE_VERSION]: this.config.serviceVersion ?? '0.1.6',
       [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: this.config.environment ?? 'production',
       ...this.config.resourceAttributes,
     });

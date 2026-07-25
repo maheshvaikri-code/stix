@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   CheckCircle,
   ClipboardList,
+  Command,
   Database,
   ExternalLink,
   FileText,
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Policies", href: "/policies", icon: FileText },
   { name: "Governance", href: "/governance", icon: ClipboardList },
   { name: "Fabric", href: "/fabric", icon: Network },
+  { name: "Doctrine", href: "/doctrine", icon: Command },
   { name: "Evidence", href: "/evidence", icon: Database },
   { name: "Approvals", href: "/approvals", icon: CheckCircle, badge: true },
   { name: "GitLab", href: "/gitlab", icon: GitBranch },

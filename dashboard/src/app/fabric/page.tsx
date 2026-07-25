@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { FabricOrbit } from "@/components/fabric/fabric-orbit";
 import {
   Table,
   TableBody,
@@ -102,7 +103,7 @@ export default function FabricPage() {
           <div className="absolute bottom-0 left-1/2 h-48 w-48 rounded-full bg-blue-500 blur-3xl" />
         </div>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:28px_28px]" />
-        <div className="relative grid gap-8 p-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="relative grid gap-8 p-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.85fr)]">
           <div className="space-y-5">
             <Badge variant="info">STIX Fabric Control Plane</Badge>
             <div>
@@ -132,11 +133,20 @@ export default function FabricPage() {
             </div>
           </div>
 
-          <FabricSignalPanel
-            totalNodes={data?.graph.nodes.length ?? 0}
-            totalEdges={data?.graph.edges.length ?? 0}
-            postureScore={posture.score}
-          />
+          <div className="space-y-4">
+            <FabricOrbit
+              agents={stats.agents}
+              enforcementPoints={stats.enforcement_points}
+              toolActions={stats.tool_actions}
+              policyChannels={stats.policy_channels}
+              postureScore={posture.score}
+            />
+            <FabricSignalPanel
+              totalNodes={data?.graph.nodes.length ?? 0}
+              totalEdges={data?.graph.edges.length ?? 0}
+              postureScore={posture.score}
+            />
+          </div>
         </div>
       </motion.div>
 

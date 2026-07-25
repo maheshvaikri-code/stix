@@ -1,6 +1,6 @@
 {
   "name": "@stix/agent-sdk",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "STIX Agent SDK - Enterprise policy enforcement for AI agents",
   "license": "MIT",
   "main": "dist/index.js",
@@ -52,7 +52,7 @@
   "dependencies": {
     "@stix/fabric-types": "workspace:*",
     "@stix/shared": "workspace:*",
-    "undici": "^6.0.0"
+    "undici": "^6.27.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

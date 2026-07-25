@@ -51,6 +51,12 @@ interface AppContext {
   startTime: number;
 }
 
+type RequestError = Error & {
+  code?: string;
+  statusCode?: number;
+  validation?: unknown;
+};
+
 // =============================================================================
 // CREATE APPLICATION
 // =============================================================================
@@ -90,8 +96,10 @@ async function createApp(): Promise<AppContext> {
     });
   }
 
-  server.setErrorHandler((error, request, reply) => {
-    if ('validation' in error) {
+  server.setErrorHandler((rawError, request, reply) => {
+    const error = toRequestError(rawError);
+
+    if (error.validation) {
       return reply.code(400).send({
         error: error.message,
         message: error.message,
@@ -322,6 +330,14 @@ async function createApp(): Promise<AppContext> {
     signingKey,
     startTime,
   };
+}
+
+function toRequestError(error: unknown): RequestError {
+  if (error instanceof Error) {
+    return error as RequestError;
+  }
+
+  return new Error(String(error)) as RequestError;
 }
 
 // =============================================================================

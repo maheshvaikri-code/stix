@@ -128,6 +128,12 @@ export interface DashboardStats {
     chain_valid: boolean;
     last_verified: string;
   };
+  degraded_services?: DashboardStatsSourceStatus[];
+}
+
+export interface DashboardStatsSourceStatus {
+  service: Extract<ApiService, 'enforcer' | 'policy' | 'evidence' | 'approvals'>;
+  message: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -172,6 +178,35 @@ export type {
   FabricToolAction,
 };
 
+const EMPTY_DASHBOARD_STATS: Omit<DashboardStats, 'degraded_services'> = {
+  decisions: {
+    total: 0,
+    allowed: 0,
+    denied: 0,
+    quarantined: 0,
+    last_24h: 0,
+    trend: 0,
+  },
+  approvals: {
+    pending: 0,
+    approved_today: 0,
+    rejected_today: 0,
+    avg_response_time_ms: 0,
+  },
+  policies: {
+    total: 0,
+    active: 0,
+    by_regulation: {},
+    by_decision: {},
+  },
+  evidence: {
+    total_records: 0,
+    today: 0,
+    chain_valid: false,
+    last_verified: new Date(0).toISOString(),
+  },
+};
+
 // =============================================================================
 // API CLIENT
 // =============================================================================
@@ -209,6 +244,23 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  private async fetchWithFallback<T>(
+    service: DashboardStatsSourceStatus['service'],
+    path: string,
+    fallback: T,
+    degradedServices: DashboardStatsSourceStatus[]
+  ): Promise<T> {
+    try {
+      return await this.fetch<T>(service, path);
+    } catch (error) {
+      degradedServices.push({
+        service,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return fallback;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -254,14 +306,41 @@ class ApiClient {
   // ---------------------------------------------------------------------------
 
   async getDashboardStats(): Promise<DashboardStats> {
+    const degradedServices: DashboardStatsSourceStatus[] = [];
     const [decisions, approvals, policies, evidence] = await Promise.all([
-      this.fetch<DashboardStats['decisions']>('enforcer', '/api/v1/stats/decisions'),
-      this.fetch<DashboardStats['approvals']>('approvals', '/api/v1/stats'),
-      this.fetch<DashboardStats['policies']>('policy', '/api/v1/stats'),
-      this.fetch<DashboardStats['evidence']>('evidence', '/api/v1/stats'),
+      this.fetchWithFallback<DashboardStats['decisions']>(
+        'enforcer',
+        '/api/v1/stats/decisions',
+        EMPTY_DASHBOARD_STATS.decisions,
+        degradedServices
+      ),
+      this.fetchWithFallback<DashboardStats['approvals']>(
+        'approvals',
+        '/api/v1/stats',
+        EMPTY_DASHBOARD_STATS.approvals,
+        degradedServices
+      ),
+      this.fetchWithFallback<DashboardStats['policies']>(
+        'policy',
+        '/api/v1/stats',
+        EMPTY_DASHBOARD_STATS.policies,
+        degradedServices
+      ),
+      this.fetchWithFallback<DashboardStats['evidence']>(
+        'evidence',
+        '/api/v1/stats',
+        EMPTY_DASHBOARD_STATS.evidence,
+        degradedServices
+      ),
     ]);
 
-    return { decisions, approvals, policies, evidence };
+    return {
+      decisions,
+      approvals,
+      policies,
+      evidence,
+      degraded_services: degradedServices,
+    };
   }
 
   async getDecisionTimeSeries(

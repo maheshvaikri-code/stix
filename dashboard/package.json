@@ -1,13 +1,13 @@
 {
   "name": "@stix/dashboard",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "STIX Fabric Console - policy, evidence, approvals, and agent governance UI",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3100",
     "build": "node scripts/build.mjs",
     "start": "next start -p 3100",
-    "lint": "next lint",
+    "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
@@ -17,23 +17,25 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@stix/fabric-types": "workspace:*",
     "@tanstack/react-query": "^5.17.0",
+    "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.309.0",
     "motion": "^12.42.1",
-    "next": "^14.0.4",
+    "next": "15.5.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.10.3",
+    "react-is": "^18.2.0",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^2.2.0",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.19"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.33",
+    "postcss": "^8.5.10",
     "typescript": "^5.3.0"
   }
 }

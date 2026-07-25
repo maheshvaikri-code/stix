@@ -48,6 +48,32 @@ async function createApp(): Promise<AppContext> {
     trustProxy: true,
   });
 
+  server.addHook('onRequest', async request => {
+    if (request.method !== 'DELETE') {
+      return;
+    }
+
+    const contentTypeHeader = request.headers['content-type'];
+    const contentType = Array.isArray(contentTypeHeader)
+      ? contentTypeHeader.join(',')
+      : contentTypeHeader ?? '';
+    const contentLengthHeader = request.headers['content-length'];
+    const contentLength = Array.isArray(contentLengthHeader)
+      ? Number(contentLengthHeader[0] ?? '0')
+      : Number(contentLengthHeader ?? '0');
+    const hasTransferEncoding = request.headers['transfer-encoding'] !== undefined;
+
+    if (
+      contentType.toLowerCase().includes('application/json') &&
+      !hasTransferEncoding &&
+      (!Number.isFinite(contentLength) || contentLength <= 0)
+    ) {
+      // Some clients send Content-Type on bodyless DELETE requests; Fastify 5 treats that as invalid JSON.
+      delete request.headers['content-type'];
+      delete request.raw.headers['content-type'];
+    }
+  });
+
   // Register plugins
   await server.register(cors, {
     origin: config.service.env === 'prod' ? false : true,
