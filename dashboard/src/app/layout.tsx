@@ -1,16 +1,19 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { Providers } from './providers';
-import { Sidebar } from '@/components/layout/sidebar';
+import type { Metadata } from "next";
+import { Space_Grotesk } from "next/font/google";
+import "./globals.css";
+import { Providers } from "./providers";
+import { Sidebar } from "@/components/layout/sidebar";
 
-const inter = Inter({ subsets: ['latin'] });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
-  title: 'STIX Dashboard',
-  description: 'Policy management and monitoring for AI agent authorization',
+  title: "STIX Fabric Console",
+  description: "Premium policy fabric console for AI agent authorization",
   icons: {
-    icon: '/favicon.png',
+    icon: "/favicon.png",
   },
 };
 
@@ -21,11 +24,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={spaceGrotesk.className}>
         <Providers>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen overflow-x-hidden bg-[var(--stix-bg)] text-slate-950">
             <Sidebar />
-            <main className="pl-64">
+            <main className="min-h-screen pb-24 lg:pb-0 lg:pl-72">
               {children}
             </main>
           </div>

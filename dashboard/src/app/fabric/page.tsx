@@ -89,7 +89,7 @@ export default function FabricPage() {
   const posture = useMemo(() => buildPosture(data), [data]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#e0f2fe,transparent_32%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_48%,#f8fafc_100%)] p-6 space-y-6">
+    <div className="relative z-10 min-h-screen space-y-6 p-4 sm:p-6">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

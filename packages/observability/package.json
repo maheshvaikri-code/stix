@@ -1,6 +1,6 @@
 {
   "name": "@stix/observability",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "STIX Observability - Metrics and tracing for STIX services",
   "license": "MIT",
   "main": "dist/index.js",

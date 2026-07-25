@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import Link from "next/link";
 import {
   Shield,
   FileText,
@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Leaf,
   Network,
-} from 'lucide-react';
+  Sparkles,
+} from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -27,25 +28,41 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-} from 'recharts';
-import { useDashboardStats, useDecisionTimeSeries, useAllServicesHealth, useApprovals } from '@/lib/hooks';
-import { Card, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge, DecisionBadge, StatusBadge } from '@/components/ui/badge';
-import { StatusIndicator, PulsingIndicator } from '@/components/ui/status-indicator';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+} from "recharts";
+import {
+  useDashboardStats,
+  useDecisionTimeSeries,
+  useAllServicesHealth,
+  useApprovals,
+} from "@/lib/hooks";
+import { Card, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge, DecisionBadge, StatusBadge } from "@/components/ui/badge";
+import {
+  StatusIndicator,
+  PulsingIndicator,
+} from "@/components/ui/status-indicator";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // =============================================================================
 // DASHBOARD PAGE
 // =============================================================================
 
 export default function DashboardPage() {
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
+  const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("24h");
 
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useDashboardStats();
-  const { data: timeSeries, isLoading: timeSeriesLoading } = useDecisionTimeSeries(timeRange);
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useDashboardStats();
+  const { data: timeSeries, isLoading: timeSeriesLoading } =
+    useDecisionTimeSeries(timeRange);
   const { data: health, refetch: refetchHealth } = useAllServicesHealth();
-  const { data: pendingApprovals } = useApprovals({ status: 'PENDING', page_size: 5 });
+  const { data: pendingApprovals } = useApprovals({
+    status: "PENDING",
+    page_size: 5,
+  });
 
   const handleRefresh = () => {
     refetchStats();
@@ -53,70 +70,94 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="relative z-10 space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Real-time overview of STIX authorization activity
-          </p>
+      <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300/50 sm:p-8">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-cyan-400/30 blur-3xl" />
+          <div className="absolute right-8 top-8 h-48 w-48 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            {(['24h', '7d', '30d'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 text-sm rounded ${
-                  timeRange === range
-                    ? 'bg-white shadow text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {range}
-              </button>
-            ))}
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+              <Sparkles className="h-3.5 w-3.5" />
+              Live command center
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              STIX Fabric Console
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+              Real-time authorization posture, policy evidence, approvals, and
+              agent governance across the trusted execution fabric.
+            </p>
           </div>
-          <Button variant="secondary" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex rounded-2xl border border-white/10 bg-white/10 p-1">
+              {(["24h", "7d", "30d"] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-3 py-1 text-sm rounded ${
+                    timeRange === range
+                      ? "bg-white shadow text-slate-950"
+                      : "text-slate-300 hover:text-white"
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleRefresh}
+              className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Service Status */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {['enforcer', 'policy', 'evidence', 'approvals', 'fabric'].map((service) => {
-          const serviceHealth = health?.[service as keyof typeof health];
-          const status = serviceHealth?.status || 'unknown';
-          const icons = {
-            enforcer: Shield,
-            policy: FileText,
-            evidence: Database,
-            approvals: CheckCircle,
-            fabric: Network,
-          };
-          const Icon = icons[service as keyof typeof icons];
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {["enforcer", "policy", "evidence", "approvals", "fabric"].map(
+          (service) => {
+            const serviceHealth = health?.[service as keyof typeof health];
+            const status = serviceHealth?.status || "unknown";
+            const icons = {
+              enforcer: Shield,
+              policy: FileText,
+              evidence: Database,
+              approvals: CheckCircle,
+              fabric: Network,
+            };
+            const Icon = icons[service as keyof typeof icons];
 
-          return (
-            <Card key={service} className="!p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Icon className="h-5 w-5 text-gray-600" />
+            return (
+              <Card key={service} className="!p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <Icon className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold capitalize text-slate-950">
+                        {service}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {serviceHealth?.version || "Unknown"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium capitalize">{service}</p>
-                    <p className="text-xs text-gray-500">
-                      {serviceHealth?.version || 'Unknown'}
-                    </p>
-                  </div>
+                  <PulsingIndicator
+                    status={status === "unknown" ? "unhealthy" : status}
+                  />
                 </div>
-                <PulsingIndicator status={status === 'unknown' ? 'unhealthy' : status} />
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          },
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -124,40 +165,42 @@ export default function DashboardPage() {
         <div className="py-8">
           <LoadingSpinner />
         </div>
-      ) : stats && (
-        <div className="grid grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Decisions"
-            value={stats.decisions.total}
-            icon={<Activity className="h-6 w-6" />}
-            change={stats.decisions.trend}
-            changeLabel={`${stats.decisions.trend >= 0 ? '+' : ''}${stats.decisions.trend}% from previous`}
-          />
-          <StatsCard
-            title="Allowed"
-            value={stats.decisions.allowed}
-            icon={<CheckCircle className="h-6 w-6" />}
-            iconColor="text-green-600"
-            iconBg="bg-green-50"
-            subtitle={`${((stats.decisions.allowed / stats.decisions.total) * 100).toFixed(1)}% of total`}
-          />
-          <StatsCard
-            title="Denied"
-            value={stats.decisions.denied}
-            icon={<XCircle className="h-6 w-6" />}
-            iconColor="text-red-600"
-            iconBg="bg-red-50"
-            subtitle={`${((stats.decisions.denied / stats.decisions.total) * 100).toFixed(1)}% of total`}
-          />
-          <StatsCard
-            title="Pending Approvals"
-            value={stats.approvals.pending}
-            icon={<Clock className="h-6 w-6" />}
-            iconColor="text-yellow-600"
-            iconBg="bg-yellow-50"
-            alert={stats.approvals.pending > 0}
-          />
-        </div>
+      ) : (
+        stats && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatsCard
+              title="Total Decisions"
+              value={stats.decisions.total}
+              icon={<Activity className="h-6 w-6" />}
+              change={stats.decisions.trend}
+              changeLabel={`${stats.decisions.trend >= 0 ? "+" : ""}${stats.decisions.trend}% from previous`}
+            />
+            <StatsCard
+              title="Allowed"
+              value={stats.decisions.allowed}
+              icon={<CheckCircle className="h-6 w-6" />}
+              iconColor="text-green-600"
+              iconBg="bg-green-50"
+              subtitle={`${((stats.decisions.allowed / stats.decisions.total) * 100).toFixed(1)}% of total`}
+            />
+            <StatsCard
+              title="Denied"
+              value={stats.decisions.denied}
+              icon={<XCircle className="h-6 w-6" />}
+              iconColor="text-red-600"
+              iconBg="bg-red-50"
+              subtitle={`${((stats.decisions.denied / stats.decisions.total) * 100).toFixed(1)}% of total`}
+            />
+            <StatsCard
+              title="Pending Approvals"
+              value={stats.approvals.pending}
+              icon={<Clock className="h-6 w-6" />}
+              iconColor="text-yellow-600"
+              iconBg="bg-yellow-50"
+              alert={stats.approvals.pending > 0}
+            />
+          </div>
+        )
       )}
 
       {/* Decision Timeline (Recharts) */}
@@ -173,7 +216,10 @@ export default function DashboardPage() {
             </div>
           ) : timeSeries && timeSeries.allowed?.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mergeTimeSeries(timeSeries)} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <AreaChart
+                data={mergeTimeSeries(timeSeries)}
+                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+              >
                 <defs>
                   <linearGradient id="colorAllowed" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -183,7 +229,13 @@ export default function DashboardPage() {
                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorQuarantined" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorQuarantined"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
                   </linearGradient>
@@ -191,29 +243,32 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis
                   dataKey="timestamp"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
                   tickFormatter={(v: string) => {
                     const d = new Date(v);
-                    return timeRange === '24h'
-                      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    return timeRange === "24h"
+                      ? d.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : d.toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                        });
                   }}
                 />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
-                    fontSize: '12px',
+                    backgroundColor: "#1e293b",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    fontSize: "12px",
                   }}
                   labelFormatter={(v: string) => new Date(v).toLocaleString()}
                 />
-                <Legend
-                  wrapperStyle={{ fontSize: '12px' }}
-                  iconType="circle"
-                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} iconType="circle" />
                 <Area
                   type="monotone"
                   dataKey="allowed"
@@ -252,9 +307,9 @@ export default function DashboardPage() {
       </Card>
 
       {/* Main Content */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Decision Distribution */}
-        <Card className="col-span-2">
+        <Card className="xl:col-span-2">
           <CardHeader
             title="Decision Distribution"
             description={`Last ${timeRange}`}
@@ -267,7 +322,10 @@ export default function DashboardPage() {
           <CardHeader
             title="Policies"
             action={
-              <Link href="/policies" className="text-sm text-blue-600 hover:text-blue-800">
+              <Link
+                href="/policies"
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
                 View all
               </Link>
             }
@@ -276,18 +334,27 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Active Policies</span>
-                <span className="text-2xl font-bold">{stats.policies.active}</span>
+                <span className="text-2xl font-bold">
+                  {stats.policies.active}
+                </span>
               </div>
               <div className="text-sm text-gray-500">
                 {stats.policies.total} total policies
               </div>
               <div className="space-y-2">
-                {Object.entries(stats.policies.by_regulation).slice(0, 5).map(([reg, count]) => (
-                  <div key={reg} className="flex items-center justify-between text-sm">
-                    <Badge variant="info" size="sm">{reg}</Badge>
-                    <span>{count}</span>
-                  </div>
-                ))}
+                {Object.entries(stats.policies.by_regulation)
+                  .slice(0, 5)
+                  .map(([reg, count]) => (
+                    <div
+                      key={reg}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <Badge variant="info" size="sm">
+                        {reg}
+                      </Badge>
+                      <span>{count}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -295,13 +362,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Pending Approvals */}
         <Card>
           <CardHeader
             title="Pending Approvals"
             action={
-              <Link href="/approvals" className="text-sm text-blue-600 hover:text-blue-800">
+              <Link
+                href="/approvals"
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
                 View all
               </Link>
             }
@@ -346,7 +416,10 @@ export default function DashboardPage() {
           <CardHeader
             title="Evidence Chain"
             action={
-              <Link href="/evidence" className="text-sm text-blue-600 hover:text-blue-800">
+              <Link
+                href="/evidence"
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
                 View details
               </Link>
             }
@@ -356,7 +429,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-4">
                 <div
                   className={`p-3 rounded-lg ${
-                    stats.evidence.chain_valid ? 'bg-green-50' : 'bg-red-50'
+                    stats.evidence.chain_valid ? "bg-green-50" : "bg-red-50"
                   }`}
                 >
                   {stats.evidence.chain_valid ? (
@@ -367,7 +440,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="font-medium">
-                    Chain {stats.evidence.chain_valid ? 'Valid' : 'Invalid'}
+                    Chain {stats.evidence.chain_valid ? "Valid" : "Invalid"}
                   </p>
                   <p className="text-sm text-gray-500">
                     Last verified: {formatTimeAgo(stats.evidence.last_verified)}
@@ -400,19 +473,30 @@ export default function DashboardPage() {
           description="AI compute savings from local policy evaluation vs. LLM-based compliance checking"
         />
         {stats && (
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
             <div className="text-center">
               <p className="text-3xl font-bold text-green-700">
-                {Math.round(((stats.decisions.total - (stats.decisions.quarantined || 0)) / Math.max(stats.decisions.total, 1)) * 100)}%
+                {Math.round(
+                  ((stats.decisions.total -
+                    (stats.decisions.quarantined || 0)) /
+                    Math.max(stats.decisions.total, 1)) *
+                    100,
+                )}
+                %
               </p>
-              <p className="text-sm text-green-600 mt-1">Decisions Without LLM</p>
+              <p className="text-sm text-green-600 mt-1">
+                Decisions Without LLM
+              </p>
               <p className="text-xs text-gray-500 mt-1">
                 Local policy engine evaluation
               </p>
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-green-700">
-                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 1200).toLocaleString()}
+                {(
+                  (stats.decisions.total - (stats.decisions.quarantined || 0)) *
+                  1200
+                ).toLocaleString()}
               </p>
               <p className="text-sm text-green-600 mt-1">Tokens Saved</p>
               <p className="text-xs text-gray-500 mt-1">
@@ -421,7 +505,10 @@ export default function DashboardPage() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-green-700">
-                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 0.003).toFixed(2)}
+                {(
+                  (stats.decisions.total - (stats.decisions.quarantined || 0)) *
+                  0.003
+                ).toFixed(2)}
               </p>
               <p className="text-sm text-green-600 mt-1">USD Saved</p>
               <p className="text-xs text-gray-500 mt-1">
@@ -430,7 +517,11 @@ export default function DashboardPage() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-green-700">
-                {((stats.decisions.total - (stats.decisions.quarantined || 0)) * 0.8).toFixed(1)}s
+                {(
+                  (stats.decisions.total - (stats.decisions.quarantined || 0)) *
+                  0.8
+                ).toFixed(1)}
+                s
               </p>
               <p className="text-sm text-green-600 mt-1">Compute Time Saved</p>
               <p className="text-xs text-gray-500 mt-1">
@@ -473,27 +564,42 @@ function mergeTimeSeries(data: {
 
   for (const point of data.allowed) {
     if (!byTimestamp.has(point.timestamp)) {
-      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+      byTimestamp.set(point.timestamp, {
+        timestamp: point.timestamp,
+        allowed: 0,
+        denied: 0,
+        quarantined: 0,
+      });
     }
     byTimestamp.get(point.timestamp)!.allowed = point.value;
   }
 
   for (const point of data.denied) {
     if (!byTimestamp.has(point.timestamp)) {
-      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+      byTimestamp.set(point.timestamp, {
+        timestamp: point.timestamp,
+        allowed: 0,
+        denied: 0,
+        quarantined: 0,
+      });
     }
     byTimestamp.get(point.timestamp)!.denied = point.value;
   }
 
   for (const point of data.quarantined) {
     if (!byTimestamp.has(point.timestamp)) {
-      byTimestamp.set(point.timestamp, { timestamp: point.timestamp, allowed: 0, denied: 0, quarantined: 0 });
+      byTimestamp.set(point.timestamp, {
+        timestamp: point.timestamp,
+        allowed: 0,
+        denied: 0,
+        quarantined: 0,
+      });
     }
     byTimestamp.get(point.timestamp)!.quarantined = point.value;
   }
 
   return Array.from(byTimestamp.values()).sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 }
 
@@ -505,8 +611,8 @@ function StatsCard({
   title,
   value,
   icon,
-  iconColor = 'text-blue-600',
-  iconBg = 'bg-blue-50',
+  iconColor = "text-blue-600",
+  iconBg = "bg-blue-50",
   change,
   changeLabel,
   subtitle,
@@ -523,7 +629,7 @@ function StatsCard({
   alert?: boolean;
 }) {
   return (
-    <Card className={alert ? 'border-yellow-300 bg-yellow-50' : ''}>
+    <Card className={alert ? "border-yellow-300 bg-yellow-50" : ""}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500">{title}</p>
@@ -531,7 +637,7 @@ function StatsCard({
           {change !== undefined && (
             <p
               className={`text-sm mt-1 flex items-center gap-1 ${
-                change >= 0 ? 'text-green-600' : 'text-red-600'
+                change >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
               {change >= 0 ? (
@@ -542,9 +648,7 @@ function StatsCard({
               {changeLabel}
             </p>
           )}
-          {subtitle && (
-            <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>
         <div className={`p-3 rounded-lg ${iconBg} ${iconColor}`}>{icon}</div>
       </div>
@@ -552,7 +656,18 @@ function StatsCard({
   );
 }
 
-function DecisionChart({ stats }: { stats: { decisions: { total: number; allowed: number; denied: number; quarantined: number } } }) {
+function DecisionChart({
+  stats,
+}: {
+  stats: {
+    decisions: {
+      total: number;
+      allowed: number;
+      denied: number;
+      quarantined: number;
+    };
+  };
+}) {
   const total = stats.decisions.total;
   const allowedPercent = (stats.decisions.allowed / total) * 100;
   const deniedPercent = (stats.decisions.denied / total) * 100;
@@ -628,7 +743,7 @@ function formatTimeAgo(dateString: string): string {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;

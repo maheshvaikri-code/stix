@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { type ReactNode } from 'react';
+import { type ReactNode } from "react";
 
 interface TabsProps {
   tabs: { id: string; label: string; icon?: ReactNode }[];
@@ -10,18 +10,18 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onChange }: TabsProps) {
   return (
-    <div className="border-b border-gray-200">
-      <nav className="-mb-px flex gap-6" aria-label="Tabs">
+    <div className="rounded-3xl border border-white/70 bg-white/70 p-1 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+      <nav className="flex flex-wrap gap-1" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
+              flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all
               ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? "bg-slate-950 text-white shadow-lg shadow-slate-900/15"
+                  : "text-slate-500 hover:bg-white/80 hover:text-slate-950"
               }
             `}
           >

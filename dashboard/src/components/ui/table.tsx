@@ -1,26 +1,32 @@
-'use client';
+"use client";
 
-import { type ReactNode } from 'react';
+import { type ReactNode } from "react";
 
 interface TableProps {
   children: ReactNode;
   className?: string;
 }
 
-export function Table({ children, className = '' }: TableProps) {
+export function Table({ children, className = "" }: TableProps) {
   return (
     <div className={`overflow-x-auto ${className}`}>
-      <table className="min-w-full divide-y divide-gray-200">{children}</table>
+      <table className="min-w-full divide-y divide-slate-200/70">
+        {children}
+      </table>
     </div>
   );
 }
 
 export function TableHead({ children }: { children: ReactNode }) {
-  return <thead className="bg-gray-50">{children}</thead>;
+  return <thead className="bg-slate-950/[0.03]">{children}</thead>;
 }
 
 export function TableBody({ children }: { children: ReactNode }) {
-  return <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>;
+  return (
+    <tbody className="divide-y divide-slate-200/70 bg-white/[0.58]">
+      {children}
+    </tbody>
+  );
 }
 
 export function TableRow({
@@ -35,7 +41,11 @@ export function TableRow({
   return (
     <tr
       onClick={onClick}
-      className={clickable ? 'hover:bg-gray-50 cursor-pointer' : ''}
+      className={
+        clickable
+          ? "cursor-pointer transition-colors hover:bg-cyan-50/50"
+          : "transition-colors"
+      }
     >
       {children}
     </tr>
@@ -44,7 +54,7 @@ export function TableRow({
 
 export function TableHeader({
   children,
-  className = '',
+  className = "",
   sortable,
   sorted,
   onSort,
@@ -52,15 +62,15 @@ export function TableHeader({
   children: ReactNode;
   className?: string;
   sortable?: boolean;
-  sorted?: 'asc' | 'desc' | null;
+  sorted?: "asc" | "desc" | null;
   onSort?: () => void;
 }) {
   return (
     <th
       scope="col"
       className={`
-        px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-        ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
+        px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-[0.16em]
+        ${sortable ? "cursor-pointer hover:bg-slate-100/70" : ""}
         ${className}
       `}
       onClick={sortable ? onSort : undefined}
@@ -69,9 +79,9 @@ export function TableHeader({
         {children}
         {sortable && (
           <span className="text-gray-400">
-            {sorted === 'asc' && '↑'}
-            {sorted === 'desc' && '↓'}
-            {!sorted && '↕'}
+            {sorted === "asc" && "↑"}
+            {sorted === "desc" && "↓"}
+            {!sorted && "↕"}
           </span>
         )}
       </div>
@@ -81,13 +91,15 @@ export function TableHeader({
 
 export function TableCell({
   children,
-  className = '',
+  className = "",
 }: {
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <td className={`px-6 py-4 whitespace-nowrap text-sm ${className}`}>
+    <td
+      className={`px-6 py-4 whitespace-nowrap text-sm text-slate-700 ${className}`}
+    >
       {children}
     </td>
   );

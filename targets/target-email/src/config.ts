@@ -68,7 +68,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: getEnv('SERVICE_NAME', 'stix-target-email'),
-      version: getEnv('SERVICE_VERSION', '0.1.4'),
+      version: getEnv('SERVICE_VERSION', '0.1.5'),
       env: getEnv('NODE_ENV', 'dev') as Config['service']['env'],
       port: getEnvNumber('PORT', 3080),
       host: getEnv('HOST', '0.0.0.0'),
