@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Settings,
   Key,
@@ -11,8 +12,12 @@ import {
   Check,
   AlertTriangle,
 } from 'lucide-react';
-import { useAllServicesHealth } from '@/lib/hooks';
-import { api, API_CONFIG } from '@/lib/api';
+import { useAllServicesHealth, useEvidence } from '@/lib/hooks';
+import {
+  api,
+  API_CONFIG,
+  DASHBOARD_SESSION_KEYS,
+} from '@/lib/api';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,17 +79,29 @@ export default function SettingsPage() {
 
 function ApiSettings() {
   const [apiKey, setApiKey] = useState('');
+  const [operatorId, setOperatorId] = useState('dashboard-user');
+  const [operatorRole, setOperatorRole] = useState('security_admin');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load from localStorage
-    const stored = localStorage.getItem('stix_api_key');
+    api.restoreSession();
+    const stored = localStorage.getItem(DASHBOARD_SESSION_KEYS.apiKey);
     if (stored) setApiKey(stored);
+    const operator = api.getOperatorIdentity();
+    setOperatorId(operator.id);
+    setOperatorRole(operator.role);
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem('stix_api_key', apiKey);
+    const operator = {
+      id: operatorId.trim() || 'dashboard-user',
+      role: operatorRole.trim() || 'security_admin',
+    };
+    localStorage.setItem(DASHBOARD_SESSION_KEYS.apiKey, apiKey.trim());
+    localStorage.setItem(DASHBOARD_SESSION_KEYS.operator, JSON.stringify(operator));
     api.setApiKey(apiKey);
+    api.setOperatorIdentity(operator);
+    window.dispatchEvent(new Event('stix-session-updated'));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -108,6 +125,23 @@ function ApiSettings() {
             <p className="text-xs text-gray-500">
               The API key is stored locally in your browser and used to authenticate
               requests to the STIX services.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Approver ID"
+                value={operatorId}
+                onChange={(e) => setOperatorId(e.target.value)}
+                placeholder="security-operator"
+              />
+              <Input
+                label="Approver Role"
+                value={operatorRole}
+                onChange={(e) => setOperatorRole(e.target.value)}
+                placeholder="security_admin"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Approval actions submit this identity and must match the ticket&apos;s required role.
             </p>
           </div>
         </CardContent>
@@ -262,6 +296,38 @@ function NotificationSettings() {
   const [slackEnabled, setSlackEnabled] = useState(false);
   const [webhookEnabled, setWebhookEnabled] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [pendingThreshold, setPendingThreshold] = useState('immediate');
+  const [denialThreshold, setDenialThreshold] = useState('10');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('stix_notification_settings');
+    if (!raw) return;
+    try {
+      const settings = JSON.parse(raw) as Partial<Record<string, string | boolean>>;
+      if (typeof settings.emailEnabled === 'boolean') setEmailEnabled(settings.emailEnabled);
+      if (typeof settings.slackEnabled === 'boolean') setSlackEnabled(settings.slackEnabled);
+      if (typeof settings.webhookEnabled === 'boolean') setWebhookEnabled(settings.webhookEnabled);
+      if (typeof settings.webhookUrl === 'string') setWebhookUrl(settings.webhookUrl);
+      if (typeof settings.pendingThreshold === 'string') setPendingThreshold(settings.pendingThreshold);
+      if (typeof settings.denialThreshold === 'string') setDenialThreshold(settings.denialThreshold);
+    } catch {
+      localStorage.removeItem('stix_notification_settings');
+    }
+  }, []);
+
+  const saveSettings = () => {
+    localStorage.setItem('stix_notification_settings', JSON.stringify({
+      emailEnabled,
+      slackEnabled,
+      webhookEnabled,
+      webhookUrl,
+      pendingThreshold,
+      denialThreshold,
+    }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -330,7 +396,7 @@ function NotificationSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Save Notification Settings</Button>
+          <Button onClick={saveSettings}>{saved ? 'Saved' : 'Save Notification Settings'}</Button>
         </CardFooter>
       </Card>
 
@@ -343,6 +409,8 @@ function NotificationSettings() {
           <div className="space-y-4 max-w-md">
             <Select
               label="Pending Approval Alert"
+              value={pendingThreshold}
+              onChange={(e) => setPendingThreshold(e.target.value)}
               options={[
                 { value: 'immediate', label: 'Immediately' },
                 { value: '5min', label: 'After 5 minutes' },
@@ -352,6 +420,8 @@ function NotificationSettings() {
             />
             <Select
               label="Denial Rate Alert"
+              value={denialThreshold}
+              onChange={(e) => setDenialThreshold(e.target.value)}
               options={[
                 { value: '5', label: '>5% denial rate' },
                 { value: '10', label: '>10% denial rate' },
@@ -362,7 +432,7 @@ function NotificationSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Save Alert Thresholds</Button>
+          <Button onClick={saveSettings}>{saved ? 'Saved' : 'Save Notification Settings'}</Button>
         </CardFooter>
       </Card>
     </div>
@@ -374,6 +444,38 @@ function NotificationSettings() {
 // =============================================================================
 
 function SecuritySettings() {
+  const [sessionTimeout, setSessionTimeout] = useState('30');
+  const [requireReauth, setRequireReauth] = useState(true);
+  const [saved, setSaved] = useState(false);
+  const { data: recentEvidence, isLoading: evidenceLoading } = useEvidence({ page: 1, page_size: 5 });
+
+  useEffect(() => {
+    const raw = localStorage.getItem('stix_security_settings');
+    if (!raw) return;
+    try {
+      const settings = JSON.parse(raw) as Partial<{ sessionTimeout: string; requireReauth: boolean }>;
+      if (settings.sessionTimeout) setSessionTimeout(settings.sessionTimeout);
+      if (typeof settings.requireReauth === 'boolean') setRequireReauth(settings.requireReauth);
+    } catch {
+      localStorage.removeItem('stix_security_settings');
+    }
+  }, []);
+
+  const saveSecuritySettings = () => {
+    localStorage.setItem('stix_security_settings', JSON.stringify({ sessionTimeout, requireReauth }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const clearLocalData = () => {
+    localStorage.removeItem(DASHBOARD_SESSION_KEYS.apiKey);
+    localStorage.removeItem(DASHBOARD_SESSION_KEYS.operator);
+    localStorage.removeItem('stix_notification_settings');
+    localStorage.removeItem('stix_security_settings');
+    window.dispatchEvent(new Event('stix-session-updated'));
+    window.location.reload();
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -385,6 +487,8 @@ function SecuritySettings() {
           <div className="space-y-4 max-w-md">
             <Select
               label="Session Timeout"
+              value={sessionTimeout}
+              onChange={(e) => setSessionTimeout(e.target.value)}
               options={[
                 { value: '15', label: '15 minutes' },
                 { value: '30', label: '30 minutes' },
@@ -393,13 +497,13 @@ function SecuritySettings() {
               ]}
             />
             <label className="flex items-center gap-3">
-              <input type="checkbox" className="h-4 w-4 text-blue-600" defaultChecked />
+              <input type="checkbox" className="h-4 w-4 text-blue-600" checked={requireReauth} onChange={(e) => setRequireReauth(e.target.checked)} />
               <span className="text-sm">Require re-authentication for approval actions</span>
             </label>
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Save Security Settings</Button>
+          <Button onClick={saveSecuritySettings}>{saved ? 'Saved' : 'Save Security Settings'}</Button>
         </CardFooter>
       </Card>
 
@@ -410,27 +514,23 @@ function SecuritySettings() {
         />
         <CardContent>
           <div className="space-y-3">
-            {[
-              { action: 'Approved request', time: '2 minutes ago', user: 'admin@example.com' },
-              { action: 'Rejected request', time: '15 minutes ago', user: 'admin@example.com' },
-              { action: 'Exported evidence', time: '1 hour ago', user: 'admin@example.com' },
-              { action: 'Updated policy', time: '3 hours ago', user: 'ops@example.com' },
-            ].map((log, i) => (
+            {evidenceLoading ? <LoadingSpinner size="sm" /> : (recentEvidence?.data ?? []).map((record) => (
               <div
-                key={i}
+                key={record.event_id}
                 className="flex items-center justify-between py-2 border-b last:border-0"
               >
                 <div>
-                  <p className="text-sm font-medium">{log.action}</p>
-                  <p className="text-xs text-gray-500">{log.user}</p>
+                  <p className="text-sm font-medium">{record.decision} {record.action}</p>
+                  <p className="text-xs text-gray-500">{record.actor_id} · {record.trace_id}</p>
                 </div>
-                <span className="text-xs text-gray-400">{log.time}</span>
+                <span className="text-xs text-gray-400">{new Date(record.timestamp).toLocaleString()}</span>
               </div>
             ))}
+            {!evidenceLoading && !recentEvidence?.data.length && <p className="text-sm text-gray-500">No recent evidence records.</p>}
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="secondary">View Full Audit Log</Button>
+          <Link href="/evidence"><Button variant="secondary">View Full Audit Log</Button></Link>
         </CardFooter>
       </Card>
 
@@ -447,7 +547,7 @@ function SecuritySettings() {
                 Remove all locally stored settings and cached data
               </p>
             </div>
-            <Button variant="danger" size="sm">
+            <Button variant="danger" size="sm" onClick={clearLocalData}>
               Clear Data
             </Button>
           </div>

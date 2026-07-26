@@ -37,7 +37,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: 'stix-fabric',
-      version: getEnv('SERVICE_VERSION', '0.1.13'),
+      version: getEnv('SERVICE_VERSION', '0.1.14'),
       port: getEnvNumber('PORT', SERVICE_PORTS.FABRIC),
       host: getEnv('HOST', '0.0.0.0'),
       env,

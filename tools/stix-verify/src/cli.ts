@@ -64,7 +64,7 @@ const program = new Command();
 program
   .name('stix-verify')
   .description('STIX Evidence Verification CLI')
-  .version('0.1.13');
+  .version('0.1.14');
 
 // =============================================================================
 // VERIFY CHAIN COMMAND
@@ -100,9 +100,9 @@ program
       const result = verifyHashChain(eventsToVerify);
 
       if (result.valid) {
-        spinner.succeed(chalk.green(`✓ Hash chain verified: ${result.verifiedCount} events`));
+        spinner.succeed(chalk.green(`âœ“ Hash chain verified: ${result.verifiedCount} events`));
       } else {
-        spinner.fail(chalk.red(`✗ Hash chain verification failed`));
+        spinner.fail(chalk.red(`âœ— Hash chain verification failed`));
         
         console.log('\nErrors:');
         for (const error of result.errors) {
@@ -205,9 +205,9 @@ program
       }
 
       if (failed === 0) {
-        spinner.succeed(chalk.green(`✓ All signatures verified: ${verified} events`));
+        spinner.succeed(chalk.green(`âœ“ All signatures verified: ${verified} events`));
       } else {
-        spinner.fail(chalk.red(`✗ Signature verification failed: ${failed}/${verified + failed}`));
+        spinner.fail(chalk.red(`âœ— Signature verification failed: ${failed}/${verified + failed}`));
         
         if (options.verbose) {
           console.log('\nFailed events:');
@@ -249,7 +249,7 @@ program
       }
 
       console.log(chalk.bold('\nEvent Verification Report'));
-      console.log('═'.repeat(50));
+      console.log('â•'.repeat(50));
 
       console.log(`\nEvent ID: ${chalk.cyan(event.event_id)}`);
       console.log(`Trace ID: ${chalk.cyan(event.trace_id)}`);
@@ -261,7 +261,7 @@ program
       const computedHash = sha256(canonicalize(eventWithoutIntegrity));
       const hashValid = computedHash === integrity.event_hash;
       
-      console.log(`\nHash Verification: ${hashValid ? chalk.green('✓ VALID') : chalk.red('✗ INVALID')}`);
+      console.log(`\nHash Verification: ${hashValid ? chalk.green('âœ“ VALID') : chalk.red('âœ— INVALID')}`);
       if (!hashValid) {
         console.log(chalk.red(`  Expected: ${integrity.event_hash}`));
         console.log(chalk.red(`  Computed: ${computedHash}`));
@@ -270,7 +270,7 @@ program
       // Verify prev_hash if provided
       if (options.prevHash) {
         const prevValid = integrity.prev_hash === options.prevHash;
-        console.log(`\nPrev Hash: ${prevValid ? chalk.green('✓ MATCHES') : chalk.red('✗ MISMATCH')}`);
+        console.log(`\nPrev Hash: ${prevValid ? chalk.green('âœ“ MATCHES') : chalk.red('âœ— MISMATCH')}`);
       }
 
       // Verify signature if key provided
@@ -279,9 +279,9 @@ program
         const keyPem = fs.readFileSync(keyPath, 'utf-8');
         const publicKey = loadPublicKey(keyPem);
         if (!integrity.key_id) {
-          console.log(chalk.red('\nSignature: ✗ INVALID'));
+          console.log(chalk.red('\nSignature: âœ— INVALID'));
           console.log(chalk.red('  Error: Missing integrity.key_id'));
-          console.log('\n' + '═'.repeat(50));
+          console.log('\n' + 'â•'.repeat(50));
           return;
         }
         const keyId = integrity.key_id;
@@ -295,13 +295,13 @@ program
           { keyId, algorithm: 'EdDSA', publicKey }
         );
         
-        console.log(`\nSignature: ${sigResult.valid ? chalk.green('✓ VALID') : chalk.red('✗ INVALID')}`);
+        console.log(`\nSignature: ${sigResult.valid ? chalk.green('âœ“ VALID') : chalk.red('âœ— INVALID')}`);
         if (!sigResult.valid) {
           console.log(chalk.red(`  Error: ${sigResult.error}`));
         }
       }
 
-      console.log('\n' + '═'.repeat(50));
+      console.log('\n' + 'â•'.repeat(50));
 
     } catch (error) {
       console.error(chalk.red(`Error: ${(error as Error).message}`));
@@ -357,7 +357,7 @@ program
       }
 
       console.log(chalk.bold('\nEvidence Statistics'));
-      console.log('═'.repeat(50));
+      console.log('â•'.repeat(50));
       console.log(`Total Events: ${chalk.cyan(stats.total)}`);
       console.log(`\nDecisions:`);
       console.log(`  ${chalk.green('ALLOW')}: ${stats.decisions.ALLOW}`);
@@ -369,7 +369,7 @@ program
       console.log(`\nTime Range:`);
       console.log(`  First: ${stats.timeRange.first}`);
       console.log(`  Last: ${stats.timeRange.last}`);
-      console.log('═'.repeat(50));
+      console.log('â•'.repeat(50));
 
     } catch (error) {
       spinner.fail(chalk.red(`Error: ${(error as Error).message}`));

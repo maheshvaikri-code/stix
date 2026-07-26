@@ -36,7 +36,7 @@ const program = new Command();
 program
   .name('stix-replay')
   .description('STIX Replay Tool - Replay recorded decisions for verification')
-  .version('0.1.13');
+  .version('0.1.14');
 
 // =============================================================================
 // REPLAY COMMAND
@@ -259,13 +259,13 @@ function printSummary(stats: ReturnType<typeof calculateStats>): void {
   console.log(`  Errors: ${chalk.red(stats.errors)} (${stats.errorRate.toFixed(1)}%)`);
 
   if (stats.decisionChanges.denyToAllow > 0) {
-    console.log(chalk.red(`  ⚠ CRITICAL: ${stats.decisionChanges.denyToAllow} DENY→ALLOW changes`));
+    console.log(chalk.red(`  âš  CRITICAL: ${stats.decisionChanges.denyToAllow} DENYâ†’ALLOW changes`));
   }
   if (stats.decisionChanges.quarantineToAllow > 0) {
-    console.log(chalk.red(`  ⚠ CRITICAL: ${stats.decisionChanges.quarantineToAllow} QUARANTINE→ALLOW changes`));
+    console.log(chalk.red(`  âš  CRITICAL: ${stats.decisionChanges.quarantineToAllow} QUARANTINEâ†’ALLOW changes`));
   }
   if (stats.decisionChanges.allowToDeny > 0) {
-    console.log(chalk.yellow(`  ⚠ ${stats.decisionChanges.allowToDeny} ALLOW→DENY changes (may block users)`));
+    console.log(chalk.yellow(`  âš  ${stats.decisionChanges.allowToDeny} ALLOWâ†’DENY changes (may block users)`));
   }
 
   console.log('');
@@ -295,7 +295,7 @@ async function validateBundles(bundlePath: string): Promise<void> {
     }
 
     console.log(chalk.bold('\nValidation Results'));
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
     console.log(`Total bundles: ${bundles.length}`);
     console.log(`Valid: ${chalk.green(valid)}`);
     console.log(`Invalid: ${chalk.red(invalid)}`);
@@ -344,11 +344,11 @@ async function showDiffs(
     if (showDetail) {
       for (const result of toShow) {
         console.log(formatDetailedDiff(result));
-        console.log('─'.repeat(60));
+        console.log('â”€'.repeat(60));
       }
     } else {
       const table = new Table({
-        head: ['Trace ID', 'Recorded', '→', 'Replayed', 'Reason'],
+        head: ['Trace ID', 'Recorded', 'â†’', 'Replayed', 'Reason'],
         style: { head: ['cyan'] },
       });
 
@@ -360,7 +360,7 @@ async function showDiffs(
         table.push([
           result.trace_id.substring(0, 12) + '...',
           recorded,
-          '→',
+          'â†’',
           replayed,
           reason.substring(0, 30),
         ]);
@@ -398,7 +398,7 @@ async function showStats(bundlePath: string, policyPath: string): Promise<void> 
     spinner.stop();
 
     console.log(chalk.bold('\nReplay Statistics'));
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
     console.log(`\nOverall:`);
     console.log(`  Total traces: ${chalk.cyan(stats.total)}`);
     console.log(`  Match rate: ${colorMatchRate(stats.matchRate)}`);
@@ -406,14 +406,14 @@ async function showStats(bundlePath: string, policyPath: string): Promise<void> 
     console.log(`  Error rate: ${chalk.red(stats.errorRate.toFixed(1) + '%')}`);
 
     console.log(`\nDecision Changes:`);
-    console.log(`  ALLOW→DENY: ${stats.decisionChanges.allowToDeny}`);
-    console.log(`  ALLOW→QUARANTINE: ${stats.decisionChanges.allowToQuarantine}`);
-    console.log(`  DENY→ALLOW: ${chalk.red(stats.decisionChanges.denyToAllow.toString())} ${stats.decisionChanges.denyToAllow > 0 ? '⚠ CRITICAL' : ''}`);
-    console.log(`  DENY→QUARANTINE: ${stats.decisionChanges.denyToQuarantine}`);
-    console.log(`  QUARANTINE→ALLOW: ${chalk.red(stats.decisionChanges.quarantineToAllow.toString())} ${stats.decisionChanges.quarantineToAllow > 0 ? '⚠ CRITICAL' : ''}`);
-    console.log(`  QUARANTINE→DENY: ${stats.decisionChanges.quarantineToDeny}`);
+    console.log(`  ALLOWâ†’DENY: ${stats.decisionChanges.allowToDeny}`);
+    console.log(`  ALLOWâ†’QUARANTINE: ${stats.decisionChanges.allowToQuarantine}`);
+    console.log(`  DENYâ†’ALLOW: ${chalk.red(stats.decisionChanges.denyToAllow.toString())} ${stats.decisionChanges.denyToAllow > 0 ? 'âš  CRITICAL' : ''}`);
+    console.log(`  DENYâ†’QUARANTINE: ${stats.decisionChanges.denyToQuarantine}`);
+    console.log(`  QUARANTINEâ†’ALLOW: ${chalk.red(stats.decisionChanges.quarantineToAllow.toString())} ${stats.decisionChanges.quarantineToAllow > 0 ? 'âš  CRITICAL' : ''}`);
+    console.log(`  QUARANTINEâ†’DENY: ${stats.decisionChanges.quarantineToDeny}`);
 
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
 
   } catch (error) {
     spinner.fail(chalk.red(`Error: ${(error as Error).message}`));

@@ -1,6 +1,6 @@
 {
   "name": "@stix/simulate",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "STIX Simulation Engine - Simulate policy impact on historical evidence",
   "type": "module",
   "main": "dist/index.js",

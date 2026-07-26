@@ -3,14 +3,36 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import {
   api,
+  DEFAULT_DASHBOARD_OPERATOR,
   type ApiService,
   type ApprovalRequest,
   type AuthorizeActionRequest,
+  type DashboardOperator,
   type EvidenceRecord,
   type Policy,
 } from './api';
+
+export function useDashboardOperator(): DashboardOperator {
+  const [operator, setOperator] = useState<DashboardOperator>(
+    api.getOperatorIdentity() ?? DEFAULT_DASHBOARD_OPERATOR,
+  );
+
+  useEffect(() => {
+    const sync = () => {
+      api.restoreSession();
+      setOperator(api.getOperatorIdentity());
+    };
+
+    window.addEventListener('stix-session-updated', sync);
+    sync();
+    return () => window.removeEventListener('stix-session-updated', sync);
+  }, []);
+
+  return operator;
+}
 
 // =============================================================================
 // QUERY KEYS

@@ -52,7 +52,7 @@ export default function EvidencePage() {
   const [selectedRecord, setSelectedRecord] = useState<EvidenceRecord | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const { data: evidenceData, isLoading, refetch } = useEvidence({
+  const { data: evidenceData, isLoading, error: evidenceError, refetch } = useEvidence({
     page,
     page_size: 20,
     trace_id: traceId || undefined,
@@ -62,12 +62,12 @@ export default function EvidencePage() {
     end_time: endDate,
   });
 
-  const { data: stats } = useEvidenceStats({
+  const { data: stats, error: statsError } = useEvidenceStats({
     start_time: startDate,
     end_time: endDate,
   });
 
-  const { data: chainVerification, isLoading: verifying, refetch: verifyChain } = useVerifyEvidenceChain({
+  const { data: chainVerification, isLoading: verifying, error: chainError, refetch: verifyChain } = useVerifyEvidenceChain({
     start_time: startDate,
     end_time: endDate,
   });
@@ -92,6 +92,12 @@ export default function EvidencePage() {
           </Button>
         </div>
       </div>
+
+      {(evidenceError || statsError || chainError) && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Evidence is partially unavailable. {([evidenceError, statsError, chainError].find(Boolean) as Error | undefined)?.message ?? 'Retry the request or check the Evidence service.'}
+        </div>
+      )}
 
       {/* Stats Cards */}
       {stats && (
@@ -224,6 +230,12 @@ export default function EvidencePage() {
             <div className="py-12">
               <LoadingSpinner />
             </div>
+          ) : evidenceError ? (
+            <EmptyState
+              icon={<AlertTriangle className="h-12 w-12 text-amber-500" />}
+              title="Evidence records unavailable"
+              description={evidenceError instanceof Error ? evidenceError.message : 'Retry the request.'}
+            />
           ) : !evidenceData?.data.length ? (
             <EmptyState
               icon={<Database className="h-12 w-12" />}

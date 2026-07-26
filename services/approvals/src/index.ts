@@ -86,7 +86,7 @@ function loadConfig(): Config {
   const parsed = ConfigSchema.parse({
     service: {
       name: 'stix-approvals',
-      version: getEnv('SERVICE_VERSION', '0.1.13'),
+      version: getEnv('SERVICE_VERSION', '0.1.14'),
       port: getEnvNumber('PORT', SERVICE_PORTS.APPROVALS),
       host: getEnv('HOST', '0.0.0.0'),
       env,
@@ -729,9 +729,12 @@ async function registerRoutes(
       created_at: t.created_at,
       expires_at: t.expires_at,
       status: t.status,
-      reviewed_by: t.decisions[0]?.approver_id,
-      reviewed_at: t.resolved_at,
-      review_notes: t.decisions[0]?.justification,
+        reviewed_by: t.decisions[0]?.approver_id,
+        reviewed_at: t.resolved_at,
+        review_notes: t.decisions[0]?.justification,
+        required_role: t.required_role,
+        require_justification: t.require_justification,
+        security_binding: t.security_binding,
     }));
 
     return reply.code(200).send({
@@ -834,13 +837,22 @@ async function registerRoutes(
   });
 
   // Approve request (dashboard format)
-  fastify.post<{ Params: { requestId: string }; Body: { notes?: string } }>(
+  fastify.post<{
+    Params: { requestId: string };
+    Body: {
+      notes?: string;
+      approver_id?: string;
+      approver_role?: string;
+      justification?: string;
+    };
+  }>(
     '/api/v1/approvals/:requestId/approve',
     async (request, reply) => {
       try {
         const ticket = await store.approve(request.params.requestId, {
-          approver_id: 'dashboard-user', // In production, get from auth
-          justification: request.body.notes,
+          approver_id: request.body.approver_id ?? 'dashboard-user',
+          approver_role: request.body.approver_role,
+          justification: request.body.justification ?? request.body.notes,
         });
 
         // Transform to dashboard format
@@ -860,6 +872,9 @@ async function registerRoutes(
           reviewed_by: ticket.decisions[0]?.approver_id,
           reviewed_at: ticket.resolved_at,
           review_notes: ticket.decisions[0]?.justification,
+          required_role: ticket.required_role,
+          require_justification: ticket.require_justification,
+          security_binding: ticket.security_binding,
         });
       } catch (error) {
         if (isStixError(error)) {
@@ -875,13 +890,22 @@ async function registerRoutes(
   );
 
   // Reject request (dashboard format)
-  fastify.post<{ Params: { requestId: string }; Body: { notes?: string } }>(
+  fastify.post<{
+    Params: { requestId: string };
+    Body: {
+      notes?: string;
+      approver_id?: string;
+      approver_role?: string;
+      justification?: string;
+    };
+  }>(
     '/api/v1/approvals/:requestId/reject',
     async (request, reply) => {
       try {
         const ticket = await store.reject(request.params.requestId, {
-          approver_id: 'dashboard-user', // In production, get from auth
-          justification: request.body.notes,
+          approver_id: request.body.approver_id ?? 'dashboard-user',
+          approver_role: request.body.approver_role,
+          justification: request.body.justification ?? request.body.notes,
         });
 
         // Transform to dashboard format
@@ -901,6 +925,9 @@ async function registerRoutes(
           reviewed_by: ticket.decisions[0]?.approver_id,
           reviewed_at: ticket.resolved_at,
           review_notes: ticket.decisions[0]?.justification,
+          required_role: ticket.required_role,
+          require_justification: ticket.require_justification,
+          security_binding: ticket.security_binding,
         });
       } catch (error) {
         if (isStixError(error)) {
@@ -1001,6 +1028,9 @@ async function registerRoutes(
         reviewed_by: ticket.decisions[0]?.approver_id,
         reviewed_at: ticket.resolved_at,
         review_notes: ticket.decisions[0]?.justification,
+        required_role: ticket.required_role,
+        require_justification: ticket.require_justification,
+        security_binding: ticket.security_binding,
       }]);
     } catch (error) {
       return reply.code(500).send({

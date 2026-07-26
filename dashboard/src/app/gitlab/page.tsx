@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   GitBranch,
   GitMerge,
@@ -311,18 +312,24 @@ export default function GitLabPage() {
           <Card>
             <CardHeader title="Quick Actions" />
             <div className="space-y-2">
-              <Button variant="secondary" className="w-full justify-start text-sm">
+              <Link href="/policies" className="block">
+                <Button variant="secondary" className="w-full justify-start text-sm">
                 <Eye className="h-4 w-4 mr-2" />
                 View Policy Pack
-              </Button>
-              <Button variant="secondary" className="w-full justify-start text-sm">
+                </Button>
+              </Link>
+              <Link href="/governance" className="block">
+                <Button variant="secondary" className="w-full justify-start text-sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Run Policy Drift Check
-              </Button>
-              <Button variant="secondary" className="w-full justify-start text-sm">
+                </Button>
+              </Link>
+              <Link href="/evidence" className="block">
+                <Button variant="secondary" className="w-full justify-start text-sm">
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 View Evidence Chain
-              </Button>
+                </Button>
+              </Link>
             </div>
           </Card>
         </div>

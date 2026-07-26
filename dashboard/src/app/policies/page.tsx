@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FileText,
   Plus,
@@ -15,7 +15,14 @@ import {
   XCircle,
   Play,
 } from 'lucide-react';
-import { useAuthorizeAction, usePolicies, useTogglePolicy, useDeletePolicy } from '@/lib/hooks';
+import {
+  useAuthorizeAction,
+  usePolicies,
+  useTogglePolicy,
+  useDeletePolicy,
+  useCreatePolicy,
+  useUpdatePolicy,
+} from '@/lib/hooks';
 import {
   type ActorType,
   type AuthorizationDecision,
@@ -25,9 +32,10 @@ import {
   type Policy,
   type RiskTier,
 } from '@/lib/api';
+import { api } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, Textarea } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge, DecisionBadge } from '@/components/ui/badge';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '@/components/ui/table';
@@ -47,8 +55,12 @@ export default function PoliciesPage() {
   const [regulation, setRegulation] = useState<string>('');
   const [decision, setDecision] = useState<string>('');
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
+  const [editorPolicy, setEditorPolicy] = useState<Policy | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, error } = usePolicies({
     page,
@@ -60,6 +72,7 @@ export default function PoliciesPage() {
 
   const togglePolicy = useTogglePolicy();
   const deletePolicy = useDeletePolicy();
+  const createPolicy = useCreatePolicy();
 
   const handleToggle = (policyId: string, currentEnabled: boolean) => {
     togglePolicy.mutate({ policyId, enabled: !currentEnabled });
@@ -69,6 +82,34 @@ export default function PoliciesPage() {
     deletePolicy.mutate(policyId, {
       onSuccess: () => setShowDeleteConfirm(null),
     });
+  };
+
+  const handleExport = async () => {
+    try {
+      const blob = await api.exportPolicies();
+      downloadBlob(blob, `stix-policies-${new Date().toISOString().slice(0, 10)}.json`);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to export policies');
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const parsed = JSON.parse(await file.text()) as { policies?: unknown[] } | unknown[];
+      const policies = Array.isArray(parsed) ? parsed : parsed.policies;
+      if (!policies?.length) throw new Error('The import file must contain a non-empty policies array');
+
+      for (const policy of policies) {
+        await createPolicy.mutateAsync(policy as Omit<Policy, 'created_at' | 'updated_at'>);
+      }
+      setActionError(null);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to import policies');
+    }
   };
 
   return (
@@ -85,15 +126,22 @@ export default function PoliciesPage() {
             <Play className="h-4 w-4 mr-2" />
             Simulator
           </Button>
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={() => importInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Button variant="secondary">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImport}
+            className="hidden"
+          />
+          <Button variant="secondary" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button>
+          <Button onClick={() => { setEditorPolicy(null); setShowEditor(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             New Policy
           </Button>
@@ -135,6 +183,12 @@ export default function PoliciesPage() {
           />
         </div>
       </Card>
+
+      {(actionError || togglePolicy.error || deletePolicy.error) && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          {actionError || (togglePolicy.error as Error | null)?.message || (deletePolicy.error as Error | null)?.message}
+        </div>
+      )}
 
       {/* Policies Table */}
       <Card padding="none">
@@ -234,7 +288,10 @@ export default function PoliciesPage() {
                         >
                           <Eye className="h-4 w-4 text-gray-500" />
                         </button>
-                        <button className="p-1 hover:bg-gray-100 rounded">
+                        <button
+                          onClick={() => { setEditorPolicy(policy); setShowEditor(true); }}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
                           <Edit className="h-4 w-4 text-gray-500" />
                         </button>
                         <button
@@ -320,6 +377,12 @@ export default function PoliciesPage() {
           </div>
         )}
       </Modal>
+
+      <PolicyEditor
+        isOpen={showEditor}
+        policy={editorPolicy}
+        onClose={() => setShowEditor(false)}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -844,6 +907,154 @@ function PolicySimulator({
           <Play className="h-4 w-4 mr-2" />
           Run Simulation
         </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function PolicyEditor({
+  isOpen,
+  policy,
+  onClose,
+}: {
+  isOpen: boolean;
+  policy: Policy | null;
+  onClose: () => void;
+}) {
+  const createPolicy = useCreatePolicy();
+  const updatePolicy = useUpdatePolicy();
+  const [policyId, setPolicyId] = useState('');
+  const [version, setVersion] = useState('1.0.0');
+  const [priority, setPriority] = useState('100');
+  const [actorType, setActorType] = useState<ActorType>('AI_AGENT');
+  const [action, setAction] = useState('*');
+  const [resourceType, setResourceType] = useState('*');
+  const [decision, setDecision] = useState<AuthorizationDecision>('ALLOW');
+  const [reasonCode, setReasonCode] = useState('POLICY_ALLOW');
+  const [regulation, setRegulation] = useState('');
+  const [description, setDescription] = useState('');
+  const [conditions, setConditions] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setPolicyId(policy?.policy_id ?? '');
+    setVersion(policy?.version ?? '1.0.0');
+    setPriority(String(policy?.priority ?? 100));
+    setActorType((policy?.scope.actor_type as ActorType | undefined) ?? 'AI_AGENT');
+    setAction(policy?.scope.action ?? '*');
+    setResourceType(policy?.scope.resource_type ?? '*');
+    setDecision(policy?.decision ?? 'ALLOW');
+    setReasonCode(policy?.reason_code ?? 'POLICY_ALLOW');
+    setRegulation(policy?.regulation ?? '');
+    setDescription(policy?.description ?? '');
+    setConditions(policy?.conditions ? JSON.stringify(policy.conditions, null, 2) : '');
+    setEnabled(policy?.enabled ?? true);
+    setFormError(null);
+  }, [isOpen, policy]);
+
+  const submit = async () => {
+    try {
+      if (!policyId.trim()) throw new Error('Policy ID is required');
+      let parsedConditions: Record<string, unknown> | undefined;
+      if (conditions.trim()) {
+        const parsed = JSON.parse(conditions) as unknown;
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new Error('Conditions must be a JSON object');
+        }
+        parsedConditions = parsed as Record<string, unknown>;
+      }
+
+      const payload = {
+        policy_id: policyId.trim(),
+        version: version.trim() || '1.0.0',
+        priority: Number(priority) || 100,
+        scope: {
+          actor_type: actorType,
+          action: action.trim() || '*',
+          resource_type: resourceType.trim() || '*',
+        },
+        decision,
+        reason_code: reasonCode.trim() || 'POLICY_ALLOW',
+        regulation: regulation.trim() || undefined,
+        description: description.trim() || undefined,
+        conditions: parsedConditions,
+        enabled,
+      } satisfies Omit<Policy, 'created_at' | 'updated_at'>;
+
+      if (policy) {
+        await updatePolicy.mutateAsync({ policyId: policy.policy_id, updates: payload });
+      } else {
+        await createPolicy.mutateAsync(payload);
+      }
+      onClose();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Failed to save policy');
+    }
+  };
+
+  const saving = createPolicy.isPending || updatePolicy.isPending;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={policy ? `Edit Policy: ${policy.policy_id}` : 'Create Policy'}
+      size="xl"
+    >
+      <div className="space-y-5">
+        {formError && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {formError}
+          </div>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Policy ID" value={policyId} onChange={(e) => setPolicyId(e.target.value)} disabled={Boolean(policy)} />
+          <Input label="Version" value={version} onChange={(e) => setVersion(e.target.value)} />
+          <Input label="Priority" type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
+          <Input label="Reason Code" value={reasonCode} onChange={(e) => setReasonCode(e.target.value)} />
+          <Select
+            label="Actor Type"
+            value={actorType}
+            onChange={(e) => setActorType(e.target.value as ActorType)}
+            options={['AI_AGENT', 'SERVICE', 'HUMAN', 'JOB', 'SYSTEM'].map((value) => ({ value, label: value }))}
+          />
+          <Select
+            label="Decision"
+            value={decision}
+            onChange={(e) => setDecision(e.target.value as AuthorizationDecision)}
+            options={[
+              { value: 'ALLOW', label: 'Allow' },
+              { value: 'DENY', label: 'Deny' },
+              { value: 'QUARANTINE', label: 'Quarantine' },
+            ]}
+          />
+          <Input label="Action" value={action} onChange={(e) => setAction(e.target.value)} />
+          <Input label="Resource Type" value={resourceType} onChange={(e) => setResourceType(e.target.value)} />
+          <Input label="Regulation" value={regulation} onChange={(e) => setRegulation(e.target.value)} placeholder="HIPAA, SOX, GDPR" />
+          <label className="flex items-center gap-3 self-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium">
+            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4 accent-cyan-600" />
+            Policy enabled
+          </label>
+        </div>
+        <Textarea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Explain the control intent and operator response." />
+        <Textarea label="Conditions (JSON object, optional)" value={conditions} onChange={(e) => setConditions(e.target.value)} rows={6} placeholder={'{\n  "env": "prod"\n}'} className="font-mono text-xs" />
+      </div>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button onClick={submit} loading={saving}>{policy ? 'Save Changes' : 'Create Policy'}</Button>
       </ModalFooter>
     </Modal>
   );

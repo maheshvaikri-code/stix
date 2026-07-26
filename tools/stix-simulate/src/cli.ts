@@ -33,7 +33,7 @@ const program = new Command();
 program
   .name('stix-simulate')
   .description('STIX Simulation Engine - Simulate policy impact on historical evidence')
-  .version('0.1.13');
+  .version('0.1.14');
 
 // =============================================================================
 // SIMULATE COMMAND
@@ -211,13 +211,13 @@ function printSummary(report: SimulationReport): void {
 
   // Key changes
   if (decision_changes.allow_to_deny > 0) {
-    console.log(`  ${chalk.red('⚠')} ALLOW→DENY: ${decision_changes.allow_to_deny} (would block)`);
+    console.log(`  ${chalk.red('âš ')} ALLOWâ†’DENY: ${decision_changes.allow_to_deny} (would block)`);
   }
   if (decision_changes.allow_to_quarantine > 0) {
-    console.log(`  ${chalk.yellow('⏸')} ALLOW→QUARANTINE: ${decision_changes.allow_to_quarantine} (would require approval)`);
+    console.log(`  ${chalk.yellow('â¸')} ALLOWâ†’QUARANTINE: ${decision_changes.allow_to_quarantine} (would require approval)`);
   }
   if (decision_changes.deny_to_allow > 0) {
-    console.log(`  ${chalk.red('⚠')} DENY→ALLOW: ${decision_changes.deny_to_allow} (CRITICAL - opens access)`);
+    console.log(`  ${chalk.red('âš ')} DENYâ†’ALLOW: ${decision_changes.deny_to_allow} (CRITICAL - opens access)`);
   }
 
   console.log('');
@@ -233,7 +233,7 @@ async function showEvidenceStats(evidencePath: string): Promise<void> {
     const stats = getEvidenceStats(inputs);
 
     console.log(chalk.bold('\nEvidence Statistics'));
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
     console.log(`Total traces: ${chalk.cyan(stats.total)}`);
     console.log(`\nDecisions:`);
     console.log(`  ${chalk.green('ALLOW')}: ${stats.byDecision.ALLOW || 0}`);
@@ -247,7 +247,7 @@ async function showEvidenceStats(evidencePath: string): Promise<void> {
       console.log(`  First: ${stats.timeRange.first}`);
       console.log(`  Last: ${stats.timeRange.last}`);
     }
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
 
   } catch (error) {
     spinner.fail(chalk.red(`Error: ${(error as Error).message}`));
@@ -264,7 +264,7 @@ async function showPolicyStats(policyPath: string): Promise<void> {
     const stats = getPolicyStats(pack);
 
     console.log(chalk.bold('\nPolicy Pack Statistics'));
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
     console.log(`Pack ID: ${chalk.cyan(pack.id)}`);
     console.log(`Pack hash: ${pack.hash.substring(0, 16)}...`);
     console.log(`Total policies: ${stats.totalPolicies}`);
@@ -278,7 +278,7 @@ async function showPolicyStats(policyPath: string): Promise<void> {
     if (stats.regulations.length > 0) {
       console.log(`\nRegulations: ${stats.regulations.join(', ')}`);
     }
-    console.log('═'.repeat(50));
+    console.log('â•'.repeat(50));
 
   } catch (error) {
     spinner.fail(chalk.red(`Error: ${(error as Error).message}`));
@@ -327,7 +327,7 @@ async function showDiffs(
     console.log('');
 
     const table = new Table({
-      head: ['Trace ID', 'Recorded', '→', 'Simulated', 'Risk', 'Reason'],
+      head: ['Trace ID', 'Recorded', 'â†’', 'Simulated', 'Risk', 'Reason'],
       style: { head: ['cyan'] },
     });
 
@@ -339,7 +339,7 @@ async function showDiffs(
       table.push([
         result.trace_id.substring(0, 12) + '...',
         from,
-        '→',
+        'â†’',
         to,
         risk,
         result.simulated.reason_code,

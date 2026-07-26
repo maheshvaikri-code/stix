@@ -16,6 +16,7 @@ import {
   useApproval,
   useApproveRequest,
   useRejectRequest,
+  useDashboardOperator,
 } from '@/lib/hooks';
 import { type ApprovalRequest } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -248,6 +249,8 @@ function PendingApprovalsList({
 }) {
   const approveRequest = useApproveRequest();
   const rejectRequest = useRejectRequest();
+  const operator = useDashboardOperator();
+  const actionError = approveRequest.error ?? rejectRequest.error;
 
   if (isLoading) {
     return (
@@ -271,6 +274,14 @@ function PendingApprovalsList({
 
   return (
     <div className="space-y-4">
+      {actionError && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          Approval action failed: {actionError instanceof Error ? actionError.message : 'Unknown error'}
+          <span className="mt-1 block text-xs text-rose-700">
+            Signed in as {operator.id} ({operator.role}). Update the operator identity in Settings if the ticket requires another role.
+          </span>
+        </div>
+      )}
       {approvals.map((approval) => {
         const expiresIn = new Date(approval.expires_at).getTime() - Date.now();
         const expiresHours = Math.floor(expiresIn / (1000 * 60 * 60));
@@ -311,6 +322,12 @@ function PendingApprovalsList({
                     <p className="text-xs text-gray-500">Reason</p>
                     <p className="text-sm">{approval.reason_code}</p>
                   </div>
+                  {approval.required_role && (
+                    <div>
+                      <p className="text-xs text-gray-500">Required role</p>
+                      <p className="text-sm font-medium">{approval.required_role}</p>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -374,8 +391,12 @@ function ApprovalDetail({
   const [notes, setNotes] = useState('');
   const approveRequest = useApproveRequest();
   const rejectRequest = useRejectRequest();
+  const operator = useDashboardOperator();
 
   const isPending = approval.status === 'PENDING';
+  const roleMismatch = Boolean(
+    approval.required_role && approval.required_role !== operator.role,
+  );
 
   const handleApprove = () => {
     approveRequest.mutate(
@@ -479,6 +500,10 @@ function ApprovalDetail({
             <p className="text-gray-500">Reason Code</p>
             <p className="font-mono text-sm">{approval.reason_code}</p>
           </div>
+          <div>
+            <p className="text-gray-500">Required Approver Role</p>
+            <p className="font-medium">{approval.required_role ?? 'Any configured approver'}</p>
+          </div>
         </div>
       </div>
 
@@ -503,6 +528,16 @@ function ApprovalDetail({
       {/* Action Section */}
       {isPending && (
         <>
+          {(approveRequest.error || rejectRequest.error) && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+              {((approveRequest.error ?? rejectRequest.error) as Error).message}
+            </div>
+          )}
+          {roleMismatch && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              This ticket requires <strong>{approval.required_role}</strong>, but the dashboard operator is configured as <strong>{operator.role}</strong>.
+            </div>
+          )}
           <div>
             <Textarea
               label="Notes (optional)"
@@ -525,7 +560,11 @@ function ApprovalDetail({
               <XCircle className="h-4 w-4 mr-2" />
               Reject
             </Button>
-            <Button onClick={handleApprove} loading={approveRequest.isPending}>
+            <Button
+              onClick={handleApprove}
+              loading={approveRequest.isPending}
+              disabled={roleMismatch}
+            >
               <CheckCircle className="h-4 w-4 mr-2" />
               Approve
             </Button>

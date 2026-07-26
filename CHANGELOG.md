@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.14] - 2026-07-26
+
+### Dashboard
+
+- Wired dashboard evidence statistics, chain verification, filtered export, and live error states to the running Evidence service.
+- Wired approval decisions with configured approver identity and role, including required-role visibility and mismatch guidance.
+- Restored dashboard sessions on load and made API key/operator settings apply across the console.
+- Added live policy create/edit/import/export controls and connected GitLab quick actions to console routes.
+- Added the Evidence filtered export endpoint used by the dashboard and strengthened its integration coverage.
+
 ## [0.1.13] - 2026-07-26
 
 ### Security

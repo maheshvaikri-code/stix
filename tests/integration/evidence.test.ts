@@ -232,12 +232,8 @@ describe('Evidence Service Integration', () => {
         records: EvidenceRecord[];
       }>('/api/v1/evidence/export?format=json&limit=10');
 
-      if (status === 200) {
-        expect(Array.isArray(data.records)).toBe(true);
-      } else {
-        // Endpoint might return file download
-        expect([200, 404]).toContain(status);
-      }
+      expect(status).toBe(200);
+      expect(Array.isArray(data.records)).toBe(true);
     });
   });
 

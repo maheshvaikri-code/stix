@@ -56,7 +56,7 @@ export default function DashboardPage() {
     isLoading: statsLoading,
     refetch: refetchStats,
   } = useDashboardStats();
-  const { data: timeSeries, isLoading: timeSeriesLoading } =
+  const { data: timeSeries, isLoading: timeSeriesLoading, error: timeSeriesError } =
     useDecisionTimeSeries(timeRange);
   const { data: health, refetch: refetchHealth } = useAllServicesHealth();
   const { data: pendingApprovals } = useApprovals({
@@ -236,6 +236,10 @@ export default function DashboardPage() {
           {timeSeriesLoading ? (
             <div className="flex items-center justify-center h-full">
               <LoadingSpinner />
+            </div>
+          ) : timeSeriesError ? (
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-amber-700">
+              Timeline unavailable: {timeSeriesError instanceof Error ? timeSeriesError.message : "retry the request"}
             </div>
           ) : timeSeries && timeSeries.allowed?.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">

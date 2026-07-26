@@ -17,7 +17,7 @@ import {
   Settings,
   ShieldCheck,
 } from "lucide-react";
-import { useApprovals } from "@/lib/hooks";
+import { useApprovals, useDashboardOperator } from "@/lib/hooks";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -43,6 +43,7 @@ export function Sidebar() {
     status: "PENDING",
     page_size: 1,
   });
+  const operator = useDashboardOperator();
   const pendingCount = pendingData?.total || 0;
 
   return (
@@ -143,10 +144,10 @@ export function Sidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">
-                  Admin
+                  {operator.id}
                 </p>
                 <p className="truncate text-xs text-slate-400">
-                  admin@example.com
+                  {operator.role}
                 </p>
               </div>
             </div>

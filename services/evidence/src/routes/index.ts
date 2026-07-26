@@ -463,6 +463,68 @@ export async function evidenceRoutes(
   });
 
   /**
+   * GET /api/v1/evidence/export
+   * Export the filtered evidence ledger for dashboard and compliance use.
+   */
+  fastify.get<{
+    Querystring: {
+      start_time?: string;
+      end_time?: string;
+      format?: 'json' | 'jsonl' | 'csv';
+    };
+  }>('/api/v1/evidence/export', async (request, reply) => {
+    try {
+      const start = request.query.start_time ? new Date(request.query.start_time) : undefined;
+      const end = request.query.end_time ? new Date(request.query.end_time) : undefined;
+
+      if (start && Number.isNaN(start.getTime())) {
+        return reply.code(400).send({ error: 'Invalid start_time' });
+      }
+      if (end && Number.isNaN(end.getTime())) {
+        return reply.code(400).send({ error: 'Invalid end_time' });
+      }
+
+      const events = (await store.getAll())
+        .filter(event => {
+          const timestamp = new Date(event.timestamp).getTime();
+          if (start && timestamp < start.getTime()) return false;
+          if (end && timestamp > end.getTime()) return false;
+          return true;
+        })
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      const format = request.query.format ?? 'json';
+      if (format === 'csv') {
+        return reply
+          .code(200)
+          .header('Content-Type', 'text/csv')
+          .header('Content-Disposition', 'attachment; filename="stix-evidence.csv"')
+          .send(eventsToCSV(events));
+      }
+
+      if (format === 'jsonl') {
+        return reply
+          .code(200)
+          .header('Content-Type', 'application/x-ndjson')
+          .header('Content-Disposition', 'attachment; filename="stix-evidence.jsonl"')
+          .send(events.map(event => JSON.stringify(event)).join('\n'));
+      }
+
+      return reply
+        .code(200)
+        .header('Content-Type', 'application/json')
+        .header('Content-Disposition', 'attachment; filename="stix-evidence.json"')
+        .send({ records: events, exported_at: new Date().toISOString() });
+    } catch (error) {
+      request.log.error({ err: error }, 'Failed to export evidence');
+      return reply.code(500).send({
+        success: false,
+        error: { code: 'EXPORT_FAILED', message: 'Failed to export evidence' },
+      });
+    }
+  });
+
+  /**
    * GET /api/v1/evidence/export/:traceId
    * Export trace events
    */
