@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-http",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "STIX Target HTTP - Protected HTTP/API calling service",
   "type": "module",
   "main": "dist/index.js",

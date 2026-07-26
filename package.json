@@ -1,6 +1,6 @@
 {
   "name": "@stix/monorepo",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "STIX Core and STIX Fabric - trusted execution and policy fabric for AI agents",
   "type": "module",
@@ -52,6 +52,7 @@
     "docker:up": "docker compose -f deploy/docker/docker-compose.yaml up -d",
     "docker:down": "docker compose -f deploy/docker/docker-compose.yaml down",
     "docker:logs": "docker compose -f deploy/docker/docker-compose.yaml logs -f",
+    "deploy:floci:smoke": "node scripts/deploy/floci-aws-smoke.mjs",
     "k8s:apply": "kubectl apply -f deploy/k8s/",
     "k8s:delete": "kubectl delete -f deploy/k8s/",
     "demo:fabric:seed": "node scripts/demo/seed-fabric-demo.mjs",

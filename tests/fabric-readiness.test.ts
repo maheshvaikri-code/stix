@@ -165,7 +165,7 @@ function createReadyInventory(): FabricInventory {
           display_name: 'Doctrine Gold Build Gate',
           environment: 'prod',
           rollout_state: 'ACTIVE',
-          active_bundle_id: 'bundle_0_1_8_doctrine',
+          active_bundle_id: 'bundle_0_1_9_doctrine',
           metadata: {
             coverage: 'g0-g7',
           },

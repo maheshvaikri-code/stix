@@ -74,13 +74,20 @@ patches:
       kind: PodDisruptionBudget
       name: stix-enforcer-pdb
 
-configMapGenerator:
-  - name: stix-config
-    behavior: merge
-    literals:
-      - LOG_LEVEL=info
-      - RATE_LIMIT_MAX=5000
-      - TRACING_SAMPLE_RATE=0.01
+  # Production config overrides
+  - patch: |-
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: "info"
+      - op: replace
+        path: /data/RATE_LIMIT_MAX
+        value: "5000"
+      - op: replace
+        path: /data/TRACING_SAMPLE_RATE
+        value: "0.01"
+    target:
+      kind: ConfigMap
+      name: stix-config
 
 images:
   - name: ghcr.io/stix-ai/stix-enforcer
@@ -92,5 +99,8 @@ images:
   - name: ghcr.io/stix-ai/stix-dashboard
     newTag: v1.0.0
 
-commonLabels:
-  environment: production
+labels:
+  - pairs:
+      environment: production
+    includeSelectors: true
+    includeTemplates: true

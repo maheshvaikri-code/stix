@@ -14,7 +14,7 @@ RUN apk add --no-cache python3 make g++ curl
 WORKDIR /app
 
 # Copy workspace config
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml .npmrc ./
 COPY tsconfig.base.json ./
 
 # Copy all package.json files for dependency resolution
@@ -25,9 +25,10 @@ COPY services/policy/package.json ./services/policy/
 COPY services/evidence/package.json ./services/evidence/
 COPY services/approvals/package.json ./services/approvals/
 COPY services/fabric/package.json ./services/fabric/
+COPY dashboard/package.json ./dashboard/
 
 # Install pnpm and dependencies
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8.12.0
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # -----------------------------------------------------------------------------
@@ -38,12 +39,13 @@ FROM base AS builder
 # Copy source files
 COPY packages/ ./packages/
 COPY services/ ./services/
+COPY dashboard/ ./dashboard/
 
 # Re-link workspace bins after source copy (COPY can replace pnpm symlinks)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Build all packages
-RUN pnpm --filter @stix/shared --filter @stix/fabric-types --filter @stix/enforcer --filter @stix/policy --filter @stix/evidence --filter @stix/approvals --filter @stix/fabric build
+RUN pnpm --filter @stix/shared --filter @stix/fabric-types --filter @stix/enforcer --filter @stix/policy --filter @stix/evidence --filter @stix/approvals --filter @stix/fabric --filter @stix/dashboard build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production - Enforcer
@@ -174,3 +176,31 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3005/health || exit 1
 
 CMD ["node", "services/fabric/dist/index.js"]
+
+# -----------------------------------------------------------------------------
+# Stage 8: Production - Dashboard
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS dashboard
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/fabric-types/node_modules ./packages/fabric-types/node_modules
+COPY --from=builder /app/dashboard/node_modules ./dashboard/node_modules
+COPY --from=builder /app/packages/fabric-types/dist ./packages/fabric-types/dist
+COPY --from=builder /app/packages/fabric-types/package.json ./packages/fabric-types/
+COPY --from=builder /app/dashboard/.next ./dashboard/.next
+COPY --from=builder /app/dashboard/public ./dashboard/public
+COPY --from=builder /app/dashboard/next.config.js ./dashboard/
+COPY --from=builder /app/dashboard/package.json ./dashboard/
+
+RUN apk add --no-cache curl
+
+USER node
+WORKDIR /app/dashboard
+EXPOSE 3100
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3100/ || exit 1
+
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "3100"]

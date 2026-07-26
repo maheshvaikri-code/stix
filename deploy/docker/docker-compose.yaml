@@ -2,7 +2,24 @@
 # STIX Docker Compose - Development Environment
 # =============================================================================
 
+name: stix
+
 services:
+  # ---------------------------------------------------------------------------
+  # Floci - Local AWS Emulator for FDE/Doctrine deployment drills
+  # ---------------------------------------------------------------------------
+  floci:
+    image: floci/floci:latest
+    container_name: stix-floci
+    ports:
+      - "${FLOCI_PORT:-4566}:4566"
+    environment:
+      - FLOCI_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+    volumes:
+      - floci-data:/app/data
+    networks:
+      - stix-network
+
   # ---------------------------------------------------------------------------
   # STIX Enforcer - Authorization Decision Engine
   # ---------------------------------------------------------------------------
@@ -26,11 +43,21 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - DEFAULT_FAIL_MODE=CLOSED
+      - AWS_ENDPOINT_URL=http://floci:4566
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
     depends_on:
-      - policy
-      - evidence
-      - approvals
-      - redis
+      floci:
+        condition: service_healthy
+      policy:
+        condition: service_healthy
+      evidence:
+        condition: service_healthy
+      approvals:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - stix-network
     healthcheck:
@@ -58,10 +85,17 @@ services:
       - STORAGE_TYPE=postgres
       - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
       - POLICY_DIRECTORY=/app/policies
+      - AWS_ENDPOINT_URL=http://floci:4566
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
     volumes:
       - ../../policies/examples:/app/policies:ro
     depends_on:
-      - postgres
+      floci:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - stix-network
     healthcheck:
@@ -89,8 +123,15 @@ services:
       - STORAGE_TYPE=postgres
       - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
       - SIGNING_ENABLED=true
+      - AWS_ENDPOINT_URL=http://floci:4566
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
     depends_on:
-      - postgres
+      floci:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - stix-network
     healthcheck:
@@ -118,8 +159,15 @@ services:
       - STORAGE_TYPE=postgres
       - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
       - APPROVAL_TIMEOUT_HOURS=24
+      - AWS_ENDPOINT_URL=http://floci:4566
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
     depends_on:
-      - postgres
+      floci:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - stix-network
     healthcheck:
@@ -146,8 +194,15 @@ services:
       - LOG_PRETTY=true
       - STORAGE_TYPE=postgres
       - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
+      - AWS_ENDPOINT_URL=http://floci:4566
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
     depends_on:
-      - postgres
+      floci:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - stix-network
     healthcheck:
@@ -155,6 +210,44 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  # ---------------------------------------------------------------------------
+  # STIX Dashboard - Fabric Console and Doctrine View
+  # ---------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: dashboard
+    container_name: stix-dashboard
+    ports:
+      - "${STIX_DASHBOARD_PORT:-3100}:3100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - NEXT_PUBLIC_ENFORCER_URL=${NEXT_PUBLIC_ENFORCER_URL:-http://localhost:3001}
+      - NEXT_PUBLIC_POLICY_URL=${NEXT_PUBLIC_POLICY_URL:-http://localhost:3002}
+      - NEXT_PUBLIC_EVIDENCE_URL=${NEXT_PUBLIC_EVIDENCE_URL:-http://localhost:3003}
+      - NEXT_PUBLIC_APPROVALS_URL=${NEXT_PUBLIC_APPROVALS_URL:-http://localhost:3004}
+      - NEXT_PUBLIC_FABRIC_URL=${NEXT_PUBLIC_FABRIC_URL:-http://localhost:3005}
+    depends_on:
+      enforcer:
+        condition: service_healthy
+      policy:
+        condition: service_healthy
+      evidence:
+        condition: service_healthy
+      approvals:
+        condition: service_healthy
+      fabric:
+        condition: service_healthy
+    networks:
+      - stix-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ---------------------------------------------------------------------------
   # Redis - Caching Layer
@@ -202,5 +295,6 @@ networks:
     driver: bridge
 
 volumes:
+  floci-data:
   redis-data:
   postgres-data:

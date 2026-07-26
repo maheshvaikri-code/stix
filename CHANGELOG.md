@@ -2,6 +2,24 @@
 
 All notable changes to STIX are documented here.
 
+## [0.1.9] - 2026-07-25
+
+### Added
+
+- Added Floci AWS emulator support to the Docker deployment stack for FDE/Doctrine deployment drills.
+- Added a deployable dashboard image target so `/fabric` and `/doctrine` are included in the containerized stack.
+- Added `pnpm deploy:floci:smoke` for S3-compatible Floci artifact round-trip validation.
+- Added a lean `.dockerignore` for reproducible Docker build contexts.
+- Added Floci AWS deployment documentation and v0.1.9 release readiness evidence.
+
+### Changed
+
+- Isolated the Docker Compose project with `name: stix` to prevent non-STIX orphan cleanup collisions.
+- Docker Compose now waits for healthy Floci, Postgres, Redis, and STIX services before starting dependent services.
+- Docker image builds now use the repo-pinned `pnpm@8.12.0` and copy `.npmrc` for deterministic frozen installs.
+- Fixed staging and production Kustomize overlays to patch the existing `stix-config` ConfigMap instead of invalid generator merge behavior.
+- Bumped the monorepo and STIX package versions to `0.1.9`.
+
 ## [0.1.8] - 2026-07-25
 
 ### Added

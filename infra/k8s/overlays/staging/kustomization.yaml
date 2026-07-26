@@ -87,13 +87,20 @@ patches:
       kind: Ingress
       name: stix-ingress
 
-configMapGenerator:
-  - name: stix-config
-    behavior: merge
-    literals:
-      - LOG_LEVEL=debug
-      - RATE_LIMIT_MAX=100
-      - TRACING_SAMPLE_RATE=1.0
+  # Staging config overrides
+  - patch: |-
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: "debug"
+      - op: replace
+        path: /data/RATE_LIMIT_MAX
+        value: "100"
+      - op: replace
+        path: /data/TRACING_SAMPLE_RATE
+        value: "1.0"
+    target:
+      kind: ConfigMap
+      name: stix-config
 
 images:
   - name: ghcr.io/stix-ai/stix-enforcer
@@ -105,5 +112,8 @@ images:
   - name: ghcr.io/stix-ai/stix-dashboard
     newTag: staging
 
-commonLabels:
-  environment: staging
+labels:
+  - pairs:
+      environment: staging
+    includeSelectors: true
+    includeTemplates: true
