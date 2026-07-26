@@ -85,7 +85,7 @@ function loadConfig(): Config {
   const parsed = ConfigSchema.parse({
     service: {
       name: 'stix-approvals',
-      version: getEnv('SERVICE_VERSION', '0.1.11'),
+      version: getEnv('SERVICE_VERSION', '0.1.12'),
       port: getEnvNumber('PORT', SERVICE_PORTS.APPROVALS),
       host: getEnv('HOST', '0.0.0.0'),
       env,
@@ -677,14 +677,30 @@ async function registerRoutes(
   });
 
   // List approvals
-  fastify.get<{ Querystring: { page?: string; page_size?: string; status?: string } }>('/api/v1/approvals', async (request, reply) => {
+  fastify.get<{
+    Querystring: {
+      page?: string;
+      page_size?: string;
+      status?: string;
+      actor_id?: string;
+      action?: string;
+    };
+  }>('/api/v1/approvals', async (request, reply) => {
     const page = parseInt(request.query.page || '1');
     const pageSize = parseInt(request.query.page_size || '20');
     const statusFilter = request.query.status;
+    const actorIdFilter = request.query.actor_id;
+    const actionFilter = request.query.action;
 
     let tickets = await store.getAll();
     if (statusFilter) {
       tickets = tickets.filter(t => t.status === statusFilter);
+    }
+    if (actorIdFilter) {
+      tickets = tickets.filter(t => t.actor.id === actorIdFilter);
+    }
+    if (actionFilter) {
+      tickets = tickets.filter(t => t.action === actionFilter);
     }
 
     // Sort by created_at descending (newest first)

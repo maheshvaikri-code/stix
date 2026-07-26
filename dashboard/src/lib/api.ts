@@ -158,6 +158,67 @@ export interface DecisionTimeSeries {
   quarantined: TimeSeriesPoint[];
 }
 
+export type ActorType = 'HUMAN' | 'SERVICE' | 'AI_AGENT' | 'JOB' | 'SYSTEM';
+export type Environment = 'dev' | 'test' | 'stage' | 'prod' | 'production';
+export type AuthorizationDecision = 'ALLOW' | 'DENY' | 'QUARANTINE';
+export type RiskTier = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface DetectionSignals {
+  piiDetected?: boolean;
+  phiDetected?: boolean;
+  pciDetected?: boolean;
+  secretsDetected?: boolean;
+  custom?: Record<string, boolean>;
+}
+
+export interface AuthorizeActionRequest {
+  actor: {
+    id: string;
+    type: ActorType;
+    role?: string;
+    tenant?: string;
+    attributes?: Record<string, unknown>;
+  };
+  action: string;
+  resource: {
+    type: string;
+    id?: string;
+    classification?: string[];
+    attributes?: Record<string, unknown>;
+  };
+  context: {
+    env: Environment;
+    purpose?: string;
+    run_id?: string;
+    session_id?: string;
+    ticket_id?: string;
+    jurisdiction?: string;
+    tags?: string[];
+    signals?: DetectionSignals;
+    attributes?: Record<string, unknown>;
+  };
+  tool_call?: {
+    tool: string;
+    risk_tier?: RiskTier;
+    args_summary?: string;
+  };
+}
+
+export interface AuthorizationResult {
+  decision: AuthorizationDecision;
+  reason_code?: string;
+  trace_id?: string;
+  explanation?: string;
+  policy_id?: string;
+  policy?: { id: string; version: string; hash: string };
+  obligations?: Array<{ type: string; params?: Record<string, unknown> }>;
+  controls?: string[];
+  regulations?: string[];
+  proof_token?: string;
+  approval?: { required: boolean; ticket_id?: string; approver_role?: string } | null;
+  approval_ticket_id?: string;
+}
+
 export type {
   FabricAgent,
   FabricEnforcementPoint,
@@ -338,6 +399,17 @@ class ApiClient {
     period: '24h' | '7d' | '30d' = '24h'
   ): Promise<DecisionTimeSeries> {
     return this.fetch<DecisionTimeSeries>('enforcer', `/api/v1/stats/timeseries?period=${period}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authorization
+  // ---------------------------------------------------------------------------
+
+  async authorize(request: AuthorizeActionRequest): Promise<AuthorizationResult> {
+    return this.fetch<AuthorizationResult>('enforcer', '/api/v1/authorize', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   }
 
   // ---------------------------------------------------------------------------

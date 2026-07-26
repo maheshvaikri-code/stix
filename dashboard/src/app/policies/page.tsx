@@ -15,8 +15,16 @@ import {
   XCircle,
   Play,
 } from 'lucide-react';
-import { usePolicies, useTogglePolicy, useDeletePolicy } from '@/lib/hooks';
-import { type Policy } from '@/lib/api';
+import { useAuthorizeAction, usePolicies, useTogglePolicy, useDeletePolicy } from '@/lib/hooks';
+import {
+  type ActorType,
+  type AuthorizationDecision,
+  type AuthorizationResult,
+  type DetectionSignals,
+  type Environment,
+  type Policy,
+  type RiskTier,
+} from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -352,76 +360,129 @@ export default function PoliciesPage() {
 // POLICY SIMULATOR
 // =============================================================================
 
-// Preset compliance scenarios for quick testing
-const PRESET_SCENARIOS = [
+type CoreSignalKey = 'piiDetected' | 'phiDetected' | 'pciDetected' | 'secretsDetected';
+
+type SignalState = Record<CoreSignalKey, boolean>;
+
+interface PresetScenario {
+  name: string;
+  description: string;
+  actorId: string;
+  actorType: ActorType;
+  action: string;
+  resourceType: string;
+  env: Environment;
+  signals: Partial<SignalState>;
+  riskTier?: RiskTier;
+  expected: AuthorizationDecision;
+}
+
+const DEFAULT_SIGNALS: SignalState = {
+  piiDetected: false,
+  phiDetected: false,
+  pciDetected: false,
+  secretsDetected: false,
+};
+
+const SIGNAL_OPTIONS: Array<{
+  key: CoreSignalKey;
+  label: string;
+  description: string;
+}> = [
   {
-    name: 'AI Agent Accesses Patient Data',
-    description: 'HIPAA: AI agent reads patient records in production',
+    key: 'piiDetected',
+    label: 'PII',
+    description: 'Personally identifiable information detected',
+  },
+  {
+    key: 'phiDetected',
+    label: 'PHI',
+    description: 'Protected health information detected',
+  },
+  {
+    key: 'pciDetected',
+    label: 'PCI',
+    description: 'Payment card data detected',
+  },
+  {
+    key: 'secretsDetected',
+    label: 'Secrets',
+    description: 'Credentials or keys detected',
+  },
+];
+
+// Preset compliance scenarios for quick testing against the live Enforcer API.
+const PRESET_SCENARIOS: PresetScenario[] = [
+  {
+    name: 'PHI Access Blocked',
+    description: 'HIPAA: AI agent attempts to read patient data with PHI detected',
     actorId: 'healthcare-agent',
     actorType: 'AI_AGENT',
     action: 'read_patient_record',
     resourceType: 'patient_data',
     env: 'prod',
     signals: { phiDetected: true },
-    expected: 'QUARANTINE',
-  },
-  {
-    name: 'Pipeline Deploys to Production',
-    description: 'SOX: CI/CD pipeline deploying to production environment',
-    actorId: 'ci-runner-42',
-    actorType: 'JOB',
-    action: 'deploy',
-    resourceType: 'production_environment',
-    env: 'prod',
-    signals: {},
-    expected: 'ALLOW',
-  },
-  {
-    name: 'Agent Sends Bulk Email',
-    description: 'Rate limit: AI agent sending mass email campaign',
-    actorId: 'marketing-agent',
-    actorType: 'AI_AGENT',
-    action: 'send_email',
-    resourceType: 'email',
-    env: 'prod',
-    signals: { piiDetected: true },
     expected: 'DENY',
   },
   {
-    name: 'Secret Detected in MR',
-    description: 'Security: Merge request contains hardcoded API key',
+    name: 'PII Read With Masking',
+    description: 'Baseline: low-risk read with PII signal should allow with masking obligations',
+    actorId: 'support-agent',
+    actorType: 'AI_AGENT',
+    action: 'read_customer_record',
+    resourceType: 'customer_profile',
+    env: 'prod',
+    signals: { piiDetected: true },
+    expected: 'ALLOW',
+  },
+  {
+    name: 'High-Risk Tool Execution',
+    description: 'Default guardrail: high-risk tool execution requires human approval',
+    actorId: 'ops-agent',
+    actorType: 'AI_AGENT',
+    action: 'execute_shell',
+    resourceType: 'tool',
+    env: 'prod',
+    signals: {},
+    riskTier: 'HIGH',
+    expected: 'QUARANTINE',
+  },
+  {
+    name: 'Secret Access Blocked',
+    description: 'Security: AI agent touches a secret with credential signal detected',
     actorId: 'gitlab:user:developer',
     actorType: 'AI_AGENT',
-    action: 'mr_review',
-    resourceType: 'merge_request',
+    action: 'read_secret',
+    resourceType: 'secret',
     env: 'prod',
     signals: { secretsDetected: true },
     expected: 'DENY',
   },
   {
-    name: 'Credit Card Data Access',
-    description: 'PCI-DSS: Service accessing payment card information',
+    name: 'Tokenized Payment Allowed',
+    description: 'PCI: service processes tokenized payment data without card data exposure',
     actorId: 'payment-service',
     actorType: 'SERVICE',
-    action: 'read_payment_data',
-    resourceType: 'payment_card',
+    action: 'process_payment',
+    resourceType: 'payment_token',
     env: 'prod',
-    signals: { pciDetected: true },
-    expected: 'QUARANTINE',
+    signals: {},
+    expected: 'ALLOW',
   },
 ];
 
-interface SimulationResult {
-  decision: string;
-  reason_code?: string;
-  trace_id?: string;
-  explanation?: string;
-  policy?: { id: string; version: string; hash: string };
-  obligations?: Array<{ type: string; params?: Record<string, unknown> }>;
-  controls?: string[];
-  regulations?: string[];
-  proof_token?: string;
-  approval?: { required: boolean; ticket_id?: string; approver_role?: string } | null;
+type SimulationResult = AuthorizationResult;
+
+function activeSignals(signals: SignalState): DetectionSignals {
+  return Object.fromEntries(
+    Object.entries(signals).filter(([, enabled]) => enabled),
+  ) as DetectionSignals;
+}
+
+function decodeJwtPart(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  return JSON.parse(atob(padded));
 }
 
 function PolicySimulator({
@@ -432,23 +493,36 @@ function PolicySimulator({
   onClose: () => void;
 }) {
   const [actorId, setActorId] = useState('test-agent');
-  const [actorType, setActorType] = useState('AI_AGENT');
+  const [actorType, setActorType] = useState<ActorType>('AI_AGENT');
   const [action, setAction] = useState('send_email');
   const [resourceType, setResourceType] = useState('email');
-  const [env, setEnv] = useState('prod');
+  const [env, setEnv] = useState<Environment>('prod');
+  const [riskTier, setRiskTier] = useState<RiskTier | ''>('');
+  const [signals, setSignals] = useState<SignalState>(DEFAULT_SIGNALS);
+  const [expectedDecision, setExpectedDecision] = useState<AuthorizationDecision | null>(null);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProofToken, setShowProofToken] = useState(false);
+  const authorizeAction = useAuthorizeAction();
 
-  const applyPreset = (preset: typeof PRESET_SCENARIOS[number]) => {
+  const resetResult = () => {
+    setResult(null);
+    setError(null);
+    setShowProofToken(false);
+    authorizeAction.reset();
+  };
+
+  const applyPreset = (preset: PresetScenario) => {
     setActorId(preset.actorId);
     setActorType(preset.actorType);
     setAction(preset.action);
     setResourceType(preset.resourceType);
     setEnv(preset.env);
-    setResult(null);
-    setError(null);
+    setRiskTier(preset.riskTier ?? '');
+    setSignals({ ...DEFAULT_SIGNALS, ...preset.signals });
+    setExpectedDecision(preset.expected);
+    resetResult();
   };
 
   const runSimulation = async () => {
@@ -456,17 +530,29 @@ function PolicySimulator({
     setError(null);
     setShowProofToken(false);
     try {
-      const response = await fetch('http://localhost:3001/api/v1/authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actor: { id: actorId, type: actorType },
-          action,
-          resource: { type: resourceType },
-          context: { env },
-        }),
+      const resourceAttributes = riskTier ? { risk_tier: riskTier } : undefined;
+      const data = await authorizeAction.mutateAsync({
+        actor: { id: actorId, type: actorType },
+        action,
+        resource: {
+          type: resourceType,
+          ...(resourceAttributes ? { attributes: resourceAttributes } : {}),
+        },
+        context: {
+          env,
+          tags: ['dashboard:policy-simulator'],
+          signals: activeSignals(signals),
+        },
+        ...(riskTier
+          ? {
+              tool_call: {
+                tool: action,
+                risk_tier: riskTier,
+                args_summary: `Dashboard simulator request for ${resourceType}`,
+              },
+            }
+          : {}),
       });
-      const data = await response.json();
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Simulation failed');
@@ -479,8 +565,8 @@ function PolicySimulator({
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
-      const header = JSON.parse(atob(parts[0]));
-      const payload = JSON.parse(atob(parts[1]));
+      const header = decodeJwtPart(parts[0]);
+      const payload = decodeJwtPart(parts[1]);
       return { header, payload, signature: parts[2].substring(0, 32) + '...' };
     } catch {
       return null;
@@ -538,7 +624,7 @@ function PolicySimulator({
             <Select
               label="Actor Type"
               value={actorType}
-              onChange={(e) => setActorType(e.target.value)}
+              onChange={(e) => setActorType(e.target.value as ActorType)}
               options={[
                 { value: 'AI_AGENT', label: 'AI Agent' },
                 { value: 'SERVICE', label: 'Service' },
@@ -559,7 +645,7 @@ function PolicySimulator({
             <Select
               label="Environment"
               value={env}
-              onChange={(e) => setEnv(e.target.value)}
+              onChange={(e) => setEnv(e.target.value as Environment)}
               options={[
                 { value: 'prod', label: 'Production' },
                 { value: 'stage', label: 'Staging' },
@@ -567,6 +653,54 @@ function PolicySimulator({
                 { value: 'test', label: 'Test' },
               ]}
             />
+            <Select
+              label="Risk Tier"
+              value={riskTier}
+              onChange={(e) => setRiskTier(e.target.value as RiskTier | '')}
+              options={[
+                { value: '', label: 'None' },
+                { value: 'LOW', label: 'Low' },
+                { value: 'MEDIUM', label: 'Medium' },
+                { value: 'HIGH', label: 'High' },
+                { value: 'CRITICAL', label: 'Critical' },
+              ]}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">
+            Detection Signals
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {SIGNAL_OPTIONS.map((signal) => {
+              const enabled = signals[signal.key];
+              return (
+                <button
+                  key={signal.key}
+                  type="button"
+                  onClick={() =>
+                    setSignals((current) => ({
+                      ...current,
+                      [signal.key]: !current[signal.key],
+                    }))
+                  }
+                  className={`rounded-lg border p-3 text-left transition-colors ${
+                    enabled
+                      ? 'border-blue-300 bg-blue-50 text-blue-950'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium">{signal.label}</span>
+                    <Badge variant={enabled ? 'info' : 'default'} size="sm">
+                      {enabled ? 'On' : 'Off'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">{signal.description}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -582,8 +716,18 @@ function PolicySimulator({
             result.decision === 'DENY' ? 'bg-red-50 border-red-200' :
             'bg-yellow-50 border-yellow-200'
           }`}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium">Simulation Result</p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium">Simulation Result</p>
+                {expectedDecision && (
+                  <Badge
+                    variant={expectedDecision === result.decision ? 'success' : 'warning'}
+                    size="sm"
+                  >
+                    {expectedDecision === result.decision ? 'Matched' : 'Expected'} {expectedDecision}
+                  </Badge>
+                )}
+              </div>
               {result.trace_id && (
                 <span className="text-xs text-gray-400 font-mono">
                   {result.trace_id.substring(0, 16)}...

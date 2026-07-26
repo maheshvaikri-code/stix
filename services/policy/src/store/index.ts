@@ -131,25 +131,43 @@ export class InMemoryPolicyStore implements PolicyStore {
     for (const file of files) {
       try {
         const content = fs.readFileSync(file, 'utf-8');
-        const parsed = yaml.parse(content);
+        const docs = yaml.parseAllDocuments(content, { prettyErrors: true });
+        let filePolicyCount = 0;
 
-        // Handle both single policy and array of policies
-        const policies = Array.isArray(parsed) ? parsed : [parsed];
+        for (let index = 0; index < docs.length; index++) {
+          const doc = docs[index];
+          if (doc.errors.length > 0) {
+            this.logger.warn('Skipping invalid YAML policy document', {
+              file,
+              document: index + 1,
+              errors: doc.errors.map((error) => error.message),
+            });
+            continue;
+          }
 
-        for (const policy of policies) {
-          // Handle policy pack format (has 'policies' array)
-          if (policy.policies && Array.isArray(policy.policies)) {
-            for (const p of policy.policies) {
-              await this.loadPolicy(p, file);
+          const parsed = doc.toJSON();
+          if (parsed == null) {
+            continue;
+          }
+
+          const policies = Array.isArray(parsed) ? parsed : [parsed];
+
+          for (const policy of policies) {
+            if (policy && typeof policy === 'object' && Array.isArray(policy.policies)) {
+              for (const p of policy.policies) {
+                await this.loadPolicy(p, file);
+                loaded++;
+                filePolicyCount++;
+              }
+            } else {
+              await this.loadPolicy(policy, file);
               loaded++;
+              filePolicyCount++;
             }
-          } else {
-            await this.loadPolicy(policy, file);
-            loaded++;
           }
         }
 
-        this.logger.debug('Loaded policy file', { file, count: policies.length });
+        this.logger.debug('Loaded policy file', { file, count: filePolicyCount });
       } catch (error) {
         this.logger.error('Failed to load policy file', {
           file,

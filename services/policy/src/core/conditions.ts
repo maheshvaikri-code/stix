@@ -45,6 +45,11 @@ export function evaluateConditions(
   conditions: PolicyConditions,
   ctx: ConditionContext
 ): boolean {
+  // Environment check
+  if (conditions.env && conditions.env !== ctx.context.env) {
+    return false;
+  }
+
   // Time window check
   if (conditions.time_window) {
     if (!isWithinTimeWindow(conditions.time_window)) {
@@ -52,9 +57,11 @@ export function evaluateConditions(
     }
   }
 
-  // Required signals check
-  if (conditions.require_signals) {
-    if (!hasRequiredSignals(conditions.require_signals, ctx.context.signals)) {
+  // Required signals check. Policy packs use `require_signal`; older callers
+  // may still emit `require_signals`, so support both shapes.
+  const requiredSignals = conditions.require_signal ?? conditions.require_signals;
+  if (requiredSignals) {
+    if (!hasRequiredSignals(requiredSignals, ctx.context.signals)) {
       return false;
     }
   }
@@ -62,6 +69,36 @@ export function evaluateConditions(
   // Required attributes check
   if (conditions.require_attributes) {
     if (!hasRequiredAttributes(conditions.require_attributes, ctx)) {
+      return false;
+    }
+  }
+
+  if (conditions.require_resource_attr) {
+    if (!hasRequiredAttributesInSource(conditions.require_resource_attr, {
+      ...(ctx.resource.attributes ?? {}),
+      id: ctx.resource.id,
+      type: ctx.resource.type,
+      classification: ctx.resource.classification,
+    })) {
+      return false;
+    }
+  }
+
+  if (conditions.require_actor_attr) {
+    if (!hasRequiredAttributesInSource(conditions.require_actor_attr, {
+      ...(ctx.actor.attributes ?? {}),
+      id: ctx.actor.id,
+      type: ctx.actor.type,
+      role: ctx.actor.role,
+      tenant: ctx.actor.tenant,
+    })) {
+      return false;
+    }
+  }
+
+  if (conditions.require_tenant_match) {
+    const resourceTenant = ctx.resource.attributes?.tenant;
+    if (!ctx.actor.tenant || ctx.actor.tenant !== resourceTenant) {
       return false;
     }
   }
@@ -185,8 +222,8 @@ function parseTimeOfDay(timeStr: string, referenceDate: Date): Date {
  * Check if all required signals are present with expected values
  */
 function hasRequiredSignals(
-  required: Record<string, boolean | string | number>,
-  signals?: Record<string, boolean | number | string>
+  required: Record<string, unknown>,
+  signals?: Record<string, unknown>
 ): boolean {
   if (!signals) return false;
 
@@ -229,9 +266,9 @@ function hasRequiredAttributes(
 ): boolean {
   // Merge all attribute sources
   const allAttributes: Record<string, unknown> = {
-    ...ctx.actor.attributes,
-    ...ctx.context.attributes,
-    ...ctx.resource.attributes,
+    ...(ctx.actor.attributes ?? {}),
+    ...(ctx.context.attributes ?? {}),
+    ...(ctx.resource.attributes ?? {}),
   };
 
   for (const [key, expectedValue] of Object.entries(required)) {
@@ -246,6 +283,20 @@ function hasRequiredAttributes(
       continue;
     }
 
+    if (!matchesValue(actualValue, expectedValue)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function hasRequiredAttributesInSource(
+  required: Record<string, unknown>,
+  source: Record<string, unknown>
+): boolean {
+  for (const [key, expectedValue] of Object.entries(required)) {
+    const actualValue = key.includes('.') ? getNestedValue(source, key) : source[key];
     if (!matchesValue(actualValue, expectedValue)) {
       return false;
     }

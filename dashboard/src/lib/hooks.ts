@@ -3,7 +3,14 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type ApiService, type Policy, type EvidenceRecord, type ApprovalRequest } from './api';
+import {
+  api,
+  type ApiService,
+  type ApprovalRequest,
+  type AuthorizeActionRequest,
+  type EvidenceRecord,
+  type Policy,
+} from './api';
 
 // =============================================================================
 // QUERY KEYS
@@ -14,6 +21,8 @@ export const queryKeys = {
   allHealth: ['health', 'all'] as const,
   dashboardStats: ['dashboard', 'stats'] as const,
   decisionTimeSeries: (period: string) => ['dashboard', 'timeseries', period] as const,
+
+  authorization: ['authorization'] as const,
 
   policies: (params: Record<string, unknown>) => ['policies', params] as const,
   policy: (id: string) => ['policies', 'detail', id] as const,
@@ -78,6 +87,23 @@ export function useDecisionTimeSeries(period: '24h' | '7d' | '30d' = '24h') {
     queryFn: () => api.getDecisionTimeSeries(period),
     refetchInterval: 60000,
     staleTime: 30000,
+  });
+}
+
+// =============================================================================
+// AUTHORIZATION HOOKS
+// =============================================================================
+
+export function useAuthorizeAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: AuthorizeActionRequest) => api.authorize(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: ['evidence'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
   });
 }
 

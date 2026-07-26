@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.12] - 2026-07-26
+
+### Fixed
+
+- Loaded every YAML document from multi-document policy packs in the policy service instead of only the first document.
+- Honored `require_signal`, `env`, `require_resource_attr`, `require_actor_attr`, and tenant-match policy conditions before broad rules can match.
+- Wired the dashboard Policy Simulator through the shared API client and React Query mutation path instead of hardcoded localhost fetches.
+- Added simulator controls for detection signals and risk tier so presets exercise live Enforcer policy behavior.
+
+### Tests
+
+- Added regression coverage for multi-document policy loading and condition guard evaluation.
+
 All notable changes to STIX are documented here.
 
 ## [0.1.11] - 2026-07-26
