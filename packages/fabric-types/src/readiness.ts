@@ -128,7 +128,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       label: "Active agent coverage",
       value: activeAgentCoverage,
       summary: `${stats.active_agents} of ${stats.agents} agents are active.`,
-      recommendation: "Activate or decommission inactive agents so inventory state is intentional.",
+      recommendation:
+        "Activate or decommission inactive agents so inventory state is intentional.",
       className: "h-full rounded-full bg-cyan-300",
     }),
     makeSignal({
@@ -136,7 +137,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       label: "Active enforcement coverage",
       value: activeGuardCoverage,
       summary: `${stats.active_enforcement_points} of ${stats.enforcement_points} enforcement points are active.`,
-      recommendation: "Bring every production guard online or mark retired points as decommissioned.",
+      recommendation:
+        "Bring every production guard online or mark retired points as decommissioned.",
       className: "h-full rounded-full bg-emerald-300",
     }),
     makeSignal({
@@ -144,7 +146,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       label: "Protected agent coverage",
       value: protectedAgentCoverage,
       summary: `${countProtectedAgents(agents, graph)} of ${agents.length} agents have graph protection edges.`,
-      recommendation: "Link each agent to at least one enforcement point in the Fabric graph.",
+      recommendation:
+        "Link each agent to at least one enforcement point in the Fabric graph.",
       className: "h-full rounded-full bg-teal-300",
     }),
     makeSignal({
@@ -152,7 +155,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       label: "Active policy channels",
       value: activeChannelCoverage,
       summary: `${channels.filter((channel) => channel.rollout_state === "ACTIVE").length} of ${channels.length} channels are active.`,
-      recommendation: "Promote policy bundles into active rollout channels before production use.",
+      recommendation:
+        "Promote policy bundles into active rollout channels before production use.",
       className: "h-full rounded-full bg-blue-300",
     }),
     makeSignal({
@@ -162,7 +166,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       summary: highRiskActions.length
         ? `${highRiskActions.filter((action) => action.approval_required).length} of ${highRiskActions.length} high-risk actions require approval.`
         : "No high-risk actions are registered.",
-      recommendation: "Require human approval for critical production-impacting tool actions.",
+      recommendation:
+        "Require human approval for critical production-impacting tool actions.",
       className: "h-full rounded-full bg-amber-300",
     }),
     makeSignal({
@@ -170,7 +175,8 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
       label: "Production guard coverage",
       value: productionGuardCoverage,
       summary: `${productionAgents.filter((agent) => isAgentProtectedByActivePoint(agent, enforcementPoints)).length} of ${productionAgents.length} production agents are attached to active guards.`,
-      recommendation: "Attach every production agent to an active enforcement point.",
+      recommendation:
+        "Attach every production agent to an active enforcement point.",
       className: "h-full rounded-full bg-indigo-300",
     }),
   ];
@@ -196,6 +202,40 @@ export function buildFabricPosture(data?: FabricInventory): FabricPosture {
 
 export function buildDoctrinePosture(data?: FabricInventory): DoctrinePosture {
   const doctrine = getDoctrineInventory(data);
+  const hasObserverRecords =
+    doctrine.agents.length +
+      doctrine.enforcementPoints.length +
+      doctrine.actions.length +
+      doctrine.channels.length >
+    0;
+
+  if (!hasObserverRecords) {
+    return {
+      score: 100,
+      level: "ready",
+      summary:
+        "Doctrine FDE is an external governed operating module, not a STIX Fabric product component. No optional observer records are registered.",
+      registered: false,
+      counts: {
+        agents: 0,
+        enforcementPoints: 0,
+        actions: 0,
+        channels: 0,
+        gates: 0,
+      },
+      controls: [
+        {
+          id: "operator-boundary",
+          label: "Operator boundary explicit",
+          passed: true,
+          detail:
+            "Doctrine governs engineering execution outside the Fabric registry; STIX Fabric readiness does not require Doctrine records.",
+        },
+      ],
+      issues: [],
+    };
+  }
+
   const gates = collectDoctrineGates(doctrine.agents, doctrine.channels);
   const hasAgent = doctrine.agents.length > 0;
   const hasGatekeeper = doctrine.enforcementPoints.some(
@@ -215,51 +255,51 @@ export function buildDoctrinePosture(data?: FabricInventory): DoctrinePosture {
   const controls = [
     {
       id: "agent-runtime",
-      label: "Doctrine runtime registered",
+      label: "Optional operator runtime observed",
       passed: hasAgent,
       detail: hasAgent
-        ? `${doctrine.agents.length} Doctrine runtime record(s) in Fabric.`
-        : "No Doctrine runtime agent record found.",
+        ? `${doctrine.agents.length} Doctrine operator record(s) are visible in Fabric.`
+        : "No optional Doctrine operator agent record found.",
     },
     {
       id: "gatekeeper",
-      label: "Gatekeeper active",
+      label: "Optional gatekeeper active",
       passed: hasGatekeeper,
       detail: hasGatekeeper
-        ? "Doctrine gatekeeper enforcement point is active."
-        : "No active Doctrine enforcement point is registered.",
+        ? "A Doctrine operator gatekeeper enforcement point is active."
+        : "No active optional Doctrine enforcement point is registered.",
     },
     {
       id: "verify-action",
-      label: "Verify action modeled",
+      label: "Verify action observed",
       passed: hasVerifyAction,
       detail: hasVerifyAction
-        ? "Doctrine gate verification is visible as a governed tool action."
-        : "Doctrine verify action is missing from Fabric tool actions.",
+        ? "Doctrine gate verification is visible as optional observer metadata."
+        : "Doctrine verify action is not present in optional observer metadata.",
     },
     {
       id: "checkpoint-action",
-      label: "Checkpoint action modeled",
+      label: "Checkpoint action observed",
       passed: hasCheckpointAction,
       detail: hasCheckpointAction
-        ? "Doctrine checkpointing is visible as a governed tool action."
-        : "Doctrine checkpoint action is missing from Fabric tool actions.",
+        ? "Doctrine checkpointing is visible as optional observer metadata."
+        : "Doctrine checkpoint action is not present in optional observer metadata.",
     },
     {
       id: "release-channel",
-      label: "Gold build channel active",
+      label: "Optional gold build channel active",
       passed: hasActiveChannel,
       detail: hasActiveChannel
-        ? "Doctrine release promotion has an active policy channel."
-        : "Doctrine release channel is not active.",
+        ? "Doctrine release promotion has an optional active observer channel."
+        : "Doctrine optional release channel is not active.",
     },
     {
       id: "g0-g7-coverage",
       label: "G0-G7 gate coverage",
       passed: hasGateCoverage,
       detail: hasGateCoverage
-        ? "All eight Doctrine gates are represented in metadata."
-        : `${gates.size} of 8 Doctrine gates are represented in metadata.`,
+        ? "All eight Doctrine gates are represented in optional metadata."
+        : `${gates.size} of 8 Doctrine gates are represented in optional metadata.`,
     },
   ];
 
@@ -267,7 +307,7 @@ export function buildDoctrinePosture(data?: FabricInventory): DoctrinePosture {
     .filter((control) => !control.passed)
     .map((control) => ({
       id: `doctrine-${control.id}`,
-      severity: control.id === "agent-runtime" ? "critical" : "warning",
+      severity: "warning",
       title: control.label,
       detail: control.detail,
       remediation: doctrineRemediation(control.id),
@@ -280,10 +320,10 @@ export function buildDoctrinePosture(data?: FabricInventory): DoctrinePosture {
 
   return {
     score,
-    level: readinessLevel(score, issues),
+    level: score >= 90 ? "ready" : "watch",
     summary: controls.every((control) => control.passed)
-      ? "Doctrine is fully represented as a read-only STIX Fabric runtime."
-      : "Doctrine is partially represented; complete the missing registry records before enforcement wrapping.",
+      ? "Doctrine external operator metadata is fully represented for optional observation."
+      : "Doctrine external operator metadata is partial; this does not block STIX Fabric readiness.",
     registered: controls.some((control) => control.passed),
     counts: {
       agents: doctrine.agents.length,
@@ -298,11 +338,12 @@ export function buildDoctrinePosture(data?: FabricInventory): DoctrinePosture {
 }
 
 export function getDoctrineInventory(data?: FabricInventory) {
-  const agents = data?.agents.data.filter((agent) =>
-    [agent.agent_id, agent.runtime, agent.display_name, ...agent.labels].some(
-      includesDoctrine,
-    ),
-  ) ?? [];
+  const agents =
+    data?.agents.data.filter((agent) =>
+      [agent.agent_id, agent.runtime, agent.display_name, ...agent.labels].some(
+        includesDoctrine,
+      ),
+    ) ?? [];
   const enforcementPoints =
     data?.enforcementPoints.data.filter((point) =>
       [point.enforcement_point_id, point.display_name, point.type].some(
@@ -317,9 +358,11 @@ export function getDoctrineInventory(data?: FabricInventory) {
     ) ?? [];
   const channels =
     data?.policyChannels.data.filter((channel) =>
-      [channel.channel_id, channel.display_name, channel.active_bundle_id ?? ""].some(
-        includesDoctrine,
-      ),
+      [
+        channel.channel_id,
+        channel.display_name,
+        channel.active_bundle_id ?? "",
+      ].some(includesDoctrine),
     ) ?? [];
 
   return {
@@ -350,8 +393,10 @@ function buildFabricIssues({
       id: "no-agents",
       severity: "critical",
       title: "No agents registered",
-      detail: "Fabric cannot govern a runtime that is not represented in the registry.",
-      remediation: "Register agents through the Fabric API or seed a demo inventory.",
+      detail:
+        "Fabric cannot govern a runtime that is not represented in the registry.",
+      remediation:
+        "Register agents through the Fabric API or seed a demo inventory.",
     });
   }
 
@@ -360,8 +405,10 @@ function buildFabricIssues({
       id: "no-enforcement-points",
       severity: "critical",
       title: "No enforcement points registered",
-      detail: "Agents need SDK, gateway, CI, MCP, or target enforcement points.",
-      remediation: "Register at least one enforcement point and attach agent IDs.",
+      detail:
+        "Agents need SDK, gateway, CI, MCP, or target enforcement points.",
+      remediation:
+        "Register at least one enforcement point and attach agent IDs.",
     });
   }
 
@@ -443,16 +490,19 @@ function isHighRiskAction(action: FabricToolAction) {
 }
 
 function hasProtectedByEdge(agentId: string, graph?: FabricInventory["graph"]) {
-  return graph?.edges.some(
-    (edge) => edge.from === agentId && edge.relation === "protected_by",
-  ) ?? false;
+  return (
+    graph?.edges.some(
+      (edge) => edge.from === agentId && edge.relation === "protected_by",
+    ) ?? false
+  );
 }
 
 function countProtectedAgents(
   agents: FabricAgent[],
   graph?: FabricInventory["graph"],
 ) {
-  return agents.filter((agent) => hasProtectedByEdge(agent.agent_id, graph)).length;
+  return agents.filter((agent) => hasProtectedByEdge(agent.agent_id, graph))
+    .length;
 }
 
 function isAgentProtectedByActivePoint(
@@ -482,7 +532,10 @@ function collectDoctrineGates(
   for (const channel of channels) {
     collectGateValues(channel.metadata.gates, gates);
     const coverage = channel.metadata.coverage;
-    if (typeof coverage === "string" && coverage.toLowerCase().includes("g0-g7")) {
+    if (
+      typeof coverage === "string" &&
+      coverage.toLowerCase().includes("g0-g7")
+    ) {
       for (let index = 0; index <= 7; index += 1) {
         gates.add(`G${index}`);
       }
@@ -506,15 +559,24 @@ function collectGateValues(value: unknown, gates: Set<string>) {
 
 function doctrineRemediation(controlId: string) {
   const remediations: Record<string, string> = {
-    "agent-runtime": "Register `agent_doctrine_os` through the Fabric API.",
-    gatekeeper: "Register `ep_doctrine_gatekeeper` and keep it ACTIVE.",
-    "verify-action": "Register `tool_doctrine_verify` as a Fabric tool action.",
-    "checkpoint-action": "Register `tool_doctrine_checkpoint` as a Fabric tool action.",
-    "release-channel": "Register and activate `channel_doctrine_gold_build`.",
-    "g0-g7-coverage": "Add G0-G7 metadata to the Doctrine agent or policy channel.",
+    "agent-runtime":
+      "Only add a Doctrine operator record when intentionally observing external engineering governance.",
+    gatekeeper:
+      "Only register an optional Doctrine gatekeeper adapter when it is read-only or STIX-authorized.",
+    "verify-action":
+      "Optional observer metadata may expose Doctrine verify status; it is not required for Fabric.",
+    "checkpoint-action":
+      "Optional checkpoint metadata must remain read-only until wrapped by STIX authorization.",
+    "release-channel":
+      "Optional Doctrine release-channel metadata should describe a human-reviewed Gold Build lane.",
+    "g0-g7-coverage":
+      "If optional Doctrine records are present, include explicit G0-G7 metadata for operator clarity.",
   };
 
-  return remediations[controlId] ?? "Complete the missing Doctrine Fabric record.";
+  return (
+    remediations[controlId] ??
+    "Complete or remove partial optional Doctrine observer metadata."
+  );
 }
 
 function dedupeIssues(issues: FabricReadinessIssue[]) {

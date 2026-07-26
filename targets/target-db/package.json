@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-db",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "STIX Target DB - Protected database access service",
   "type": "module",
   "main": "dist/index.js",
@@ -26,7 +26,7 @@
     "@fastify/rate-limit": "^11.1.0",
     "pg": "^8.11.3",
     "mysql2": "^3.7.0",
-    "better-sqlite3": "^9.3.0",
+    "better-sqlite3": "^12.11.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {

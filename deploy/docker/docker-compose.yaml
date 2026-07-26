@@ -9,16 +9,27 @@ services:
   # Floci - Local AWS Emulator for FDE/Doctrine deployment drills
   # ---------------------------------------------------------------------------
   floci:
-    image: floci/floci:latest
-    container_name: stix-floci
+    image: ${FLOCI_IMAGE:-floci/floci:1.5.11}
     ports:
       - "${FLOCI_PORT:-4566}:4566"
     environment:
       - FLOCI_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - FLOCI_DEFAULT_ACCOUNT_ID=000000000000
+      - FLOCI_HOSTNAME=floci
+      - FLOCI_BASE_URL=http://floci:4566
     volumes:
       - floci-data:/app/data
     networks:
       - stix-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:4566/_floci/health >/dev/null 2>&1 || curl -fsS http://localhost:4566/ >/dev/null 2>&1",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   # ---------------------------------------------------------------------------
   # STIX Enforcer - Authorization Decision Engine
@@ -28,7 +39,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: enforcer
-    container_name: stix-enforcer
     ports:
       - "${STIX_ENFORCER_PORT:-3001}:3001"
     environment:
@@ -45,8 +55,8 @@ services:
       - DEFAULT_FAIL_MODE=CLOSED
       - AWS_ENDPOINT_URL=http://floci:4566
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     depends_on:
       floci:
         condition: service_healthy
@@ -74,7 +84,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: policy
-    container_name: stix-policy
     ports:
       - "${STIX_POLICY_PORT:-3002}:3002"
     environment:
@@ -87,8 +96,8 @@ services:
       - POLICY_DIRECTORY=/app/policies
       - AWS_ENDPOINT_URL=http://floci:4566
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     volumes:
       - ../../policies/examples:/app/policies:ro
     depends_on:
@@ -112,7 +121,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: evidence
-    container_name: stix-evidence
     ports:
       - "${STIX_EVIDENCE_PORT:-3003}:3003"
     environment:
@@ -125,8 +133,8 @@ services:
       - SIGNING_ENABLED=true
       - AWS_ENDPOINT_URL=http://floci:4566
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     depends_on:
       floci:
         condition: service_healthy
@@ -148,7 +156,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: approvals
-    container_name: stix-approvals
     ports:
       - "${STIX_APPROVALS_PORT:-3004}:3004"
     environment:
@@ -161,8 +168,8 @@ services:
       - APPROVAL_TIMEOUT_HOURS=24
       - AWS_ENDPOINT_URL=http://floci:4566
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     depends_on:
       floci:
         condition: service_healthy
@@ -184,7 +191,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: fabric
-    container_name: stix-fabric
     ports:
       - "${STIX_FABRIC_PORT:-3005}:3005"
     environment:
@@ -196,8 +202,8 @@ services:
       - POSTGRES_URL=postgresql://stix:stix@postgres:5432/stix
       - AWS_ENDPOINT_URL=http://floci:4566
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     depends_on:
       floci:
         condition: service_healthy
@@ -219,7 +225,6 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: dashboard
-    container_name: stix-dashboard
     ports:
       - "${STIX_DASHBOARD_PORT:-3100}:3100"
     environment:
@@ -254,7 +259,6 @@ services:
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: stix-redis
     ports:
       - "${STIX_REDIS_PORT:-6379}:6379"
     command: redis-server --appendonly yes
@@ -273,7 +277,6 @@ services:
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: stix-postgres
     ports:
       - "${STIX_POSTGRES_PORT:-5432}:5432"
     environment:

@@ -2,6 +2,22 @@
 
 All notable changes to STIX are documented here.
 
+## [0.1.11] - 2026-07-26
+
+### Changed
+
+- Reframed Doctrine/FDE as an external governed operating module instead of a STIX Fabric product component.
+- Updated the Fabric demo seed so Doctrine observer records are opt-in with `STIX_DEMO_INCLUDE_DOCTRINE=true`.
+- Updated the Floci FDE deploy gate to validate STIX Fabric readiness only, while reporting Doctrine/FDE as the operator lane.
+- Bumped the monorepo and STIX package versions to `0.1.11`.
+
+### Fixed
+
+- Hardened the Floci AWS smoke to use deterministic object keys and fail on non-local AWS endpoints.
+- Prevented host AWS credentials from being passed into the Docker Compose Floci deployment stack.
+- Added a pinned default Floci image and explicit Floci container health check for the local deploy lane.
+- Upgraded existing `better-sqlite3` consumers to `12.11.1` so full installs work on Node 20 through Node 26.
+
 ## [0.1.10] - 2026-07-25
 
 ### Added

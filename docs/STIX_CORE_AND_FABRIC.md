@@ -9,9 +9,9 @@ This split keeps the current runtime precise while giving the platform a clear p
 
 ## Product Model
 
-| Layer | Role | Primary Users |
-|---|---|---|
-| STIX Core | Enforce decisions, issue proof, record evidence, and replay policy outcomes | Platform engineers, security engineers, agent/runtime builders |
+| Layer       | Role                                                                                                          | Primary Users                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| STIX Core   | Enforce decisions, issue proof, record evidence, and replay policy outcomes                                   | Platform engineers, security engineers, agent/runtime builders           |
 | STIX Fabric | Coordinate policies, agents, tools, approvals, rollout, and compliance posture across many enforcement points | Governance teams, security leaders, compliance officers, platform owners |
 
 ## STIX Core
@@ -54,14 +54,14 @@ Fabric answers a larger question:
 
 STIX Core already supports the storage primitives Fabric needs:
 
-| State | Current Core Storage | Fabric Direction |
-|---|---|---|
-| Policy packs | File, file-watch, memory, Postgres | GitOps-backed signed bundles plus Postgres metadata |
-| Evidence | Memory, Postgres | Postgres for hot evidence, object storage for archives |
-| Approvals | Memory, Postgres | Postgres with routing, SLA, and escalation metadata |
-| Decision cache | Redis or in-memory fallback | Redis for distributed cache and rate-limit state |
+| State                 | Current Core Storage                        | Fabric Direction                                                  |
+| --------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| Policy packs          | File, file-watch, memory, Postgres          | GitOps-backed signed bundles plus Postgres metadata               |
+| Evidence              | Memory, Postgres                            | Postgres for hot evidence, object storage for archives            |
+| Approvals             | Memory, Postgres                            | Postgres with routing, SLA, and escalation metadata               |
+| Decision cache        | Redis or in-memory fallback                 | Redis for distributed cache and rate-limit state                  |
 | Agent/tool registries | STIX Fabric memory or Postgres registry API | Postgres system of record, graph expansion, and inventory history |
-| Reports/exports | Files/artifacts | Object storage or durable artifact backend |
+| Reports/exports       | Files/artifacts                             | Object storage or durable artifact backend                        |
 
 Memory is for development and tests only. Production should use Postgres and Redis.
 
@@ -135,14 +135,13 @@ Then open:
 
 ```text
 http://localhost:3100/fabric
-http://localhost:3100/doctrine
 ```
 
 The seed command writes stable demo agents, enforcement points, tool actions, and policy channels to the running Fabric API at `http://localhost:3005` by default. Override with `STIX_FABRIC_URL` when the Fabric service is running elsewhere.
 
-The demo seed includes Doctrine as a governed engineering-runtime integration. See `docs/integrations/STIX_DOCTRINE_INTEGRATION.md` for the current registry-level boundary and the safe adapter path.
+Doctrine/FDE is not part of STIX Fabric. It is the governed operating module for how engineering work and deployment drills are executed in this repo. The Fabric demo seed does not include Doctrine records by default. Optional read-only Doctrine observer metadata can be enabled for a specific demo with `STIX_DEMO_INCLUDE_DOCTRINE=true`; see `docs/integrations/STIX_DOCTRINE_INTEGRATION.md`.
 
-The Fabric service exposes `GET /api/v1/fabric/readiness` as the backend readiness report for Fabric and Doctrine posture. The dashboard prefers that API and keeps a local shared fallback for offline/development views. `/fabric` shows graph coverage, approval coverage, policy-channel posture, and remediation cards. `/doctrine` shows whether Doctrine is represented as a runtime, gatekeeper, verify/checkpoint action pair, active release channel, and G0-G7 gate set.
+The Fabric service exposes `GET /api/v1/fabric/readiness` as the backend readiness report for Fabric posture, with a compatibility `doctrine` section that is optional operator posture only. The dashboard prefers that API and keeps a local shared fallback for offline/development views. `/fabric` shows graph coverage, approval coverage, policy-channel posture, and remediation cards.
 
 ## Positioning
 

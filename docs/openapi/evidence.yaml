@@ -4,7 +4,7 @@ info:
   description: |
     Immutable evidence storage with hash-chain integrity.
     Records authorization decisions and action outcomes for audit and compliance.
-  version: 0.1.10
+  version: 0.1.11
   contact:
     name: STIX Team
   license:

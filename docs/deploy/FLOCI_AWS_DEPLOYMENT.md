@@ -2,21 +2,21 @@
 
 This deployment path runs STIX Core, STIX Fabric, the dashboard, Postgres, Redis, and Floci in one isolated Docker Compose project.
 
-Floci provides a local AWS-compatible endpoint for FDE and Doctrine deployment drills without requiring real AWS credentials.
+Doctrine/FDE is the governed operating module for executing this deployment drill. It is not a STIX Fabric product component. Floci provides the local AWS-compatible endpoint used by the drill without requiring real AWS credentials.
 
 ## Stack
 
-| Component | Container | Host port |
-|---|---|---|
-| Floci AWS emulator | `stix-floci` | `4566` |
-| Enforcer | `stix-enforcer` | `3001` |
-| Policy | `stix-policy` | `3002` |
-| Evidence | `stix-evidence` | `3003` |
-| Approvals | `stix-approvals` | `3004` |
-| Fabric | `stix-fabric` | `3005` |
-| Dashboard | `stix-dashboard` | `3100` |
-| Postgres | `stix-postgres` | `5432` |
-| Redis | `stix-redis` | `6379` |
+| Component          | Compose service | Host port |
+| ------------------ | --------------- | --------- |
+| Floci AWS emulator | `floci`         | `4566`    |
+| Enforcer           | `enforcer`      | `3001`    |
+| Policy             | `policy`        | `3002`    |
+| Evidence           | `evidence`      | `3003`    |
+| Approvals          | `approvals`     | `3004`    |
+| Fabric             | `fabric`        | `3005`    |
+| Dashboard          | `dashboard`     | `3100`    |
+| Postgres           | `postgres`      | `5432`    |
+| Redis              | `redis`         | `6379`    |
 
 ## Deploy
 
@@ -34,12 +34,24 @@ The recommended full gate is:
 pnpm deploy:fde:floci
 ```
 
-This command validates Compose config, builds and starts the stack, waits for health, seeds Doctrine/Fabric records, checks readiness, smokes dashboard routes, verifies Floci S3-compatible artifact round trip, and writes `artifacts/deploy/floci-fde-gate-report.json`.
+This command validates the Doctrine/FDE local-only contract, builds and starts the stack, waits for health, seeds STIX Fabric product demo records, checks Fabric readiness, smokes dashboard routes, verifies a deterministic Floci S3-compatible artifact round trip, and writes `artifacts/deploy/floci-fde-gate-report.json`.
+
+For fast preflight without starting containers:
+
+```bash
+pnpm deploy:fde:floci -- --check-only
+```
 
 Use teardown mode in CI:
 
 ```bash
-pnpm deploy:fde:floci -- --teardown
+pnpm deploy:fde:floci -- --teardown --reset-volumes
+```
+
+Use a separate Compose project name for isolated drills:
+
+```bash
+pnpm deploy:fde:floci -- --project-name=stix_fde_drill --teardown --reset-volumes
 ```
 
 The same gate runs in GitHub Actions through `.github/workflows/floci-fde.yml` when deployment, Fabric, dashboard, or FDE scripts change.
@@ -53,11 +65,18 @@ curl http://localhost:3005/health
 curl http://localhost:4566/
 ```
 
-Seed the Doctrine/Fabric registry and verify readiness:
+Seed the STIX Fabric demo registry and verify readiness:
 
 ```bash
 pnpm demo:fabric:seed
 curl http://localhost:3005/api/v1/fabric/readiness
+```
+
+Doctrine observer records are optional and are disabled by default:
+
+```bash
+STIX_DEMO_INCLUDE_DOCTRINE=true pnpm demo:fabric:seed
+pnpm deploy:fde:floci -- --include-doctrine-observer
 ```
 
 Run the Floci AWS smoke:
@@ -70,15 +89,17 @@ Open the deployed dashboard:
 
 ```text
 http://localhost:3100/fabric
-http://localhost:3100/doctrine
 ```
 
 ## Notes
 
 - Floci is local AWS emulation, not a real AWS account deployment.
 - STIX services receive `AWS_ENDPOINT_URL=http://floci:4566` plus deterministic local test credentials.
+- The Compose stack pins Floci with `FLOCI_IMAGE` defaulting to `floci/floci:1.5.11`; override only for an intentional emulator upgrade drill.
+- Host `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not passed into the stack; the local emulator always uses dummy `test` credentials.
 - Durable STIX state remains in Postgres for this stack.
-- Floci is currently used for AWS-shaped FDE artifact smoke validation.
+- Floci is currently used for AWS-shaped FDE artifact smoke validation and local deployment parity checks.
+- Emulator-verified is not cloud-verified. Promotion to real AWS requires a separate human-reviewed plan and real-cloud smoke.
 - For real AWS deployment, use the Kubernetes/EKS or ECS path with managed Postgres, Redis, KMS or secret-managed signing keys, and real AWS IAM boundaries.
 
 ## Cleanup

@@ -35,7 +35,12 @@ const gates = [
   { id: "G3", label: "Build", owner: "Engineering", state: "Active" },
   { id: "G4", label: "Review", owner: "Code Review", state: "Guarded" },
   { id: "G5", label: "Verify", owner: "QA + Security", state: "Guarded" },
-  { id: "G6", label: "Release", owner: "Release", state: "Blocked until green" },
+  {
+    id: "G6",
+    label: "Release",
+    owner: "Release",
+    state: "Blocked until green",
+  },
   { id: "G7", label: "Retro", owner: "Project Review", state: "Required" },
 ];
 
@@ -75,13 +80,13 @@ export default function DoctrinePage() {
           <div>
             <Badge variant="warning">Doctrine engaged</Badge>
             <h1 className="mt-5 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
-              Engineering gates governed as Fabric runtime.
+              Engineering gates governed outside Fabric.
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300">
-              Doctrine supplies the operating loop. STIX Fabric registers it as
-              an agent runtime, enforcement point, and policy channel so release
-              actions can be authorized, evidenced, and reviewed with the same
-              control plane as any autonomous agent.
+              Doctrine/FDE supplies the operating loop for coding and deployment
+              work in this repo or any repo. STIX Fabric does not own Doctrine;
+              it may only observe signed, read-only operator metadata when a
+              demo explicitly enables that adapter.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
@@ -91,11 +96,11 @@ export default function DoctrinePage() {
                 className="border-white/10 bg-white/10 text-white hover:bg-white/20"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh Doctrine Wiring
+                Refresh Operator View
               </Button>
               <span className="flex items-center gap-2 text-sm text-slate-300">
                 <Sparkles className="h-4 w-4 text-amber-200" />
-                Registry-level integration
+                Optional observer metadata
               </span>
             </div>
           </div>
@@ -145,7 +150,7 @@ export default function DoctrinePage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DoctrineMetric
-              label="Readiness Score"
+              label="Observer Score"
               value={posture.score}
               icon={<Command className="h-5 w-5" />}
               tone="amber"
@@ -159,7 +164,7 @@ export default function DoctrinePage() {
               suffix="/8"
             />
             <DoctrineMetric
-              label="Governed Actions"
+              label="Observed Actions"
               value={posture.counts.actions}
               icon={<Workflow className="h-5 w-5" />}
               tone="emerald"
@@ -188,7 +193,7 @@ export default function DoctrinePage() {
             <Card className="bg-white/90">
               <CardHeader
                 title="Readiness Exceptions"
-                description="What must be fixed before Doctrine enforcement wrapping"
+                description="Optional observer gaps; these do not block Fabric readiness"
               />
               <div className="space-y-3">
                 {posture.issues.map((issue) => (
@@ -206,8 +211,8 @@ export default function DoctrinePage() {
           <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
             <Card className="border-0 bg-slate-950 text-white shadow-xl shadow-slate-300/40">
               <CardHeader
-                title="Doctrine Fabric Wiring"
-                description="Live records discovered through the Fabric registry"
+                title="Optional Observer Wiring"
+                description="Live external-operator records discovered through the Fabric registry"
               />
               <div className="grid gap-3 md:grid-cols-2">
                 {doctrine.actions.map((action) => (
@@ -253,17 +258,17 @@ export default function DoctrinePage() {
                 <BoundaryItem
                   icon={<Network className="h-4 w-4" />}
                   title="Wired now"
-                  text="Doctrine has read-only Fabric readiness computed from registry data."
+                  text="Doctrine/FDE operates outside Fabric; optional observer metadata can be read from registry data."
                 />
                 <BoundaryItem
                   icon={<Activity className="h-4 w-4" />}
                   title="Next adapter"
-                  text="Expose signed, read-only Doctrine gate and state-plane summaries."
+                  text="Expose signed, read-only Doctrine gate and state-plane summaries without granting write authority."
                 />
                 <BoundaryItem
                   icon={<FileCheck2 className="h-4 w-4" />}
                   title="Later enforcement"
-                  text="Wrap checkpoint and release actions with STIX authorization."
+                  text="Wrap any checkpoint or release write action with STIX authorization before execution."
                 />
               </div>
             </Card>
@@ -273,8 +278,8 @@ export default function DoctrinePage() {
         <Card className="border-dashed border-slate-300 bg-white/80">
           <EmptyState
             icon={<Command className="h-12 w-12" />}
-            title="Doctrine is not registered in Fabric yet"
-            description="Run pnpm demo:fabric:seed or register Doctrine records through the Fabric API to light up this page."
+            title="Doctrine is operating outside Fabric"
+            description="This is the correct default. Add optional observer metadata only when a demo explicitly needs read-only Doctrine/FDE posture."
           />
         </Card>
       )}
@@ -312,7 +317,9 @@ function DoctrineMetric({
             {suffix}
           </p>
         </div>
-        <div className={`rounded-2xl bg-gradient-to-br p-3 ring-1 ${styles[tone]}`}>
+        <div
+          className={`rounded-2xl bg-gradient-to-br p-3 ring-1 ${styles[tone]}`}
+        >
           {icon}
         </div>
       </div>
