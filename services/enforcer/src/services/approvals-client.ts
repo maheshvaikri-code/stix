@@ -7,6 +7,7 @@ import {
   type Actor,
   type Resource,
   type Context,
+  type ApprovalBinding,
   type Logger,
   retry,
   withTimeout,
@@ -31,6 +32,7 @@ export interface CreateTicketRequest {
   required_role?: string;
   require_justification: boolean;
   expires_at: string;
+  security_binding: ApprovalBinding;
 }
 
 export interface ApprovalTicket {
@@ -48,6 +50,7 @@ export interface ApprovalTicket {
   created_at: string;
   expires_at: string;
   resolved_at?: string;
+  security_binding?: ApprovalBinding;
 }
 
 export interface ApprovalDecision {
@@ -304,6 +307,7 @@ export class MockApprovalsClient extends ApprovalsClient {
       decisions: [],
       created_at: new Date().toISOString(),
       expires_at: request.expires_at,
+      security_binding: request.security_binding,
     };
 
     this.tickets.set(request.ticket_id, ticket);

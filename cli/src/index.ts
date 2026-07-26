@@ -14,7 +14,7 @@ const program = new Command();
 program
   .name('stix')
   .description('STIX CLI - Shield Trust and Integrity eXecution')
-  .version('0.1.12');
+  .version('0.1.13');
 
 // Register commands
 program.addCommand(policyCommand);

@@ -1,6 +1,6 @@
 {
   "name": "@stix/dashboard",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "STIX Fabric Console - policy, evidence, approvals, and agent governance UI",
   "private": true,
   "scripts": {

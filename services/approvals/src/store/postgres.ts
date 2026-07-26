@@ -47,6 +47,7 @@ export class PostgresApprovalStore implements ApprovalStore {
         context_run_id TEXT,
         context_ticket_id TEXT,
         context_attributes JSONB,
+        security_binding JSONB,
         approver_role TEXT,
         required_count INTEGER NOT NULL DEFAULT 1,
         current_count INTEGER NOT NULL DEFAULT 0,
@@ -74,6 +75,7 @@ export class PostgresApprovalStore implements ApprovalStore {
       CREATE INDEX IF NOT EXISTS idx_approvals_created_at ON approvals(created_at);
       CREATE INDEX IF NOT EXISTS idx_approvals_expires_at ON approvals(expires_at);
       CREATE INDEX IF NOT EXISTS idx_approval_records_approval_id ON approval_records(approval_id);
+      ALTER TABLE approvals ADD COLUMN IF NOT EXISTS security_binding JSONB;
     `);
 
     this.logger.info('Postgres approval store initialized');
@@ -93,15 +95,15 @@ export class PostgresApprovalStore implements ApprovalStore {
         `INSERT INTO approvals (
           id, trace_id, status, actor_id, actor_type, actor_role, actor_tenant,
           action, resource_type, resource_id, resource_classification,
-          context_env, context_purpose, context_run_id, context_ticket_id, context_attributes,
+          context_env, context_purpose, context_run_id, context_ticket_id, context_attributes, security_binding,
           approver_role, required_count, current_count, require_justification,
           policy_id, policy_version, created_at, expires_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7,
           $8, $9, $10, $11,
           $12, $13, $14, $15, $16,
-          $17, $18, $19, $20,
-          $21, $22, $23, $24
+          $17, $18, $19, $20, $21,
+          $22, $23, $24, $25
         )`,
         [
           ticket.ticket_id,
@@ -120,6 +122,7 @@ export class PostgresApprovalStore implements ApprovalStore {
           ticket.context.run_id,
           ticket.context.ticket_id,
           JSON.stringify(ticket.context.attributes ?? {}),
+          JSON.stringify(ticket.security_binding ?? null),
           ticket.required_role,
           ticket.required_count,
           0,
@@ -468,6 +471,9 @@ export class PostgresApprovalStore implements ApprovalStore {
           ? JSON.parse(row.context_attributes)
           : row.context_attributes,
       },
+      security_binding: typeof row.security_binding === 'string'
+        ? JSON.parse(row.security_binding)
+        : row.security_binding,
       required_count: row.required_count as number,
       required_role: row.approver_role as string | undefined,
       require_justification: row.require_justification as boolean,

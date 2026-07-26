@@ -14,6 +14,14 @@ import {
   getEnvBool,
 } from '@stix/shared';
 
+const WorkloadIdentitySchema = z.object({
+  actorId: z.string().min(1).max(255),
+  actorType: z.enum(['HUMAN', 'SERVICE', 'AI_AGENT', 'JOB', 'SYSTEM']),
+  tenant: z.string().max(255).optional(),
+  role: z.string().max(255).optional(),
+  attributes: z.record(z.unknown()).optional(),
+});
+
 // =============================================================================
 // CONFIGURATION SCHEMA
 // =============================================================================
@@ -37,6 +45,7 @@ const ConfigSchema = z.object({
   // Authorization
   authorization: z.object({
     defaultFailMode: z.enum(['CLOSED', 'OPEN_LOW_RISK_ONLY', 'OPEN']),
+    enterpriseMode: z.boolean(),
     tokenExpirySeconds: z.number(),
     cacheEnabled: z.boolean(),
     cacheTtlSeconds: z.number(),
@@ -96,10 +105,12 @@ const ConfigSchema = z.object({
     verificationKeysPath: z.string().optional(),
     apiKeyAuthEnabled: z.boolean(),
     apiKeys: z.array(z.string()),
+    workloadIdentities: z.record(WorkloadIdentitySchema),
   }),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
+export type WorkloadIdentity = z.infer<typeof WorkloadIdentitySchema>;
 
 // =============================================================================
 // LOAD CONFIGURATION
@@ -115,11 +126,25 @@ export function loadConfig(): Config {
   const rawEnv = getEnv('NODE_ENV', 'dev');
   const normalizedEnv = rawEnv.toLowerCase() === 'production' ? 'prod' : rawEnv.toLowerCase();
   const env = normalizedEnv as 'dev' | 'test' | 'stage' | 'prod';
+  const enterpriseMode = getEnvBool('ENTERPRISE_MODE', env === 'prod');
+  const parseWorkloadIdentities = (): Record<string, WorkloadIdentity> => {
+    const raw = getEnv('WORKLOAD_IDENTITIES', '');
+    if (!raw) return {};
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('must be a JSON object');
+      }
+      return parsed as Record<string, WorkloadIdentity>;
+    } catch (error) {
+      throw new Error(`WORKLOAD_IDENTITIES must be valid JSON: ${(error as Error).message}`);
+    }
+  };
   
   const config: Config = {
     service: {
       name: 'stix-enforcer',
-      version: getEnv('SERVICE_VERSION', '0.1.12'),
+      version: getEnv('SERVICE_VERSION', '0.1.13'),
       port: getEnvNumber('PORT', SERVICE_PORTS.ENFORCER),
       host: getEnv('HOST', '0.0.0.0'),
       env,
@@ -131,7 +156,8 @@ export function loadConfig(): Config {
     },
     
     authorization: {
-      defaultFailMode: (getEnv('DEFAULT_FAIL_MODE', 'CLOSED')) as Config['authorization']['defaultFailMode'],
+      enterpriseMode,
+      defaultFailMode: (enterpriseMode ? 'CLOSED' : getEnv('DEFAULT_FAIL_MODE', 'CLOSED')) as Config['authorization']['defaultFailMode'],
       tokenExpirySeconds: getEnvNumber('TOKEN_EXPIRY_SECONDS', 300),
       cacheEnabled: getEnvBool('CACHE_ENABLED', true),
       cacheTtlSeconds: getEnvNumber('CACHE_TTL_SECONDS', 60),
@@ -182,8 +208,9 @@ export function loadConfig(): Config {
       signingKeyPem: getEnv('SIGNING_KEY_PEM', ''),
       signingKeyId: getEnv('SIGNING_KEY_ID', ''),
       verificationKeysPath: getEnv('VERIFICATION_KEYS_PATH', ''),
-      apiKeyAuthEnabled: getEnvBool('API_KEY_AUTH_ENABLED', env === 'prod'),
+      apiKeyAuthEnabled: enterpriseMode || getEnvBool('API_KEY_AUTH_ENABLED', env === 'prod'),
       apiKeys: parseCsv(getEnv('API_KEYS', '')),
+      workloadIdentities: parseWorkloadIdentities(),
     },
   };
 
@@ -196,6 +223,17 @@ export function loadConfig(): Config {
 
   if (parsed.service.env === 'prod' && !parsed.services.serviceAuthToken) {
     throw new Error('Production enforcer requires SERVICE_AUTH_TOKEN for downstream service calls.');
+  }
+
+  if (parsed.authorization.enterpriseMode) {
+    const missingIdentityBindings = parsed.security.apiKeys.filter(
+      (apiKey) => !parsed.security.workloadIdentities[apiKey]
+    );
+    if (missingIdentityBindings.length > 0) {
+      throw new Error(
+        `Enterprise enforcer requires WORKLOAD_IDENTITIES for every API key. Missing bindings: ${missingIdentityBindings.length}`
+      );
+    }
   }
 
   return parsed;

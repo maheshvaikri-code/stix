@@ -33,7 +33,7 @@ const program = new Command();
 program
   .name('stix-simulate')
   .description('STIX Simulation Engine - Simulate policy impact on historical evidence')
-  .version('0.1.12');
+  .version('0.1.13');
 
 // =============================================================================
 // SIMULATE COMMAND

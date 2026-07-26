@@ -16,6 +16,7 @@ import {
   type Actor,
   type Resource,
   type Context,
+  type ApprovalBinding,
   SERVICE_PORTS,
   APPROVAL_CONFIG,
   HEADERS,
@@ -85,7 +86,7 @@ function loadConfig(): Config {
   const parsed = ConfigSchema.parse({
     service: {
       name: 'stix-approvals',
-      version: getEnv('SERVICE_VERSION', '0.1.12'),
+      version: getEnv('SERVICE_VERSION', '0.1.13'),
       port: getEnvNumber('PORT', SERVICE_PORTS.APPROVALS),
       host: getEnv('HOST', '0.0.0.0'),
       env,
@@ -149,6 +150,7 @@ interface ApprovalTicket {
   created_at: string;
   expires_at: string;
   resolved_at?: string;
+  security_binding?: ApprovalBinding;
 }
 
 interface CreateTicketInput {
@@ -162,6 +164,7 @@ interface CreateTicketInput {
   required_role?: string;
   require_justification?: boolean;
   expires_at: string;
+  security_binding?: ApprovalBinding;
 }
 
 interface ApproveInput {
@@ -210,6 +213,7 @@ class ApprovalStore implements ApprovalStoreContract {
       decisions: [],
       created_at: isoTimestamp(),
       expires_at: input.expires_at,
+      security_binding: input.security_binding,
     };
 
     this.tickets.set(ticket.ticket_id, ticket);
@@ -400,6 +404,7 @@ class PostgresApprovalStore implements ApprovalStoreContract {
       decisions: [],
       created_at: isoTimestamp(),
       expires_at: input.expires_at,
+      security_binding: input.security_binding,
     };
 
     await this.write(ticket);

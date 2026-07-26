@@ -1,6 +1,6 @@
 {
   "name": "@stix/fabric-types",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "STIX Fabric shared registry and control-plane types",
   "type": "module",
   "main": "dist/index.js",

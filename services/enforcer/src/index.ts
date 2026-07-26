@@ -5,7 +5,7 @@
  * @module @stix/enforcer
  */
 
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -33,6 +33,7 @@ import {
   type CacheService,
 } from './services/index.js';
 import { authorizationRoutes, healthRoutes, statsRoutes } from './routes/index.js';
+import type { WorkloadIdentity } from './config/index.js';
 
 // =============================================================================
 // APPLICATION CONTEXT
@@ -50,6 +51,11 @@ interface AppContext {
   signingKey: SigningKey | null;
   startTime: number;
 }
+
+type AuthenticatedRequest = FastifyRequest & {
+  stixLog?: Logger;
+  stixIdentity?: WorkloadIdentity;
+};
 
 type RequestError = Error & {
   code?: string;
@@ -260,7 +266,7 @@ async function createApp(): Promise<AppContext> {
       method: request.method,
       url: request.url,
     });
-    (request as typeof request & { stixLog?: Logger }).stixLog = reqLogger;
+    (request as AuthenticatedRequest).stixLog = reqLogger;
 
     if (!config.security.apiKeyAuthEnabled) {
       return;
@@ -286,6 +292,18 @@ async function createApp(): Promise<AppContext> {
         },
       });
     }
+
+    const identity = config.security.workloadIdentities[presentedKey];
+    if (!identity) {
+      return reply.code(403).send({
+        success: false,
+        error: {
+          code: 'WORKLOAD_IDENTITY_NOT_CONFIGURED',
+          message: 'API key is not bound to an authenticated workload identity',
+        },
+      });
+    }
+    (request as AuthenticatedRequest).stixIdentity = identity;
   });
 
   // Response logging hook

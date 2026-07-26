@@ -161,21 +161,19 @@ describe('Full End-to-End Flows', () => {
       // 1. Send authorization request that requires approval
       const request = generateTestRequest({
         actor: { id: 'e2e-quarantine-agent', type: 'AI_AGENT' },
-        action: 'access_pii',
+        action: 'execute_sensitive',
         resource: {
-          type: 'customer_data',
-          id: 'customer-123',
-          classification: ['PII', 'SENSITIVE'],
+          type: 'tool',
+          id: 'e2e-quarantine-tool',
+          attributes: { risk_tier: 'HIGH' },
         },
-        context: { env: 'production', purpose: 'customer support' },
+        context: { env: 'prod', purpose: 'customer support' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE') {
-        console.log('Expected QUARANTINE, got', authData.decision, '- skipping full flow');
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
 
       const traceId = authData.trace_id;
       const approvalId = authData.approval_ticket_id!;
@@ -192,16 +190,15 @@ describe('Full End-to-End Flows', () => {
 
       // 3. Approve the request (simulating human action)
       const { status: approveStatus } = await approvals.post<ApprovalRequest>(
-        `/api/v1/approvals/${approvalId}/approve`,
+        `/api/v1/approvals/tickets/${approvalId}/approve`,
         {
-          notes: 'Approved by integration test - customer support verified',
+          approver_id: 'e2e-security-admin',
+          approver_role: 'security_admin',
+          justification: 'Approved by integration test - customer support verified',
         }
       );
 
-      if (approveStatus !== 200) {
-        console.log('Approval endpoint returned', approveStatus);
-        return;
-      }
+      expect(approveStatus).toBe(200);
 
       // 4. Verify approval status changed
       const { data: approvedData } = await approvals.get<ApprovalRequest>(
@@ -211,10 +208,19 @@ describe('Full End-to-End Flows', () => {
       expect(approvedData.status).toBe('APPROVED');
       expect(approvedData.reviewed_at).toBeDefined();
 
-      // 5. Wait for evidence
+      // 5. Reauthorize the unchanged request and require a fresh proof.
+      const { status: reauthStatus, data: reauthData } = await enforcer.post<AuthorizeResponse>(
+        '/api/v1/authorize',
+        { ...request, approval_ref: approvalId }
+      );
+      expect(reauthStatus).toBe(200);
+      expect(reauthData.decision).toBe('ALLOW');
+      expect(reauthData.proof_token).toBeDefined();
+
+      // 6. Wait for evidence
       await wait(500);
 
-      // 6. Verify evidence chain includes approval
+      // 7. Verify evidence chain includes approval
       const { data: evidenceData } = await evidence.get<{
         records: EvidenceRecord[];
       }>(`/api/v1/evidence?trace_id=${traceId}`);
@@ -225,31 +231,32 @@ describe('Full End-to-End Flows', () => {
     it('should handle rejected approvals', async () => {
       const request = generateTestRequest({
         actor: { id: 'e2e-reject-agent', type: 'AI_AGENT' },
-        action: 'delete_sensitive',
-        resource: { type: 'sensitive_data', classification: ['CRITICAL'] },
-        context: { env: 'production' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'e2e-reject-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE' || !authData.approval_ticket_id) {
-        console.log('No quarantine decision, skipping rejection test');
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
+      expect(authData.approval_ticket_id).toBeDefined();
 
       // Reject the request
       const { status: rejectStatus } = await approvals.post<ApprovalRequest>(
-        `/api/v1/approvals/${authData.approval_ticket_id}/reject`,
-        { notes: 'Rejected - action not justified' }
+        `/api/v1/approvals/tickets/${authData.approval_ticket_id}/reject`,
+        {
+          approver_id: 'e2e-security-admin',
+          approver_role: 'security_admin',
+          justification: 'Rejected - action not justified',
+        }
       );
 
-      if (rejectStatus === 200) {
-        // Verify rejection
-        const { data: rejectedData } = await approvals.get<ApprovalRequest>(
-          `/api/v1/approvals/${authData.approval_ticket_id}`
-        );
-        expect(rejectedData.status).toBe('REJECTED');
-      }
+      expect(rejectStatus).toBe(200);
+      const { data: rejectedData } = await approvals.get<ApprovalRequest>(
+        `/api/v1/approvals/${authData.approval_ticket_id}`
+      );
+      expect(rejectedData.status).toBe('REJECTED');
     });
   });
 

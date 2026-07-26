@@ -138,6 +138,8 @@ export interface ToolCall {
   risk_tier?: RiskTier;
   /** Safe summary of arguments (no sensitive data) */
   args_summary?: string;
+  /** Caller-computed hash of the exact raw arguments, when available */
+  args_hash?: string;
 }
 
 // =============================================================================
@@ -150,6 +152,8 @@ export interface ToolCall {
 export interface AuthorizeRequest {
   /** Who is performing the action */
   actor: Actor;
+  /** Stable caller-supplied action identifier (derived when omitted) */
+  action_id?: string;
   /** What action is being performed */
   action: string;
   /** What resource is being accessed */
@@ -158,6 +162,8 @@ export interface AuthorizeRequest {
   context: Context;
   /** Tool call metadata (for agent actions) */
   tool_call?: ToolCall;
+  /** Approval ticket reference used for a post-approval reauthorization */
+  approval_ref?: string;
 }
 
 /**
@@ -210,6 +216,8 @@ export interface AuthorizeResponse {
   reason_code: string;
   /** Correlation trace ID */
   trace_id: string;
+  /** Stable action identifier bound into the proof token */
+  action_id?: string;
   /** Human-readable explanation */
   explanation?: string;
   /** Policy that produced this decision */
@@ -529,6 +537,49 @@ export interface ProofTokenClaims {
   iat: number;
   /** Expiration (Unix timestamp) */
   exp: number;
+  /** Unique replay identifier (also emitted as JWT jti) */
+  replay_id?: string;
+  /** JWT ID for consumers that use standard replay terminology */
+  jti?: string;
+  /** Hash of the exact authorization request */
+  request_hash?: string;
+  /** Hash of the exact tool-call argument metadata */
+  arguments_hash?: string;
+  /** Stable action identifier */
+  action_id?: string;
+  /** Exact resource identifier */
+  resource_id?: string;
+  /** Approval ticket that authorized this proof, when applicable */
+  approval_ref?: string;
+  /** Full decision fields used by target verifiers */
+  decision?: DecisionKind;
+  reason_code?: string;
+  policy_id?: string;
+  policy_version?: string;
+  policy_hash?: string;
+  pack_hash?: string;
+  actor_id?: string;
+  actor_type?: ActorType;
+  actor_role?: string;
+  actor_tenant?: string;
+  action?: string;
+  resource_type?: string;
+  risk_tier?: RiskTier;
+  obligations?: string;
+}
+
+/** Security binding persisted with an approval ticket. */
+export interface ApprovalBinding {
+  request_hash: string;
+  arguments_hash: string;
+  action_id: string;
+  actor_id: string;
+  actor_type: ActorType;
+  actor_role?: string;
+  actor_tenant?: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
 }
 
 /**

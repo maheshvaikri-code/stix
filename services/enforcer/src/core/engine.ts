@@ -10,10 +10,12 @@ import {
   type PolicyRef,
   type Obligation,
   type ApprovalInfo,
+  type ApprovalBinding,
   type DecisionKind,
   type RiskTier,
   type Logger,
   generateTraceId,
+  generateRequestId,
   generateApprovalTicketId,
   isoTimestamp,
   unixTimestamp,
@@ -44,6 +46,15 @@ export interface AuthorizationResult {
   response: AuthorizeResponse;
   durationMs: number;
   cached: boolean;
+}
+
+class ApprovalBindingError extends Error {
+  readonly forceClosed = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApprovalBindingError';
+  }
 }
 
 // =============================================================================
@@ -98,6 +109,11 @@ export class AuthorizationEngine {
     });
 
     try {
+      // Validate approval references before any cache or policy result can be used.
+      if (request.approval_ref) {
+        await this.validateApprovalReference(request);
+      }
+
       // Check cache first
       if (this.config.authorization.cacheEnabled && this.cache) {
         const cached = await this.checkCache(ctx);
@@ -166,15 +182,7 @@ export class AuthorizationEngine {
    * Build cache key from request
    */
   private buildCacheKey(request: AuthorizeRequest): string {
-    const keyParts = [
-      request.actor.id,
-      request.actor.type,
-      request.action,
-      request.resource.type,
-      request.resource.id ?? '',
-      request.context.env,
-    ];
-    return `authz:${hashCanonical(keyParts)}`;
+    return `authz:${this.buildRequestBinding(request).request_hash}`;
   }
 
   /**
@@ -196,6 +204,18 @@ export class AuthorizationEngine {
       policy_id: decision.policy.id,
     });
 
+    // Approval never overrides a DENY. It only satisfies the human-review
+    // branch after the policy has been evaluated again.
+    if (ctx.request.approval_ref && decision.decision === 'QUARANTINE') {
+      return {
+        ...decision,
+        decision: 'ALLOW',
+        reason_code: 'APPROVED_BY_HUMAN',
+        approval: null,
+        explanation: `${decision.explanation ?? 'Policy requires approval'}; approval ${ctx.request.approval_ref} verified`,
+      };
+    }
+
     return decision;
   }
 
@@ -210,6 +230,7 @@ export class AuthorizationEngine {
       decision: policyDecision.decision,
       reason_code: policyDecision.reason_code,
       trace_id: ctx.traceId,
+      action_id: this.buildRequestBinding(ctx.request).action_id,
       explanation: policyDecision.explanation,
       policy: policyDecision.policy,
       obligations: policyDecision.obligations,
@@ -255,6 +276,7 @@ export class AuthorizationEngine {
       required_role: approval.approver_role,
       require_justification: approval.require_justification ?? false,
       expires_at: expiresAt,
+      security_binding: this.buildRequestBinding(ctx.request),
     });
 
     ctx.logger.info('Created approval request', {
@@ -297,6 +319,8 @@ export class AuthorizationEngine {
 
     const now = unixTimestamp();
     const expirySeconds = this.config.authorization.tokenExpirySeconds;
+    const binding = this.buildRequestBinding(ctx.request);
+    const replayId = generateRequestId();
 
     const claims = {
       iss: TOKEN_CONFIG.ISSUER,
@@ -306,6 +330,27 @@ export class AuthorizationEngine {
       cls: ctx.request.resource.classification ?? [],
       pol: policyDecision.policy.hash,
       tid: ctx.traceId,
+      jti: replayId,
+      replay_id: replayId,
+      request_hash: binding.request_hash,
+      arguments_hash: binding.arguments_hash,
+      action_id: binding.action_id,
+      resource_id: ctx.request.resource.id,
+      approval_ref: ctx.request.approval_ref,
+      decision: 'ALLOW' as const,
+      reason_code: policyDecision.reason_code,
+      policy_id: policyDecision.policy.id,
+      policy_version: policyDecision.policy.version,
+      policy_hash: policyDecision.policy.hash,
+      pack_hash: policyDecision.policy.hash,
+      actor_id: ctx.request.actor.id,
+      actor_type: ctx.request.actor.type,
+      actor_role: ctx.request.actor.role,
+      actor_tenant: ctx.request.actor.tenant,
+      action: ctx.request.action,
+      resource_type: ctx.request.resource.type,
+      risk_tier: ctx.request.tool_call?.risk_tier,
+      obligations: JSON.stringify(policyDecision.obligations ?? []),
       iat: now,
       exp: now + expirySeconds,
     };
@@ -376,7 +421,9 @@ export class AuthorizationEngine {
     ctx: AuthorizationContext,
     error: Error
   ): AuthorizationResult {
-    const failMode = this.config.authorization.defaultFailMode;
+    const failMode = (error as Error & { forceClosed?: boolean }).forceClosed
+      ? 'CLOSED'
+      : this.config.authorization.defaultFailMode;
     ctx.logger.warn('Applying fail mode', { fail_mode: failMode, error: error.message });
 
     let decision: DecisionKind;
@@ -411,6 +458,7 @@ export class AuthorizationEngine {
       decision,
       reason_code: reasonCode,
       trace_id: ctx.traceId,
+      action_id: this.buildRequestBinding(ctx.request).action_id,
       explanation: `Fail mode: ${failMode}. Error: ${error.message}`,
       policy: {
         id: 'fail_mode',
@@ -426,5 +474,73 @@ export class AuthorizationEngine {
       durationMs: Date.now() - ctx.startTime,
       cached: false,
     };
+  }
+
+  /**
+   * Build the immutable request binding used by proofs and approvals.
+   * approval_ref is intentionally excluded so reauthorization can prove that
+   * the approved request is byte-for-byte equivalent to the original request.
+   */
+  private buildRequestBinding(request: AuthorizeRequest): ApprovalBinding {
+    const baseRequest = {
+      ...request,
+      approval_ref: undefined,
+    };
+    const actionId = request.action_id ?? `act_${hashCanonical(baseRequest).slice(7)}`;
+    const hashableRequest = {
+      ...baseRequest,
+      action_id: actionId,
+    };
+
+    return {
+      request_hash: hashCanonical(hashableRequest),
+      arguments_hash: request.tool_call?.args_hash ?? hashCanonical(request.tool_call ?? null),
+      action_id: actionId,
+      actor_id: request.actor.id,
+      actor_type: request.actor.type,
+      actor_role: request.actor.role,
+      actor_tenant: request.actor.tenant,
+      action: request.action,
+      resource_type: request.resource.type,
+      resource_id: request.resource.id,
+    };
+  }
+
+  private async validateApprovalReference(request: AuthorizeRequest): Promise<void> {
+    const ticketId = request.approval_ref;
+    if (!ticketId) return;
+
+    let ticket;
+    try {
+      ticket = await this.approvalsClient.getTicket(ticketId);
+    } catch (error) {
+      throw new ApprovalBindingError(
+        `Approval reference '${ticketId}' could not be loaded: ${(error as Error).message}`
+      );
+    }
+
+    if (ticket.status !== 'APPROVED') {
+      throw new ApprovalBindingError(
+        `Approval reference '${ticketId}' is not approved (status=${ticket.status})`
+      );
+    }
+
+    const binding = ticket.security_binding;
+    const current = this.buildRequestBinding(request);
+    if (!binding ||
+      binding.request_hash !== current.request_hash ||
+      binding.arguments_hash !== current.arguments_hash ||
+      binding.action_id !== current.action_id ||
+      binding.actor_id !== current.actor_id ||
+      binding.actor_type !== current.actor_type ||
+      binding.actor_role !== current.actor_role ||
+      binding.actor_tenant !== current.actor_tenant ||
+      binding.action !== current.action ||
+      binding.resource_type !== current.resource_type ||
+      binding.resource_id !== current.resource_id) {
+      throw new ApprovalBindingError(
+        `Approval reference '${ticketId}' does not bind the exact authorization request`
+      );
+    }
   }
 }

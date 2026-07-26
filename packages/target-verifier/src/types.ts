@@ -27,6 +27,18 @@ export interface VerifyRequest {
   /** Expected resource ID */
   expectedResourceId?: string;
 
+  /** Expected hash of the exact authorization request */
+  expectedRequestHash?: string;
+
+  /** Expected hash of the exact tool-call argument metadata */
+  expectedArgumentsHash?: string;
+
+  /** Expected stable action identifier */
+  expectedActionId?: string;
+
+  /** Expected approval ticket reference */
+  expectedApprovalRef?: string;
+
   /** Additional context to validate */
   context?: Record<string, unknown>;
 
@@ -112,6 +124,7 @@ export type VerificationErrorCode =
   | 'DECISION_QUARANTINE'
   | 'CLAIMS_INVALID'
   | 'CONTEXT_MISMATCH'
+  | 'REQUEST_MISMATCH'
   | 'INTERNAL_ERROR';
 
 // =============================================================================
@@ -128,6 +141,9 @@ export interface TokenClaims {
   /** Subject (trace ID) */
   sub: string;
 
+  /** Authorization trace ID */
+  trace_id?: string;
+
   /** Issued at (unix timestamp) */
   iat: number;
 
@@ -139,6 +155,9 @@ export interface TokenClaims {
 
   /** JWT ID */
   jti?: string;
+
+  /** Replay identifier */
+  replay_id?: string;
 
   /** Decision */
   decision: DecisionKind;
@@ -184,6 +203,21 @@ export interface TokenClaims {
 
   /** Request hash */
   request_hash?: string;
+
+  /** Exact argument hash */
+  arguments_hash?: string;
+
+  /** Stable action identifier */
+  action_id?: string;
+
+  /** Approval ticket reference */
+  approval_ref?: string;
+
+  /** Authenticated actor role */
+  actor_role?: string;
+
+  /** Authenticated actor tenant */
+  actor_tenant?: string;
 }
 
 // =============================================================================
@@ -211,6 +245,9 @@ export interface VerifierConfig {
 
   /** Whether to require resource matching */
   requireResourceMatch?: boolean;
+
+  /** Whether to require request and replay binding claims */
+  requireRequestBinding?: boolean;
 
   /** Allowed algorithms */
   allowedAlgorithms?: string[];

@@ -140,6 +140,9 @@ export interface TelemetryHooks {
  * Simplified authorization request for SDK
  */
 export interface AuthorizeParams {
+  /** Stable action identifier (derived by the enforcer when omitted) */
+  actionId?: string;
+
   /** Action being performed */
   action: string;
 
@@ -155,6 +158,9 @@ export interface AuthorizeParams {
   /** Tool call metadata */
   toolCall?: Partial<ToolCall>;
 
+  /** Hash of the exact raw tool arguments, without sending the arguments */
+  argsHash?: string;
+
   /** Wait for approval if quarantined */
   waitForApproval?: boolean;
 
@@ -163,6 +169,9 @@ export interface AuthorizeParams {
 
   /** Approval poll interval in milliseconds */
   approvalPollInterval?: number;
+
+  /** Internal post-approval reference used for exact reauthorization */
+  approvalRef?: string;
 }
 
 /**
@@ -201,6 +210,9 @@ export interface AuthorizationResult {
 
   /** Regulation references */
   regulations: string[];
+
+  /** Original request retained for an exact post-approval reauthorization */
+  request?: AuthorizeRequest;
 }
 
 // =============================================================================

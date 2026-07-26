@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-email",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "STIX Target Email - Protected email sending service",
   "type": "module",
   "main": "dist/index.js",

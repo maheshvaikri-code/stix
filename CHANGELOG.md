@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.13] - 2026-07-26
+
+### Security
+
+- Bound proof tokens to exact request and argument hashes, action IDs, resource IDs, approval references, authenticated actor fields, and unique replay identifiers.
+- Selected target-verifier keys by JWT `kid`, enforced algorithm/key agreement, and enabled resource matching plus request-binding validation by default.
+- Reauthorized approved quarantine requests before returning `ALLOW`; approval completion now requires a newly issued proof token.
+- Forced enterprise enforcer deployments to `CLOSED` failure mode and bound actor, tenant, role, and attributes to configured workload identities.
+
+### Tests
+
+- Added unit coverage for proof bindings, `kid` selection, resource matching, workload identity binding, enterprise fail-closed behavior, and SDK approval polling.
+- Converted integration quarantine workflows from optional skips into deterministic approval, reauthorization, proof, rejection, and tamper tests.
+
 ## [0.1.12] - 2026-07-26
 
 ### Fixed

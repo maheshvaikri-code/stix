@@ -113,11 +113,17 @@ export interface AuthorizeRequest {
     type: string;
     id?: string;
     classification?: string[];
+    attributes?: Record<string, unknown>;
   };
   context: {
     env: string;
     purpose?: string;
     signals?: Record<string, boolean>;
+  };
+  tool_call?: {
+    tool: string;
+    risk_tier?: string;
+    args_summary?: string;
   };
 }
 
@@ -175,12 +181,14 @@ export function generateTestRequest(overrides?: Partial<AuthorizeRequest>): Auth
       type: overrides?.resource?.type || 'test_resource',
       id: overrides?.resource?.id,
       classification: overrides?.resource?.classification,
+      attributes: overrides?.resource?.attributes,
     },
     context: {
       env: overrides?.context?.env || 'test',
       purpose: overrides?.context?.purpose || 'integration_testing',
       signals: overrides?.context?.signals,
     },
+    tool_call: overrides?.tool_call,
   };
 }
 

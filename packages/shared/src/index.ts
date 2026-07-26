@@ -3,7 +3,7 @@
  * Enterprise-grade shared utilities for Shield, Trust & Integrity eXecution
  * 
  * @module @stix/shared
- * @version 0.1.12
+ * @version 0.1.13
  */
 
 // =============================================================================
@@ -34,6 +34,7 @@ export type {
   AuthorizeResponse,
   Obligation,
   ApprovalInfo,
+  ApprovalBinding,
   PolicyRef,
   OutcomeRequest,
   ActionMeta,
@@ -468,5 +469,5 @@ export type {
 // VERSION
 // =============================================================================
 
-export const VERSION = '0.1.12';
+export const VERSION = '0.1.13';
 export const PACKAGE_NAME = '@stix/shared';

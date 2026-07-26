@@ -152,6 +152,7 @@ export const ToolCallSchema = z.object({
   tool: z.string().min(1).max(255),
   risk_tier: RiskTierSchema.optional(),
   args_summary: z.string().max(2048).optional(),
+  args_hash: HashSchema.optional(),
 });
 
 /** Obligation schema */
@@ -184,10 +185,12 @@ export const PolicyRefSchema = z.object({
 /** Authorization request schema */
 export const AuthorizeRequestSchema = z.object({
   actor: ActorSchema,
+  action_id: z.string().min(1).max(255).optional(),
   action: z.string().min(1).max(255),
   resource: ResourceSchema,
   context: ContextSchema,
   tool_call: ToolCallSchema.optional(),
+  approval_ref: ApprovalTicketIdSchema.optional(),
 });
 
 /** Outcome request schema */
@@ -217,6 +220,7 @@ export const AuthorizeResponseSchema = z.object({
   decision: DecisionKindSchema,
   reason_code: z.string().min(1).max(64),
   trace_id: TraceIdSchema,
+  action_id: z.string().min(1).max(255).optional(),
   explanation: z.string().max(2048).optional(),
   policy: PolicyRefSchema,
   obligations: z.array(ObligationSchema),
@@ -431,6 +435,27 @@ export const ProofTokenClaimsSchema = z.object({
   tid: TraceIdSchema,
   iat: z.number().int().positive(),
   exp: z.number().int().positive(),
+  replay_id: z.string().min(1).max(255).optional(),
+  jti: z.string().min(1).max(255).optional(),
+  request_hash: HashSchema.optional(),
+  arguments_hash: HashSchema.optional(),
+  action_id: z.string().min(1).max(255).optional(),
+  resource_id: z.string().max(1024).optional(),
+  approval_ref: ApprovalTicketIdSchema.optional(),
+  decision: DecisionKindSchema.optional(),
+  reason_code: z.string().max(64).optional(),
+  policy_id: z.string().max(255).optional(),
+  policy_version: SemverSchema.optional(),
+  policy_hash: HashSchema.optional(),
+  pack_hash: HashSchema.optional(),
+  actor_id: z.string().max(255).optional(),
+  actor_type: ActorTypeSchema.optional(),
+  actor_role: z.string().max(255).optional(),
+  actor_tenant: z.string().max(255).optional(),
+  action: z.string().max(255).optional(),
+  resource_type: z.string().max(255).optional(),
+  risk_tier: RiskTierSchema.optional(),
+  obligations: z.string().max(16384).optional(),
 });
 
 // =============================================================================

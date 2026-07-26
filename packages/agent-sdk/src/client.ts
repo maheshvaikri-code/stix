@@ -142,7 +142,7 @@ export class StixClient {
         request
       );
 
-      const result = this.mapToResult(response);
+      const result = this.mapToResult(response, request);
       const durationMs = Date.now() - startTime;
 
       this.logger.info('Authorization complete', {
@@ -295,13 +295,43 @@ export class StixClient {
       if (approval.status === 'approved') {
         this.logger.info('Approval granted', { ticketId: result.approvalTicketId });
 
-        // Re-authorize to get proof token
+        // Re-authorize the exact original request. Approval status alone is
+        // never sufficient to manufacture an ALLOW or a proof token.
+        if (!result.request) {
+          return {
+            ...result,
+            allowed: false,
+            decision: 'DENY',
+            reasonCode: 'approval_reauthorization_missing_request',
+            proofToken: undefined,
+          };
+        }
+
+        const reauthorizedRequest: AuthorizeRequest = {
+          ...result.request,
+          approval_ref: result.approvalTicketId,
+        };
+        const reauthorizedResponse = await this.sendRequest<AuthorizeResponse>(
+          `${this.config.enforcerUrl}/api/v1/authorize`,
+          reauthorizedRequest
+        );
+        const reauthorized = this.mapToResult(reauthorizedResponse, reauthorizedRequest);
+
+        if (reauthorized.decision !== 'ALLOW' || !reauthorized.proofToken) {
+          return {
+            ...reauthorized,
+            allowed: false,
+            decision: 'DENY',
+            reasonCode: 'approval_reauthorization_failed',
+            approvalRequired: false,
+            approvalTicketId: result.approvalTicketId,
+            proofToken: undefined,
+          };
+        }
+
         return {
-          ...result,
-          allowed: true,
-          decision: 'ALLOW',
-          reasonCode: 'approved_by_human',
-          proofToken: undefined, // Would be fetched from approval response in full impl
+          ...reauthorized,
+          approvalTicketId: result.approvalTicketId,
         };
       }
 
@@ -400,6 +430,7 @@ export class StixClient {
 
     return {
       actor,
+      action_id: params.actionId,
       action: params.action,
       resource,
       context,
@@ -407,11 +438,13 @@ export class StixClient {
         tool: params.toolCall.tool ?? params.action,
         risk_tier: params.toolCall.risk_tier,
         args_summary: params.toolCall.args_summary,
+        args_hash: params.argsHash ?? params.toolCall.args_hash,
       } : undefined,
+      approval_ref: params.approvalRef,
     };
   }
 
-  private mapToResult(response: AuthorizeResponse): AuthorizationResult {
+  private mapToResult(response: AuthorizeResponse, request?: AuthorizeRequest): AuthorizationResult {
     return {
       allowed: response.decision === 'ALLOW',
       decision: response.decision,
@@ -424,6 +457,7 @@ export class StixClient {
       approvalTicketId: response.approval?.ticket_id,
       controls: response.controls ?? [],
       regulations: response.regulations ?? [],
+      request,
     };
   }
 

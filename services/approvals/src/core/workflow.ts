@@ -7,6 +7,7 @@ import {
   type Actor,
   type Resource,
   type Context,
+  type ApprovalBinding,
   type Logger,
   generateApprovalTicketId,
   isoTimestamp,
@@ -48,6 +49,7 @@ export interface ApprovalTicket {
   expires_at: string;
   resolved_at?: string;
   cancellation_reason?: string;
+  security_binding?: ApprovalBinding;
 }
 
 export interface CreateTicketRequest {
@@ -62,6 +64,7 @@ export interface CreateTicketRequest {
   require_justification?: boolean;
   expires_at?: string;
   timeout_hours?: number;
+  security_binding?: ApprovalBinding;
 }
 
 export interface SubmitDecisionRequest {
@@ -218,6 +221,7 @@ export class ApprovalWorkflow {
       decisions: [],
       created_at: now,
       expires_at: expiresAt,
+      security_binding: request.security_binding,
     };
 
     await this.store.createTicket(ticket);

@@ -29,9 +29,10 @@ describe('Approvals Service Integration', () => {
     // Try to create a quarantine decision to get an approval ticket
     const request = generateTestRequest({
       actor: { id: 'approval-test-agent', type: 'AI_AGENT' },
-      action: 'access_sensitive_for_test',
-      resource: { type: 'sensitive_data', classification: ['PII'] },
-      context: { env: 'production' },
+      action: 'execute_sensitive',
+      resource: { type: 'tool', id: 'approval-test-tool', attributes: { risk_tier: 'HIGH' } },
+      context: { env: 'prod' },
+      tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
     });
 
     const { data } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
@@ -150,31 +151,31 @@ describe('Approvals Service Integration', () => {
       // Create a new quarantine decision to get a fresh approval
       const request = generateTestRequest({
         actor: { id: 'approval-approve-test', type: 'AI_AGENT' },
-        action: 'sensitive_action_to_approve',
-        resource: { type: 'sensitive_data' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'approve-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE' || !authData.approval_ticket_id) {
-        console.log('No quarantine decision, skipping approve test');
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
+      expect(authData.approval_ticket_id).toBeDefined();
 
       await wait(500);
 
       const { status, data } = await approvals.post<ApprovalRequest>(
-        `/api/v1/approvals/${authData.approval_ticket_id}/approve`,
-        { notes: 'Approved for integration testing' }
+        `/api/v1/approvals/tickets/${authData.approval_ticket_id}/approve`,
+        {
+          approver_id: 'integration-security-admin',
+          approver_role: 'security_admin',
+          justification: 'Approved for integration testing',
+        }
       );
 
-      if (status === 200) {
-        expect(data.status).toBe('APPROVED');
-        expect(data.reviewed_at).toBeDefined();
-      } else {
-        // Might need authentication or different endpoint structure
-        expect([200, 401, 403, 404]).toContain(status);
-      }
+      expect(status).toBe(200);
+      expect((data as unknown as { data: { status: string; resolved_at?: string } }).data.status).toBe('APPROVED');
+      expect((data as unknown as { data: { status: string; resolved_at?: string } }).data.resolved_at).toBeDefined();
     });
   });
 
@@ -183,30 +184,31 @@ describe('Approvals Service Integration', () => {
       // Create a new quarantine decision
       const request = generateTestRequest({
         actor: { id: 'approval-reject-test', type: 'AI_AGENT' },
-        action: 'sensitive_action_to_reject',
-        resource: { type: 'sensitive_data' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'reject-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE' || !authData.approval_ticket_id) {
-        console.log('No quarantine decision, skipping reject test');
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
+      expect(authData.approval_ticket_id).toBeDefined();
 
       await wait(500);
 
       const { status, data } = await approvals.post<ApprovalRequest>(
-        `/api/v1/approvals/${authData.approval_ticket_id}/reject`,
-        { notes: 'Rejected for integration testing' }
+        `/api/v1/approvals/tickets/${authData.approval_ticket_id}/reject`,
+        {
+          approver_id: 'integration-security-admin',
+          approver_role: 'security_admin',
+          justification: 'Rejected for integration testing',
+        }
       );
 
-      if (status === 200) {
-        expect(data.status).toBe('REJECTED');
-        expect(data.reviewed_at).toBeDefined();
-      } else {
-        expect([200, 401, 403, 404]).toContain(status);
-      }
+      expect(status).toBe(200);
+      expect((data as unknown as { data: { status: string; resolved_at?: string } }).data.status).toBe('REJECTED');
+      expect((data as unknown as { data: { status: string; resolved_at?: string } }).data.resolved_at).toBeDefined();
     });
   });
 
@@ -280,16 +282,15 @@ describe('Approvals Service Integration', () => {
       // 1. Create authorization that requires approval
       const request = generateTestRequest({
         actor: { id: 'workflow-test-agent', type: 'AI_AGENT' },
-        action: 'full_workflow_test',
-        resource: { type: 'sensitive_data' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'workflow-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE') {
-        console.log('Expected QUARANTINE, got', authData.decision);
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
 
       const approvalId = authData.approval_ticket_id;
       expect(approvalId).toBeDefined();
@@ -302,14 +303,15 @@ describe('Approvals Service Integration', () => {
 
       // 3. Approve the request
       const { status: approveStatus } = await approvals.post<ApprovalRequest>(
-        `/api/v1/approvals/${approvalId}/approve`,
-        { notes: 'Workflow test approval' }
+        `/api/v1/approvals/tickets/${approvalId}/approve`,
+        {
+          approver_id: 'workflow-security-admin',
+          approver_role: 'security_admin',
+          justification: 'Workflow test approval',
+        }
       );
 
-      if (approveStatus !== 200) {
-        console.log('Approve endpoint returned', approveStatus);
-        return;
-      }
+      expect(approveStatus).toBe(200);
 
       // 4. Verify status is APPROVED
       const { data: approvedData } = await approvals.get<ApprovalRequest>(
@@ -317,8 +319,34 @@ describe('Approvals Service Integration', () => {
       );
       expect(approvedData.status).toBe('APPROVED');
 
-      // 5. Verify agent can now proceed (re-authorize should succeed)
-      // Note: This depends on implementation - some systems require a new auth request
+      // 5. Reauthorize the exact request and require a fresh proof token.
+      const { status: reauthStatus, data: reauthData } = await enforcer.post<AuthorizeResponse>(
+        '/api/v1/authorize',
+        { ...request, approval_ref: approvalId }
+      );
+      expect(reauthStatus).toBe(200);
+      expect(reauthData.decision).toBe('ALLOW');
+      expect(reauthData.proof_token).toBeDefined();
+
+      const payload = JSON.parse(
+        Buffer.from(reauthData.proof_token!.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
+      ) as Record<string, unknown>;
+      expect(payload.approval_ref).toBe(approvalId);
+      expect(payload.request_hash).toBeDefined();
+      expect(payload.arguments_hash).toBeDefined();
+      expect(payload.resource_id).toBe('workflow-tool');
+      expect(payload.replay_id).toBeDefined();
+
+      const { data: changedData } = await enforcer.post<AuthorizeResponse>(
+        '/api/v1/authorize',
+        {
+          ...request,
+          resource: { type: 'tool', id: 'different-workflow-tool', attributes: { risk_tier: 'HIGH' } },
+          approval_ref: approvalId,
+        }
+      );
+      expect(changedData.decision).toBe('DENY');
+      expect(changedData.proof_token).toBeUndefined();
     });
   });
 
@@ -326,16 +354,16 @@ describe('Approvals Service Integration', () => {
     it('should include expiration time in approval', async () => {
       const request = generateTestRequest({
         actor: { id: 'expiration-test-agent', type: 'AI_AGENT' },
-        action: 'expiration_test',
-        resource: { type: 'sensitive_data' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'expiration-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE' || !authData.approval_ticket_id) {
-        console.log('No quarantine decision');
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
+      expect(authData.approval_ticket_id).toBeDefined();
 
       const { status, data } = await approvals.get<ApprovalRequest>(
         `/api/v1/approvals/${authData.approval_ticket_id}`
@@ -363,15 +391,16 @@ describe('Approvals Service Integration', () => {
       // First create and approve
       const request = generateTestRequest({
         actor: { id: 'double-approve-test', type: 'AI_AGENT' },
-        action: 'double_approve_test',
-        resource: { type: 'sensitive_data' },
+        action: 'execute_sensitive',
+        resource: { type: 'tool', id: 'double-approve-tool', attributes: { risk_tier: 'HIGH' } },
+        context: { env: 'prod' },
+        tool_call: { tool: 'execute_sensitive', risk_tier: 'HIGH' },
       });
 
       const { data: authData } = await enforcer.post<AuthorizeResponse>('/api/v1/authorize', request);
 
-      if (authData.decision !== 'QUARANTINE' || !authData.approval_ticket_id) {
-        return;
-      }
+      expect(authData.decision).toBe('QUARANTINE');
+      expect(authData.approval_ticket_id).toBeDefined();
 
       // First approval
       await approvals.post(

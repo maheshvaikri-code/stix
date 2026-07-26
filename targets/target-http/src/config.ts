@@ -70,7 +70,7 @@ export function loadConfig(): Config {
   const config: Config = {
     service: {
       name: getEnv('SERVICE_NAME', 'stix-target-http'),
-      version: getEnv('SERVICE_VERSION', '0.1.12'),
+      version: getEnv('SERVICE_VERSION', '0.1.13'),
       env: getEnv('NODE_ENV', 'dev') as Config['service']['env'],
       port: getEnvNumber('PORT', 3081),
       host: getEnv('HOST', '0.0.0.0'),

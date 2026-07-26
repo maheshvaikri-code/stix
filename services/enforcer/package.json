@@ -1,6 +1,6 @@
 {
   "name": "@stix/enforcer",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "STIX Enforcer Service - Authorization decision engine",
   "type": "module",
   "main": "dist/index.js",

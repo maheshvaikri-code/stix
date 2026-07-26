@@ -15,6 +15,8 @@ import {
   type RiskTier,
   type DecisionKind,
   type VerificationKey,
+  type ProofTokenHeader,
+  TOKEN_CONFIG,
 } from '@stix/shared';
 
 import type {
@@ -34,11 +36,12 @@ import type {
 // =============================================================================
 
 const DEFAULT_CONFIG: Required<Omit<VerifierConfig, 'publicKeys'>> = {
-  expectedIssuer: 'stix-enforcer',
+  expectedIssuer: TOKEN_CONFIG.ISSUER,
   clockSkew: 30, // 30 seconds
   defaultMaxTokenAge: 300, // 5 minutes
   requireActionMatch: true,
-  requireResourceMatch: false,
+  requireResourceMatch: true,
+  requireRequestBinding: true,
   allowedAlgorithms: ['EdDSA', 'ES256'],
   enableCache: false,
   cacheTtl: 60,
@@ -107,7 +110,7 @@ export class TargetVerifier {
       }
 
       // Step 2: Find the right public key
-      const keyConfig = this.findKey(parsed.claims!);
+      const keyConfig = this.findKey(parsed.header?.kid);
       if (!keyConfig) {
         return this.failResult([{
           code: 'KEY_NOT_FOUND',
@@ -118,7 +121,8 @@ export class TargetVerifier {
       // Step 3: Verify signature
       const signatureValid = await this.verifySignature(
         request.token,
-        keyConfig
+        keyConfig,
+        parsed.header!
       );
       if (!signatureValid.valid) {
         return this.failResult(signatureValid.errors || []);
@@ -158,6 +162,45 @@ export class TargetVerifier {
           code: 'DECISION_QUARANTINE',
           message: `Action quarantined: ${claims.reason_code}`,
           details: { reason_code: claims.reason_code, policy_id: claims.policy_id },
+        }]);
+      }
+
+      // New proof tokens must bind the exact request and carry a unique
+      // replay identifier. Resource IDs may legitimately be absent for
+      // collection-level actions, so they are checked when supplied.
+      if (this.config.requireRequestBinding &&
+        (!claims.request_hash || !claims.action_id || !(claims.replay_id || claims.jti))) {
+        return this.failResult([{
+          code: 'CLAIMS_INVALID',
+          message: 'Proof token is missing request binding or replay claims',
+        }]);
+      }
+
+      if (request.expectedRequestHash && claims.request_hash !== request.expectedRequestHash) {
+        return this.failResult([{
+          code: 'REQUEST_MISMATCH',
+          message: 'Token request hash does not match the protected request',
+        }]);
+      }
+
+      if (request.expectedArgumentsHash && claims.arguments_hash !== request.expectedArgumentsHash) {
+        return this.failResult([{
+          code: 'REQUEST_MISMATCH',
+          message: 'Token argument hash does not match the protected request',
+        }]);
+      }
+
+      if (request.expectedActionId && claims.action_id !== request.expectedActionId) {
+        return this.failResult([{
+          code: 'REQUEST_MISMATCH',
+          message: 'Token action ID does not match the protected action',
+        }]);
+      }
+
+      if (request.expectedApprovalRef && claims.approval_ref !== request.expectedApprovalRef) {
+        return this.failResult([{
+          code: 'REQUEST_MISMATCH',
+          message: 'Token approval reference does not match the protected approval',
         }]);
       }
 
@@ -201,7 +244,7 @@ export class TargetVerifier {
       const result: VerifyResult = {
         valid: true,
         decision: claims.decision as DecisionKind,
-        traceId: claims.sub,
+        traceId: claims.trace_id ?? claims.sub,
         policyId: claims.policy_id,
         policyVersion: claims.policy_version,
         reasonCode: claims.reason_code,
@@ -222,7 +265,7 @@ export class TargetVerifier {
       this.logAudit({
         timestamp: isoTimestamp(),
         type: 'VERIFICATION_SUCCESS',
-        traceId: claims.sub,
+        traceId: claims.trace_id ?? claims.sub,
         tokenJti: claims.jti,
         action: claims.action,
         resource: { type: claims.resource_type, id: claims.resource_id },
@@ -305,7 +348,7 @@ export class TargetVerifier {
   // PRIVATE HELPERS
   // ===========================================================================
 
-  private parseToken(token: string): VerifyResult {
+  private parseToken(token: string): VerifyResult & { header?: ProofTokenHeader } {
     try {
       const parsed = parseProofTokenUnsafe(token);
       const payload = (parsed as { claims?: Record<string, unknown> }).claims;
@@ -321,10 +364,12 @@ export class TargetVerifier {
       const claims: TokenClaims = {
         iss: String(payload.iss ?? ''),
         sub: String(payload.sub ?? payload.tid ?? ''),
+        trace_id: typeof payload.tid === 'string' ? payload.tid : undefined,
         iat: Number(payload.iat ?? 0),
         exp: Number(payload.exp ?? 0),
         nbf: typeof payload.nbf === 'number' ? payload.nbf : undefined,
         jti: typeof payload.jti === 'string' ? payload.jti : undefined,
+        replay_id: typeof payload.replay_id === 'string' ? payload.replay_id : undefined,
         decision: (payload.decision as DecisionKind | undefined) ?? 'ALLOW',
         reason_code: String(payload.reason_code ?? 'POLICY_ALLOW'),
         policy_id: String(payload.policy_id ?? 'unknown'),
@@ -336,13 +381,18 @@ export class TargetVerifier {
         action: String(payload.action ?? payload.act ?? ''),
         resource_type: String(payload.resource_type ?? payload.res ?? ''),
         resource_id: typeof payload.resource_id === 'string' ? payload.resource_id : undefined,
+        action_id: typeof payload.action_id === 'string' ? payload.action_id : undefined,
+        approval_ref: typeof payload.approval_ref === 'string' ? payload.approval_ref : undefined,
+        actor_role: typeof payload.actor_role === 'string' ? payload.actor_role : undefined,
+        actor_tenant: typeof payload.actor_tenant === 'string' ? payload.actor_tenant : undefined,
         risk_tier: payload.risk_tier as RiskTier | undefined,
         obligations: typeof payload.obligations === 'string' ? payload.obligations : undefined,
         evidence_hash: typeof payload.evidence_hash === 'string' ? payload.evidence_hash : undefined,
         request_hash: typeof payload.request_hash === 'string' ? payload.request_hash : undefined,
+        arguments_hash: typeof payload.arguments_hash === 'string' ? payload.arguments_hash : undefined,
       };
 
-      return { valid: true, claims };
+      return { valid: true, claims, header: parsed.header };
     } catch (error) {
       return this.failResult([{
         code: 'TOKEN_MALFORMED',
@@ -351,23 +401,38 @@ export class TargetVerifier {
     }
   }
 
-  private findKey(claims: TokenClaims): PublicKeyConfig | undefined {
-    // Try to find key by policy_id or use first key
-    // In production, you'd use a key ID from the token header
-    if (this.keyMap.size === 0) {
-      return undefined;
-    }
-
-    // Return first available key for now
-    // Real implementation would use kid from JWT header
-    return this.keyMap.values().next().value;
+  private findKey(keyId?: string): PublicKeyConfig | undefined {
+    if (!keyId) return undefined;
+    return this.keyMap.get(keyId);
   }
 
   private async verifySignature(
     token: string,
-    keyConfig: PublicKeyConfig
+    keyConfig: PublicKeyConfig,
+    header: ProofTokenHeader
   ): Promise<{ valid: boolean; errors?: VerificationError[] }> {
     try {
+      if (header.kid !== keyConfig.keyId) {
+        return {
+          valid: false,
+          errors: [{ code: 'KEY_NOT_FOUND', message: `Token key ID '${header.kid}' is not configured` }],
+        };
+      }
+
+      if (!this.config.allowedAlgorithms.includes(header.alg)) {
+        return {
+          valid: false,
+          errors: [{ code: 'CLAIMS_INVALID', message: `Token algorithm '${header.alg}' is not allowed` }],
+        };
+      }
+
+      if (keyConfig.algorithm !== header.alg) {
+        return {
+          valid: false,
+          errors: [{ code: 'SIGNATURE_INVALID', message: 'Token algorithm does not match the configured key' }],
+        };
+      }
+
       if (!keyConfig.pem) {
         return {
           valid: false,

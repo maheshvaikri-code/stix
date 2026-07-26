@@ -14,6 +14,8 @@ import {
   createErrorResponse,
   HEADERS,
 } from '@stix/shared';
+import { validateActorBinding } from '../security/identity.js';
+import type { WorkloadIdentity } from '../config/index.js';
 import type { AuthorizationEngine } from '../core/engine.js';
 import type { EvidenceClient } from '../services/evidence-client.js';
 
@@ -53,12 +55,13 @@ export async function authorizationRoutes(
             required: ['id', 'type'],
             properties: {
               id: { type: 'string' },
-              type: { type: 'string', enum: ['HUMAN', 'SERVICE', 'AI_AGENT', 'JOB', 'SYSTEM'] },
+            type: { type: 'string', enum: ['HUMAN', 'SERVICE', 'AI_AGENT', 'JOB', 'SYSTEM'] },
               role: { type: 'string' },
               tenant: { type: 'string' },
               attributes: { type: 'object' },
             },
           },
+          action_id: { type: 'string' },
           action: { type: 'string' },
           resource: {
             type: 'object',
@@ -91,8 +94,10 @@ export async function authorizationRoutes(
               tool: { type: 'string' },
               risk_tier: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
               args_summary: { type: 'string' },
+              args_hash: { type: 'string' },
             },
           },
+          approval_ref: { type: 'string' },
         },
       },
       response: {
@@ -103,6 +108,7 @@ export async function authorizationRoutes(
             decision: { type: 'string', enum: ['ALLOW', 'DENY', 'QUARANTINE'] },
             reason_code: { type: 'string' },
             trace_id: { type: 'string' },
+            action_id: { type: 'string' },
             explanation: { type: 'string' },
             policy_id: { type: 'string' },
             policy: {
@@ -144,6 +150,20 @@ export async function authorizationRoutes(
         });
       }
       const validatedRequest = parsed.data;
+
+      const identity = (request as FastifyRequest & { stixIdentity?: WorkloadIdentity }).stixIdentity;
+      if (identity) {
+        const bindingError = validateActorBinding(validatedRequest.actor, identity);
+        if (bindingError) {
+          return reply.code(403).send({
+            success: false,
+            error: {
+              code: 'WORKLOAD_IDENTITY_MISMATCH',
+              message: bindingError,
+            },
+          });
+        }
+      }
 
       // Process authorization
       const result = await engine.authorize(validatedRequest);
