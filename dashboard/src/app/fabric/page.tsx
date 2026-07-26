@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   Activity,
@@ -13,6 +13,7 @@ import {
   GitBranch,
   Layers,
   Network,
+  Plus,
   Radar,
   RefreshCw,
   Route,
@@ -21,7 +22,14 @@ import {
   TerminalSquare,
   Workflow,
 } from "lucide-react";
-import { useFabricInventory, useFabricReadiness } from "@/lib/hooks";
+import {
+  useFabricInventory,
+  useFabricReadiness,
+  useRegisterFabricAgent,
+  useRegisterFabricEnforcementPoint,
+  useRegisterFabricPolicyChannel,
+  useRegisterFabricToolAction,
+} from "@/lib/hooks";
 import type {
   FabricAgent,
   FabricEnforcementPoint,
@@ -33,6 +41,9 @@ import type {
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Modal, ModalFooter } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
@@ -52,6 +63,7 @@ import {
 } from "@/components/ui/table";
 
 type FabricTab = "posture" | "inventory" | "graph";
+type RegistrationKind = "agent" | "enforcement_point" | "tool_action" | "policy_channel";
 type GraphNode = FabricGraphSummary["nodes"][number];
 type GraphEdge = FabricGraphSummary["edges"][number];
 
@@ -82,6 +94,8 @@ const motionTransition = { duration: 0.45, ease: "easeOut" as const };
 
 export default function FabricPage() {
   const [activeTab, setActiveTab] = useState<FabricTab>("posture");
+  const [registrationKind, setRegistrationKind] = useState<RegistrationKind>("agent");
+  const [showRegistration, setShowRegistration] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useFabricInventory();
   const {
     data: readiness,
@@ -261,7 +275,13 @@ export default function FabricPage() {
               </TabPanel>
 
               <TabPanel active={activeTab === "inventory"}>
-                <InventoryView data={data!} />
+                <InventoryView
+                  data={data!}
+                  onRegister={(kind) => {
+                    setRegistrationKind(kind);
+                    setShowRegistration(true);
+                  }}
+                />
               </TabPanel>
 
               <TabPanel active={activeTab === "graph"}>
@@ -271,6 +291,13 @@ export default function FabricPage() {
           )}
         </>
       )}
+
+      <RegisterFabricModal
+        isOpen={showRegistration}
+        kind={registrationKind}
+        onKindChange={setRegistrationKind}
+        onClose={() => setShowRegistration(false)}
+      />
     </div>
   );
 }
@@ -562,9 +589,39 @@ function ReadinessDot({ level }: { level: FabricPosture["level"] }) {
   return <span className={`h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
-function InventoryView({ data }: { data: FabricInventory }) {
+function InventoryView({
+  data,
+  onRegister,
+}: {
+  data: FabricInventory;
+  onRegister: (kind: RegistrationKind) => void;
+}) {
   return (
     <div className="space-y-6">
+      <Card className="border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-emerald-50">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">Register Fabric inventory</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Add a governed registry record. New records are immediately reflected in posture and graph views.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onRegister("agent")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Agent
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onRegister("enforcement_point")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Enforcement Point
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onRegister("tool_action")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Tool Action
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onRegister("policy_channel")}>
+              <Plus className="mr-1.5 h-4 w-4" /> Policy Channel
+            </Button>
+          </div>
+        </div>
+      </Card>
       <AgentsTable agents={data.agents.data} />
       <EnforcementPointsTable enforcementPoints={data.enforcementPoints.data} />
       <ToolActionsTable actions={data.toolActions.data} />
@@ -918,6 +975,393 @@ function GraphView({ graph }: { graph: FabricGraphSummary }) {
       </Card>
     </div>
   );
+}
+
+interface RegistrationFormState {
+  id: string;
+  displayName: string;
+  owner: string;
+  runtime: string;
+  action: string;
+  resourceType: string;
+  environment: string;
+  riskTier: string;
+  enforcementType: string;
+  url: string;
+  agentIds: string;
+  allowedEnvironments: string;
+  approvalRequired: boolean;
+  rolloutState: string;
+  activeBundleId: string;
+  labels: string;
+  metadata: string;
+}
+
+const emptyRegistrationForm: RegistrationFormState = {
+  id: "",
+  displayName: "",
+  owner: "",
+  runtime: "",
+  action: "",
+  resourceType: "",
+  environment: "stage",
+  riskTier: "MEDIUM",
+  enforcementType: "sdk",
+  url: "",
+  agentIds: "",
+  allowedEnvironments: "stage, prod",
+  approvalRequired: false,
+  rolloutState: "DRAFT",
+  activeBundleId: "",
+  labels: "",
+  metadata: "",
+};
+
+const environmentOptions = [
+  { value: "dev", label: "Development" },
+  { value: "test", label: "Test" },
+  { value: "stage", label: "Staging" },
+  { value: "prod", label: "Production" },
+];
+
+const riskOptions = [
+  { value: "LOW", label: "Low" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "HIGH", label: "High" },
+  { value: "CRITICAL", label: "Critical" },
+];
+
+function RegisterFabricModal({
+  isOpen,
+  kind,
+  onKindChange,
+  onClose,
+}: {
+  isOpen: boolean;
+  kind: RegistrationKind;
+  onKindChange: (kind: RegistrationKind) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<RegistrationFormState>(emptyRegistrationForm);
+  const [formError, setFormError] = useState<string | null>(null);
+  const registerAgent = useRegisterFabricAgent();
+  const registerEnforcementPoint = useRegisterFabricEnforcementPoint();
+  const registerToolAction = useRegisterFabricToolAction();
+  const registerPolicyChannel = useRegisterFabricPolicyChannel();
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(emptyRegistrationForm);
+      setFormError(null);
+    }
+  }, [isOpen, kind]);
+
+  const setField = <K extends keyof RegistrationFormState>(
+    field: K,
+    value: RegistrationFormState[K],
+  ) => setForm((current) => ({ ...current, [field]: value }));
+
+  const isPending =
+    registerAgent.isPending ||
+    registerEnforcementPoint.isPending ||
+    registerToolAction.isPending ||
+    registerPolicyChannel.isPending;
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+
+    try {
+      if (!form.displayName.trim()) {
+        throw new Error("Display name is required");
+      }
+
+      const metadata = form.metadata.trim() ? JSON.parse(form.metadata) : {};
+      if (!metadata || Array.isArray(metadata) || typeof metadata !== "object") {
+        throw new Error("Metadata must be a JSON object");
+      }
+
+      if (kind === "agent") {
+        if (!form.owner.trim() || !form.runtime.trim()) {
+          throw new Error("Owner and runtime are required for agents");
+        }
+        await registerAgent.mutateAsync({
+          ...(form.id.trim() ? { agent_id: form.id.trim() } : {}),
+          display_name: form.displayName.trim(),
+          owner: form.owner.trim(),
+          runtime: form.runtime.trim(),
+          environment: form.environment as "dev" | "test" | "stage" | "prod",
+          risk_tier: form.riskTier as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+          status: "ACTIVE",
+          labels: splitList(form.labels),
+          metadata,
+        });
+      } else if (kind === "enforcement_point") {
+        await registerEnforcementPoint.mutateAsync({
+          ...(form.id.trim() ? { enforcement_point_id: form.id.trim() } : {}),
+          display_name: form.displayName.trim(),
+          type: form.enforcementType as "sdk" | "ci" | "mcp_gateway" | "tool_gateway" | "service_gateway" | "target",
+          environment: form.environment as "dev" | "test" | "stage" | "prod",
+          status: "ACTIVE",
+          ...(form.url.trim() ? { url: form.url.trim() } : {}),
+          agent_ids: splitList(form.agentIds),
+          metadata,
+        });
+      } else if (kind === "tool_action") {
+        if (!form.action.trim() || !form.resourceType.trim()) {
+          throw new Error("Action and resource type are required for tool actions");
+        }
+        const allowedEnvironments = splitList(form.allowedEnvironments);
+        if (!allowedEnvironments.length) {
+          throw new Error("At least one allowed environment is required");
+        }
+        await registerToolAction.mutateAsync({
+          ...(form.id.trim() ? { action_id: form.id.trim() } : {}),
+          display_name: form.displayName.trim(),
+          action: form.action.trim(),
+          resource_type: form.resourceType.trim(),
+          risk_tier: form.riskTier as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+          approval_required: form.approvalRequired,
+          allowed_environments: allowedEnvironments as Array<"dev" | "test" | "stage" | "prod">,
+          metadata,
+        });
+      } else {
+        await registerPolicyChannel.mutateAsync({
+          ...(form.id.trim() ? { channel_id: form.id.trim() } : {}),
+          display_name: form.displayName.trim(),
+          environment: form.environment as "dev" | "test" | "stage" | "prod",
+          rollout_state: form.rolloutState as "DRAFT" | "CANARY" | "ACTIVE" | "PAUSED" | "RETIRED",
+          ...(form.activeBundleId.trim() ? { active_bundle_id: form.activeBundleId.trim() } : {}),
+          metadata,
+        });
+      }
+
+      onClose();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Registration failed");
+    }
+  };
+
+  const title = {
+    agent: "Register Agent",
+    enforcement_point: "Register Enforcement Point",
+    tool_action: "Register Tool Action",
+    policy_channel: "Register Policy Channel",
+  }[kind];
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
+      <form onSubmit={submit} className="space-y-4">
+        <Select
+          label="Record type"
+          value={kind}
+          onChange={(event) => onKindChange(event.target.value as RegistrationKind)}
+          options={[
+            { value: "agent", label: "Agent" },
+            { value: "enforcement_point", label: "Enforcement Point" },
+            { value: "tool_action", label: "Tool Action" },
+            { value: "policy_channel", label: "Policy Channel" },
+          ]}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Display name"
+            value={form.displayName}
+            onChange={(event) => setField("displayName", event.target.value)}
+            placeholder="Production release agent"
+            required
+          />
+          <Input
+            label="Stable ID (optional)"
+            value={form.id}
+            onChange={(event) => setField("id", event.target.value)}
+            placeholder="Generated if blank"
+          />
+        </div>
+
+        {kind === "agent" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Owner"
+              value={form.owner}
+              onChange={(event) => setField("owner", event.target.value)}
+              placeholder="platform-security"
+              required
+            />
+            <Input
+              label="Runtime"
+              value={form.runtime}
+              onChange={(event) => setField("runtime", event.target.value)}
+              placeholder="agent-sdk"
+              required
+            />
+          </div>
+        )}
+
+        {kind === "enforcement_point" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Point type"
+                value={form.enforcementType}
+                onChange={(event) => setField("enforcementType", event.target.value)}
+                options={[
+                  { value: "sdk", label: "SDK" },
+                  { value: "ci", label: "CI" },
+                  { value: "mcp_gateway", label: "MCP Gateway" },
+                  { value: "tool_gateway", label: "Tool Gateway" },
+                  { value: "service_gateway", label: "Service Gateway" },
+                  { value: "target", label: "Target" },
+                ]}
+              />
+              <Input
+                label="URL (optional)"
+                type="url"
+                value={form.url}
+                onChange={(event) => setField("url", event.target.value)}
+                placeholder="https://gateway.example.com"
+              />
+            </div>
+            <Input
+              label="Protected agent IDs"
+              value={form.agentIds}
+              onChange={(event) => setField("agentIds", event.target.value)}
+              placeholder="agent_release_captain, agent_finops_sentinel"
+              helperText="Comma-separated IDs from the Fabric agent registry."
+            />
+          </>
+        )}
+
+        {kind === "tool_action" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Action"
+                value={form.action}
+                onChange={(event) => setField("action", event.target.value)}
+                placeholder="deploy"
+                required
+              />
+              <Input
+                label="Resource type"
+                value={form.resourceType}
+                onChange={(event) => setField("resourceType", event.target.value)}
+                placeholder="production_environment"
+                required
+              />
+            </div>
+            <label className="flex items-center gap-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.approvalRequired}
+                onChange={(event) => setField("approvalRequired", event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+              />
+              Require human approval before execution
+            </label>
+            <Input
+              label="Allowed environments"
+              value={form.allowedEnvironments}
+              onChange={(event) => setField("allowedEnvironments", event.target.value)}
+              placeholder="stage, prod"
+              helperText="Comma-separated values: dev, test, stage, prod."
+            />
+          </>
+        )}
+
+        {kind === "policy_channel" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Rollout state"
+              value={form.rolloutState}
+              onChange={(event) => setField("rolloutState", event.target.value)}
+              options={[
+                { value: "DRAFT", label: "Draft" },
+                { value: "CANARY", label: "Canary" },
+                { value: "ACTIVE", label: "Active" },
+                { value: "PAUSED", label: "Paused" },
+                { value: "RETIRED", label: "Retired" },
+              ]}
+            />
+            <Input
+              label="Active bundle ID (optional)"
+              value={form.activeBundleId}
+              onChange={(event) => setField("activeBundleId", event.target.value)}
+              placeholder="bundle_0_1_15_stage"
+            />
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {kind !== "tool_action" && (
+            <Select
+              label="Environment"
+              value={form.environment}
+              onChange={(event) => setField("environment", event.target.value)}
+              options={environmentOptions}
+            />
+          )}
+          {kind !== "enforcement_point" && kind !== "policy_channel" && (
+            <Select
+              label="Risk tier"
+              value={form.riskTier}
+              onChange={(event) => setField("riskTier", event.target.value)}
+              options={riskOptions}
+            />
+          )}
+          {kind === "tool_action" && (
+            <Select
+              label="Risk tier"
+              value={form.riskTier}
+              onChange={(event) => setField("riskTier", event.target.value)}
+              options={riskOptions}
+            />
+          )}
+        </div>
+
+        {kind === "agent" && (
+          <Input
+            label="Labels"
+            value={form.labels}
+            onChange={(event) => setField("labels", event.target.value)}
+            placeholder="production, release, governed"
+            helperText="Comma-separated labels for filtering and discovery."
+          />
+        )}
+
+        <Textarea
+          label="Metadata JSON (optional)"
+          value={form.metadata}
+          onChange={(event) => setField("metadata", event.target.value)}
+          placeholder={'{"owner_team":"platform-security"}'}
+          rows={3}
+        />
+
+        {formError && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {formError}
+          </div>
+        )}
+
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={isPending}>
+            Register {title.replace("Register ", "")}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
+}
+
+function splitList(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function NodeIcon({ type }: { type: GraphNode["type"] }) {

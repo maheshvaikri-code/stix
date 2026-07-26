@@ -207,7 +207,7 @@ export default function PoliciesPage() {
             title="No policies found"
             description="Create your first policy to start securing AI agent actions."
             action={
-              <Button>
+              <Button onClick={() => { setEditorPolicy(null); setShowEditor(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Policy
               </Button>

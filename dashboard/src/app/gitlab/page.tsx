@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   GitBranch,
@@ -19,7 +19,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge, DecisionBadge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useEvidence } from '@/lib/hooks';
+import { useEvidence, useFabricAgents } from '@/lib/hooks';
 
 // =============================================================================
 // TYPES
@@ -47,10 +47,22 @@ export default function GitLabPage() {
   const [filter, setFilter] = useState<'all' | 'ALLOW' | 'DENY' | 'QUARANTINE'>('all');
 
   // Fetch evidence records tagged with platform:gitlab
-  const { data: evidenceData, isLoading, refetch } = useEvidence({
+  const { data: evidenceData, isLoading, error: evidenceError, refetch } = useEvidence({
     page_size: 50,
     resource_type: 'merge_request',
   });
+  const { data: fabricAgents } = useFabricAgents();
+
+  const guardianAgent = useMemo(
+    () => fabricAgents?.data.find((agent) =>
+      agent.labels.some((label) => /gitlab|guardian/i.test(label)) ||
+      /gitlab|guardian/i.test(agent.display_name),
+    ),
+    [fabricAgents],
+  );
+  const guardianPolicyPack = guardianAgent?.metadata?.policy_pack
+    ?? (guardianAgent?.labels.length ? guardianAgent.labels.join(', ') : undefined)
+    ?? 'Not configured';
 
   // Transform evidence records into MR compliance entries
   const mrEntries: MRComplianceEntry[] = (evidenceData?.data ?? []).map((record) => {
@@ -146,6 +158,15 @@ export default function GitLabPage() {
           </div>
         </Card>
       </div>
+
+      {evidenceError && (
+        <Card className="border-amber-200 bg-amber-50">
+          <div className="flex items-center gap-3 p-4 text-sm text-amber-900">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            GitLab evidence is unavailable: {evidenceError instanceof Error ? evidenceError.message : 'retry the request'}
+          </div>
+        </Card>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-3 gap-6">
@@ -259,28 +280,30 @@ export default function GitLabPage() {
                   <Shield className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm">Active</p>
-                  <p className="text-xs text-gray-500">
-                    Monitoring merge requests
+                <p className="font-medium text-sm">
+                  {guardianAgent?.status === 'ACTIVE' ? 'Active' : guardianAgent ? guardianAgent.status : 'Not registered'}
+                </p>
+                <p className="text-xs text-gray-500">
+                    {guardianAgent ? 'Registered in the live Fabric inventory' : 'No GitLab Guardian agent is registered in Fabric'}
                   </p>
                 </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Agent Type</span>
-                  <span className="font-medium">External Agent</span>
+                  <span className="font-medium">{guardianAgent?.runtime ?? 'Unregistered'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Model</span>
-                  <span className="font-medium">Claude Sonnet 4</span>
+                  <span className="text-gray-500">Owner</span>
+                  <span className="font-medium">{guardianAgent?.owner ?? '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Triggers</span>
-                  <span className="font-medium">MR, Assign, Mention</span>
+                  <span className="font-medium">{guardianAgent?.metadata?.triggers ? String(guardianAgent.metadata.triggers) : 'merge request evidence'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Policy Pack</span>
-                  <Badge variant="info" size="sm">HIPAA + SOX/PCI</Badge>
+                  <Badge variant="info" size="sm">{String(guardianPolicyPack)}</Badge>
                 </div>
               </div>
             </div>

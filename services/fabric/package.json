@@ -1,6 +1,6 @@
 {
   "name": "@stix/fabric",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "STIX Fabric control-plane service for agent policy governance",
   "type": "module",
   "main": "dist/index.js",

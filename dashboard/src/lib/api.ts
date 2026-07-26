@@ -3,6 +3,10 @@
  */
 
 import type {
+  CreateFabricAgentInput,
+  CreateFabricEnforcementPointInput,
+  CreateFabricPolicyChannelInput,
+  CreateFabricToolActionInput,
   FabricAgent,
   FabricCollection,
   FabricEnforcementPoint,
@@ -362,7 +366,7 @@ class ApiClient {
     }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     let response: Response;
     try {
@@ -372,7 +376,7 @@ class ApiClient {
         signal: options.signal ?? controller.signal,
       });
     } finally {
-      window.clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
     }
 
     if (!response.ok) {
@@ -757,6 +761,38 @@ class ApiClient {
   // ---------------------------------------------------------------------------
   // STIX Fabric
   // ---------------------------------------------------------------------------
+
+  async createFabricAgent(input: CreateFabricAgentInput): Promise<FabricAgent> {
+    return this.fetch<FabricAgent>('fabric', '/api/v1/fabric/agents', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async createFabricEnforcementPoint(
+    input: CreateFabricEnforcementPointInput,
+  ): Promise<FabricEnforcementPoint> {
+    return this.fetch<FabricEnforcementPoint>('fabric', '/api/v1/fabric/enforcement-points', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async createFabricToolAction(input: CreateFabricToolActionInput): Promise<FabricToolAction> {
+    return this.fetch<FabricToolAction>('fabric', '/api/v1/fabric/tool-actions', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async createFabricPolicyChannel(
+    input: CreateFabricPolicyChannelInput,
+  ): Promise<FabricPolicyChannel> {
+    return this.fetch<FabricPolicyChannel>('fabric', '/api/v1/fabric/policy-channels', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
 
   async listFabricAgents(): Promise<FabricCollection<FabricAgent>> {
     return this.fetch<FabricCollection<FabricAgent>>('fabric', '/api/v1/fabric/agents');

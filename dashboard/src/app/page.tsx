@@ -54,19 +54,27 @@ export default function DashboardPage() {
   const {
     data: stats,
     isLoading: statsLoading,
+    error: statsError,
     refetch: refetchStats,
   } = useDashboardStats();
-  const { data: timeSeries, isLoading: timeSeriesLoading, error: timeSeriesError } =
+  const {
+    data: timeSeries,
+    isLoading: timeSeriesLoading,
+    error: timeSeriesError,
+    refetch: refetchTimeSeries,
+  } =
     useDecisionTimeSeries(timeRange);
   const { data: health, refetch: refetchHealth } = useAllServicesHealth();
-  const { data: pendingApprovals } = useApprovals({
+  const { data: pendingApprovals, error: pendingApprovalsError, refetch: refetchApprovals } = useApprovals({
     status: "PENDING",
     page_size: 5,
   });
 
   const handleRefresh = () => {
-    refetchStats();
-    refetchHealth();
+    void refetchStats();
+    void refetchTimeSeries();
+    void refetchHealth();
+    void refetchApprovals();
   };
   const degradedServices = stats?.degraded_services ?? [];
 
@@ -179,6 +187,17 @@ export default function DashboardPage() {
                 still rendered so operators can keep working.
               </p>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {(statsError || pendingApprovalsError) && (
+        <Card className="border-amber-200 bg-amber-50/90">
+          <div className="flex items-center gap-3 text-sm text-amber-900">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span>
+              Some command-center data is unavailable: {((statsError ?? pendingApprovalsError) as Error).message}
+            </span>
           </div>
         </Card>
       )}

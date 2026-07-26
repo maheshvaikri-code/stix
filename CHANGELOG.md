@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.15] - 2026-07-26
+
+### Dashboard
+
+- Added live Fabric registry registration forms for agents, enforcement points, tool actions, and policy channels.
+- Invalidated Fabric inventory, graph, statistics, and readiness queries after successful registration.
+- Replaced approval quick actions that bypassed required justification with a review flow that enforces role and evidence requirements.
+- Replaced the Governance approval matrix sample rows with live delegation data from the approval service.
+- Added dashboard refresh/error handling for command-center, governance, approvals, and GitLab evidence views.
+- Removed the remaining inert empty-state policy creation button and surfaced the registered GitLab Guardian agent from Fabric inventory.
+
+### Reliability
+
+- Made the dashboard API timeout implementation safe for browser and non-browser client smoke tests.
+
 ## [0.1.14] - 2026-07-26
 
 ### Dashboard

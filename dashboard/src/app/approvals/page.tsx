@@ -50,7 +50,7 @@ export default function ApprovalsPage() {
       ? undefined
       : (activeTab.toUpperCase() as 'APPROVED' | 'REJECTED');
 
-  const { data, isLoading, refetch } = useApprovals({
+  const { data, isLoading, error, refetch } = useApprovals({
     page,
     page_size: 20,
     status: statusFilter as 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | undefined,
@@ -59,8 +59,9 @@ export default function ApprovalsPage() {
   });
 
   // Count pending for badge
-  const { data: pendingData } = useApprovals({ status: 'PENDING', page_size: 1 });
+  const { data: pendingData, error: pendingError } = useApprovals({ status: 'PENDING', page_size: 1 });
   const pendingCount = pendingData?.total || 0;
+  const approvalDataError = error ?? pendingError;
 
   return (
     <div className="p-6 space-y-6">
@@ -120,13 +121,18 @@ export default function ApprovalsPage() {
         </div>
       </Card>
 
+      {approvalDataError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Approval data is partially unavailable. {approvalDataError instanceof Error ? approvalDataError.message : String(approvalDataError)}
+        </div>
+      )}
+
       {/* Approvals Table/Cards */}
       {activeTab === 'pending' ? (
         <PendingApprovalsList
           approvals={data?.data || []}
           isLoading={isLoading}
           onSelect={setSelectedRequest}
-          onAction={refetch}
         />
       ) : (
         <Card padding="none">
@@ -134,6 +140,12 @@ export default function ApprovalsPage() {
             <div className="py-12">
               <LoadingSpinner />
             </div>
+          ) : error ? (
+            <EmptyState
+              icon={<AlertTriangle className="h-12 w-12 text-amber-500" />}
+              title="Approval history unavailable"
+              description={error instanceof Error ? error.message : 'Retry the request to load approval history.'}
+            />
           ) : !data?.data.length ? (
             <EmptyState
               icon={<CheckCircle className="h-12 w-12" />}
@@ -240,18 +252,11 @@ function PendingApprovalsList({
   approvals,
   isLoading,
   onSelect,
-  onAction,
 }: {
   approvals: ApprovalRequest[];
   isLoading: boolean;
   onSelect: (approval: ApprovalRequest) => void;
-  onAction: () => void;
 }) {
-  const approveRequest = useApproveRequest();
-  const rejectRequest = useRejectRequest();
-  const operator = useDashboardOperator();
-  const actionError = approveRequest.error ?? rejectRequest.error;
-
   if (isLoading) {
     return (
       <div className="py-12">
@@ -274,14 +279,6 @@ function PendingApprovalsList({
 
   return (
     <div className="space-y-4">
-      {actionError && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-          Approval action failed: {actionError instanceof Error ? actionError.message : 'Unknown error'}
-          <span className="mt-1 block text-xs text-rose-700">
-            Signed in as {operator.id} ({operator.role}). Update the operator identity in Settings if the ticket requires another role.
-          </span>
-        </div>
-      )}
       {approvals.map((approval) => {
         const expiresIn = new Date(approval.expires_at).getTime() - Date.now();
         const expiresHours = Math.floor(expiresIn / (1000 * 60 * 60));
@@ -338,33 +335,14 @@ function PendingApprovalsList({
                 </button>
               </div>
 
-              <div className="flex gap-2 ml-4">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() =>
-                    rejectRequest.mutate(
-                      { requestId: approval.request_id },
-                      { onSuccess: onAction }
-                    )
-                  }
-                  loading={rejectRequest.isPending}
-                >
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Reject
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    approveRequest.mutate(
-                      { requestId: approval.request_id },
-                      { onSuccess: onAction }
-                    )
-                  }
-                  loading={approveRequest.isPending}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Approve
+              <div className="ml-4 flex flex-col items-end gap-2">
+                {approval.required_role && (
+                  <span className="text-right text-xs text-gray-500">
+                    Requires {approval.required_role}
+                  </span>
+                )}
+                <Button size="sm" onClick={() => onSelect(approval)}>
+                  Review decision
                 </Button>
               </div>
             </div>

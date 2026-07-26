@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Download } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useApprovals, useEvidenceStats, usePolicies } from '@/lib/hooks';
-import type { Policy } from '@/lib/api';
+import type { ApprovalRequest, Policy } from '@/lib/api';
 
 type LifecycleState = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'DEPLOYED';
 
@@ -17,6 +17,14 @@ interface PolicyLifecycleItem {
   owner: string;
   updatedAt: string;
   state: LifecycleState;
+}
+
+interface DelegationRow {
+  actionClass: string;
+  requiredRole: string;
+  requestCount: number;
+  pendingCount: number;
+  nextExpiry?: string;
 }
 
 const states: LifecycleState[] = ['DRAFT', 'REVIEW', 'APPROVED', 'DEPLOYED'];
@@ -76,16 +84,20 @@ function downloadText(filename: string, content: string): void {
 }
 
 export default function GovernancePage() {
-  const { data: policyData, isLoading: policyLoading, error: policyError } = usePolicies({
+  const { data: policyData, isLoading: policyLoading, error: policyError, refetch: refetchPolicies } = usePolicies({
     page: 1,
     page_size: 200,
   });
-  const { data: approvalData } = useApprovals({
-    status: 'PENDING',
+  const { data: approvalData, error: approvalError, refetch: refetchApprovals } = useApprovals({
     page: 1,
     page_size: 200,
   });
-  const { data: evidenceStats } = useEvidenceStats();
+  const { data: evidenceStats, error: evidenceError, refetch: refetchEvidenceStats } = useEvidenceStats();
+
+  const delegationRows = useMemo(
+    () => buildDelegationRows(approvalData?.data ?? []),
+    [approvalData],
+  );
 
   const items = useMemo(
     () => (policyData?.data ?? []).map(policyToLifecycleItem),
@@ -102,7 +114,7 @@ export default function GovernancePage() {
   }, [items]);
 
   const governanceSnapshot = useMemo(() => {
-    const pendingApprovals = approvalData?.data?.length ?? 0;
+    const pendingApprovals = approvalData?.data?.filter((approval) => approval.status === 'PENDING').length ?? 0;
     const byDecision = evidenceStats?.by_decision ?? {};
 
     return {
@@ -160,15 +172,28 @@ export default function GovernancePage() {
             Policy lifecycle, approval delegation, and reporting cadence.
           </p>
         </div>
-        <Button variant="secondary" onClick={exportGovernanceReport}>
-          <Download className="h-4 w-4 mr-2" />
-          Export Snapshot
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void refetchPolicies();
+              void refetchApprovals();
+              void refetchEvidenceStats();
+            }}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button variant="secondary" onClick={exportGovernanceReport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Snapshot
+          </Button>
+        </div>
       </div>
 
-      {policyError && (
+      {(policyError || approvalError || evidenceError) && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Failed to load policy lifecycle from API: {policyError instanceof Error ? policyError.message : 'Unknown error'}
+          Governance data is partially unavailable: {(policyError ?? approvalError ?? evidenceError) instanceof Error ? (policyError ?? approvalError ?? evidenceError)?.message : 'Unknown error'}
         </div>
       )}
 
@@ -202,36 +227,44 @@ export default function GovernancePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader title="Approval Delegation Matrix" />
+          <CardHeader
+            title="Approval Delegation Matrix"
+            description="Required roles and expiry windows observed in the live approval service"
+          />
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
                   <th className="py-2 pr-4">Action Class</th>
-                  <th className="py-2 pr-4">Primary Approver</th>
-                  <th className="py-2 pr-4">Backup Approver</th>
-                  <th className="py-2">SLA</th>
+                  <th className="py-2 pr-4">Required Role</th>
+                  <th className="py-2 pr-4">Requests</th>
+                  <th className="py-2">Next Expiry</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b">
-                  <td className="py-2 pr-4">PHI External Send</td>
-                  <td className="py-2 pr-4">Privacy Officer</td>
-                  <td className="py-2 pr-4">Security Officer</td>
-                  <td className="py-2">30m</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4">Policy Promotion</td>
-                  <td className="py-2 pr-4">Compliance Lead</td>
-                  <td className="py-2 pr-4">Platform Lead</td>
-                  <td className="py-2">4h</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4">Emergency Override</td>
-                  <td className="py-2 pr-4">Security On-Call</td>
-                  <td className="py-2 pr-4">Engineering Director</td>
-                  <td className="py-2">15m</td>
-                </tr>
+                {delegationRows.map((row) => (
+                  <tr key={`${row.actionClass}-${row.requiredRole}`} className="border-b last:border-0">
+                    <td className="py-2 pr-4 font-mono text-xs">{row.actionClass}</td>
+                    <td className="py-2 pr-4">
+                      <Badge variant={row.requiredRole === 'Any configured approver' ? 'default' : 'info'} size="sm">
+                        {row.requiredRole}
+                      </Badge>
+                    </td>
+                    <td className="py-2 pr-4">
+                      {row.pendingCount > 0 ? `${row.pendingCount} pending / ` : ''}{row.requestCount} total
+                    </td>
+                    <td className="py-2 text-gray-600">
+                      {row.nextExpiry ? fmtIso(row.nextExpiry) : 'No pending request'}
+                    </td>
+                  </tr>
+                ))}
+                {!delegationRows.length && (
+                  <tr>
+                    <td className="py-4 text-sm text-gray-500" colSpan={4}>
+                      No approval delegation records returned by the service.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -259,4 +292,35 @@ export default function GovernancePage() {
       </div>
     </div>
   );
+}
+
+function buildDelegationRows(approvals: ApprovalRequest[]): DelegationRow[] {
+  const grouped = new Map<string, ApprovalRequest[]>();
+
+  for (const approval of approvals) {
+    const actionClass = `${approval.action} -> ${approval.resource_type}`;
+    const requiredRole = approval.required_role || 'Any configured approver';
+    const key = `${actionClass}::${requiredRole}`;
+    const existing = grouped.get(key) ?? [];
+    existing.push(approval);
+    grouped.set(key, existing);
+  }
+
+  return [...grouped.entries()]
+    .map(([key, requests]) => {
+      const [actionClass, requiredRole] = key.split('::');
+      const pending = requests
+        .filter((request) => request.status === 'PENDING')
+        .sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at));
+
+      return {
+        actionClass,
+        requiredRole,
+        requestCount: requests.length,
+        pendingCount: pending.length,
+        nextExpiry: pending[0]?.expires_at,
+      };
+    })
+    .sort((a, b) => b.pendingCount - a.pendingCount || b.requestCount - a.requestCount)
+    .slice(0, 8);
 }

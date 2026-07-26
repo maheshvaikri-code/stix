@@ -401,6 +401,54 @@ export function useFabricAgents() {
   });
 }
 
+export function useRegisterFabricAgent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createFabricAgent>[0]) =>
+      api.createFabricAgent(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fabric'] });
+    },
+  });
+}
+
+export function useRegisterFabricEnforcementPoint() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createFabricEnforcementPoint>[0]) =>
+      api.createFabricEnforcementPoint(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fabric'] });
+    },
+  });
+}
+
+export function useRegisterFabricToolAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createFabricToolAction>[0]) =>
+      api.createFabricToolAction(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fabric'] });
+    },
+  });
+}
+
+export function useRegisterFabricPolicyChannel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createFabricPolicyChannel>[0]) =>
+      api.createFabricPolicyChannel(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fabric'] });
+    },
+  });
+}
+
 export function useFabricEnforcementPoints() {
   return useQuery({
     queryKey: queryKeys.fabricEnforcementPoints,
