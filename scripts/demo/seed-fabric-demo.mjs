@@ -226,7 +226,7 @@ const demoRecords = [
       display_name: 'Doctrine Gold Build Gate',
       environment: 'prod',
       rollout_state: 'ACTIVE',
-      active_bundle_id: 'bundle_0_1_9_doctrine',
+      active_bundle_id: 'bundle_0_1_10_doctrine',
       metadata: {
         coverage: 'g0-g7',
         promotion: 'signed-evidence-required',
@@ -241,7 +241,7 @@ const demoRecords = [
       display_name: 'Production Guardrails',
       environment: 'prod',
       rollout_state: 'ACTIVE',
-      active_bundle_id: 'bundle_0_1_9_prod',
+      active_bundle_id: 'bundle_0_1_10_prod',
       metadata: {
         coverage: 'core+fabric',
         rollout: '100%',
@@ -256,7 +256,7 @@ const demoRecords = [
       display_name: 'Stage Canary Policies',
       environment: 'stage',
       rollout_state: 'CANARY',
-      active_bundle_id: 'bundle_0_1_9_canary',
+      active_bundle_id: 'bundle_0_1_10_canary',
       metadata: {
         rollout: '25%',
         owner: 'platform-security',

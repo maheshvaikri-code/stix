@@ -7,11 +7,11 @@ const bucket = process.env.STIX_FLOCI_BUCKET ?? 'stix-fde-artifacts';
 const objectKey = `smoke/${new Date().toISOString().replaceAll(':', '-')}-${randomUUID()}.txt`;
 const body = 'stix floci fde smoke\n';
 
-async function request(path, init = {}) {
+async function request(path, init = {}, acceptedStatuses = []) {
   const response = await fetch(`${endpointUrl}${path}`, init);
   const text = await response.text();
 
-  if (!response.ok) {
+  if (!response.ok && !acceptedStatuses.includes(response.status)) {
     throw new Error(
       [
         `${init.method ?? 'GET'} ${path} failed with HTTP ${response.status}`,
@@ -26,7 +26,7 @@ async function request(path, init = {}) {
 }
 
 try {
-  await request(`/${bucket}`, { method: 'PUT' });
+  await request(`/${bucket}`, { method: 'PUT' }, [409]);
   await request(`/${bucket}/${objectKey}`, { method: 'PUT', body });
   const objectBody = await request(`/${bucket}/${objectKey}`);
   const bucketList = await request(`/${bucket}`);

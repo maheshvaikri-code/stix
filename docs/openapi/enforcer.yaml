@@ -5,7 +5,7 @@ info:
     Authorization decision engine for AI agent actions.
     The Enforcer evaluates requests against policies and returns decisions
     with proof tokens for enforcement.
-  version: 0.1.9
+  version: 0.1.10
   contact:
     name: STIX Team
   license:

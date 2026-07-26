@@ -1,0 +1,68 @@
+name: Floci FDE Deploy Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "deploy/docker/**"
+      - "scripts/deploy/**"
+      - "scripts/demo/seed-fabric-demo.mjs"
+      - "services/fabric/**"
+      - "dashboard/**"
+      - "packages/fabric-types/**"
+      - ".github/workflows/floci-fde.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/docker/**"
+      - "scripts/deploy/**"
+      - "scripts/demo/seed-fabric-demo.mjs"
+      - "services/fabric/**"
+      - "dashboard/**"
+      - "packages/fabric-types/**"
+      - ".github/workflows/floci-fde.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: floci-fde-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "8.12.0"
+
+jobs:
+  deploy-gate:
+    name: Doctrine/FDE Floci Deploy Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Floci FDE deploy gate
+        run: pnpm deploy:fde:floci -- --teardown
+
+      - name: Upload FDE report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: floci-fde-gate-report
+          path: artifacts/deploy/

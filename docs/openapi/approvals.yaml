@@ -4,7 +4,7 @@ info:
   description: |
     Human approval workflow for quarantined actions.
     Manages approval tickets, notifications, and resolution.
-  version: 0.1.9
+  version: 0.1.10
   contact:
     name: STIX Team
   license:

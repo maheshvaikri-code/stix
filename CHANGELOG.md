@@ -2,6 +2,20 @@
 
 All notable changes to STIX are documented here.
 
+## [0.1.10] - 2026-07-25
+
+### Added
+
+- Added `pnpm deploy:fde:floci` as a one-command Doctrine/FDE deployment gate.
+- Added `scripts/deploy/floci-fde-gate.mjs` to build/start the Floci stack, wait for health, seed Doctrine/Fabric, smoke readiness, smoke dashboard routes, and emit a JSON report.
+- Added `.github/workflows/floci-fde.yml` for CI validation of the Floci FDE deployment lane.
+
+### Changed
+
+- Hardened `scripts/deploy/floci-aws-smoke.mjs` to tolerate existing S3-compatible buckets.
+- Documented the one-command FDE gate and CI teardown mode.
+- Bumped the monorepo and STIX package versions to `0.1.10`.
+
 ## [0.1.9] - 2026-07-25
 
 ### Added

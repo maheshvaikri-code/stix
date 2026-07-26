@@ -28,6 +28,22 @@ The Compose file sets `name: stix`, which creates an isolated project and networ
 
 ## Verify
 
+The recommended full gate is:
+
+```bash
+pnpm deploy:fde:floci
+```
+
+This command validates Compose config, builds and starts the stack, waits for health, seeds Doctrine/Fabric records, checks readiness, smokes dashboard routes, verifies Floci S3-compatible artifact round trip, and writes `artifacts/deploy/floci-fde-gate-report.json`.
+
+Use teardown mode in CI:
+
+```bash
+pnpm deploy:fde:floci -- --teardown
+```
+
+The same gate runs in GitHub Actions through `.github/workflows/floci-fde.yml` when deployment, Fabric, dashboard, or FDE scripts change.
+
 ```bash
 curl http://localhost:3001/health
 curl http://localhost:3002/health

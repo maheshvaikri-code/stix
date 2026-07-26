@@ -1,6 +1,6 @@
 {
   "name": "@stix/target-verifier",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "STIX Target Verifier SDK - Verify proof tokens before executing protected actions",
   "type": "module",
   "main": "dist/index.js",
