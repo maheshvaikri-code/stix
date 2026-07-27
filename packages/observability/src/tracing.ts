@@ -94,7 +94,7 @@ export class StixTracing {
 
     const resource = resourceFromAttributes({
       [SEMRESATTRS_SERVICE_NAME]: this.config.serviceName,
-      [SEMRESATTRS_SERVICE_VERSION]: this.config.serviceVersion ?? '0.1.15',
+      [SEMRESATTRS_SERVICE_VERSION]: this.config.serviceVersion ?? '0.1.16',
       [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: this.config.environment ?? 'production',
       ...this.config.resourceAttributes,
     });

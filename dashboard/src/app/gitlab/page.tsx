@@ -344,7 +344,7 @@ export default function GitLabPage() {
               <Link href="/governance" className="block">
                 <Button variant="secondary" className="w-full justify-start text-sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Run Policy Drift Check
+                Open Policy Drift Check
                 </Button>
               </Link>
               <Link href="/evidence" className="block">

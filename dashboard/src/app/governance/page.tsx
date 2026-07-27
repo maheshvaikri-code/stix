@@ -1,12 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useApprovals, useEvidenceStats, usePolicies } from '@/lib/hooks';
+import {
+  useApprovals,
+  useEvidenceStats,
+  useFabricInventory,
+  useFabricReadiness,
+  usePolicies,
+} from '@/lib/hooks';
 import type { ApprovalRequest, Policy } from '@/lib/api';
 
 type LifecycleState = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'DEPLOYED';
@@ -84,6 +90,7 @@ function downloadText(filename: string, content: string): void {
 }
 
 export default function GovernancePage() {
+  const [driftCheckedAt, setDriftCheckedAt] = useState<string | null>(null);
   const { data: policyData, isLoading: policyLoading, error: policyError, refetch: refetchPolicies } = usePolicies({
     page: 1,
     page_size: 200,
@@ -93,6 +100,8 @@ export default function GovernancePage() {
     page_size: 200,
   });
   const { data: evidenceStats, error: evidenceError, refetch: refetchEvidenceStats } = useEvidenceStats();
+  const { data: fabricData, error: fabricError, refetch: refetchFabric } = useFabricInventory();
+  const { data: readiness, error: readinessError, refetch: refetchReadiness } = useFabricReadiness();
 
   const delegationRows = useMemo(
     () => buildDelegationRows(approvalData?.data ?? []),
@@ -126,6 +135,22 @@ export default function GovernancePage() {
       updatedAt: new Date().toISOString(),
     };
   }, [approvalData, evidenceStats, items.length]);
+
+  const driftFindings = useMemo(
+    () => buildDriftFindings(policyData?.data ?? [], fabricData, readiness),
+    [fabricData, policyData, readiness],
+  );
+
+  const runDriftCheck = async () => {
+    await Promise.all([
+      refetchPolicies(),
+      refetchApprovals(),
+      refetchEvidenceStats(),
+      refetchFabric(),
+      refetchReadiness(),
+    ]);
+    setDriftCheckedAt(new Date().toISOString());
+  };
 
   const exportGovernanceReport = () => {
     const lines = [
@@ -191,11 +216,40 @@ export default function GovernancePage() {
         </div>
       </div>
 
-      {(policyError || approvalError || evidenceError) && (
+      {(policyError || approvalError || evidenceError || fabricError || readinessError) && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Governance data is partially unavailable: {(policyError ?? approvalError ?? evidenceError) instanceof Error ? (policyError ?? approvalError ?? evidenceError)?.message : 'Unknown error'}
+          Governance data is partially unavailable: {(policyError ?? approvalError ?? evidenceError ?? fabricError ?? readinessError) instanceof Error ? (policyError ?? approvalError ?? evidenceError ?? fabricError ?? readinessError)?.message : 'Unknown error'}
         </div>
       )}
+
+      <Card className={driftFindings.length ? 'border-amber-200 bg-amber-50/70' : 'border-emerald-200 bg-emerald-50/70'}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-950">Policy Drift Check</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Live consistency check across policies, Fabric rollout channels, and readiness signals.
+            </p>
+            {driftCheckedAt && (
+              <p className="mt-2 text-xs text-slate-500">Last checked: {fmtIso(driftCheckedAt)}</p>
+            )}
+          </div>
+          <Button variant="secondary" onClick={() => void runDriftCheck()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Run Drift Check
+          </Button>
+        </div>
+        <div className="mt-4 space-y-2">
+          {driftFindings.length ? driftFindings.map((finding) => (
+            <div key={finding} className="rounded-lg border border-amber-200 bg-white/70 p-3 text-sm text-amber-900">
+              {finding}
+            </div>
+          )) : (
+            <p className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-800">
+              No policy or rollout drift detected in the currently loaded live records.
+            </p>
+          )}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {grouped.map((group) => (
@@ -292,6 +346,39 @@ export default function GovernancePage() {
       </div>
     </div>
   );
+}
+
+function buildDriftFindings(
+  policies: Policy[],
+  fabricData: ReturnType<typeof useFabricInventory>['data'],
+  readiness: ReturnType<typeof useFabricReadiness>['data'],
+): string[] {
+  const findings: string[] = [];
+  const disabledPolicies = policies.filter((policy) => !policy.enabled).length;
+  if (disabledPolicies) {
+    findings.push(`${disabledPolicies} loaded policy record(s) are disabled and require lifecycle review.`);
+  }
+
+  const inactiveChannels = fabricData?.policyChannels.data.filter(
+    (channel) => channel.rollout_state !== 'ACTIVE' || !channel.active_bundle_id,
+  ) ?? [];
+  if (inactiveChannels.length) {
+    findings.push(`${inactiveChannels.length} Fabric policy channel(s) are not active or have no active bundle.`);
+  }
+
+  const unapprovedHighRiskActions = fabricData?.toolActions.data.filter(
+    (action) => (action.risk_tier === 'HIGH' || action.risk_tier === 'CRITICAL') && !action.approval_required,
+  ) ?? [];
+  if (unapprovedHighRiskActions.length) {
+    findings.push(`${unapprovedHighRiskActions.length} high-risk tool action(s) do not require approval.`);
+  }
+
+  const readinessIssues = readiness?.fabric.issues ?? [];
+  for (const issue of readinessIssues.slice(0, 3)) {
+    findings.push(`Fabric readiness: ${issue.title} - ${issue.detail}`);
+  }
+
+  return findings;
 }
 
 function buildDelegationRows(approvals: ApprovalRequest[]): DelegationRow[] {

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.16] - 2026-07-27
+
+### Dashboard
+
+- Added live approval workflow context to Evidence record details by trace ID.
+- Wired Evidence record inspection buttons and export error handling.
+- Added a live Policy Drift Check across policy state, Fabric rollout channels, high-risk approval coverage, and readiness signals.
+- Renamed the GitLab governance action so navigation no longer implies an immediate check before the operator runs it.
+
 ## [0.1.15] - 2026-07-26
 
 ### Dashboard

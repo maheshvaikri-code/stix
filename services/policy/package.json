@@ -1,6 +1,6 @@
 {
   "name": "@stix/policy",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "STIX Policy Service - Policy evaluation engine",
   "type": "module",
   "main": "dist/index.js",

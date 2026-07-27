@@ -19,6 +19,7 @@ import {
   useVerifyEvidenceChain,
   useExportEvidence,
   useEvidenceByTrace,
+  useApprovalsByTrace,
 } from '@/lib/hooks';
 import { type EvidenceRecord } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -301,7 +302,15 @@ export default function EvidencePage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <button className="p-1 hover:bg-gray-100 rounded">
+                        <button
+                          type="button"
+                          aria-label={`Inspect evidence record ${record.event_id}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedRecord(record);
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
                           <ExternalLink className="h-4 w-4 text-gray-400" />
                         </button>
                       </TableCell>
@@ -351,6 +360,11 @@ export default function EvidencePage() {
 
 function EvidenceRecordDetail({ record }: { record: EvidenceRecord }) {
   const { data: relatedRecords, isLoading } = useEvidenceByTrace(record.trace_id);
+  const {
+    data: relatedApprovals,
+    isLoading: approvalsLoading,
+    error: approvalsError,
+  } = useApprovalsByTrace(record.trace_id);
 
   return (
     <div className="space-y-6">
@@ -458,6 +472,37 @@ function EvidenceRecordDetail({ record }: { record: EvidenceRecord }) {
           </div>
         ) : (
           <p className="text-sm text-gray-500">No other records in this trace</p>
+        )}
+      </div>
+
+      <div>
+        <p className="text-sm font-medium mb-2">Approval Workflow</p>
+        {approvalsLoading ? (
+          <LoadingSpinner size="sm" />
+        ) : approvalsError ? (
+          <p className="text-sm text-amber-700">
+            Approval history unavailable: {approvalsError instanceof Error ? approvalsError.message : 'retry the request'}
+          </p>
+        ) : relatedApprovals?.length ? (
+          <div className="space-y-2">
+            {relatedApprovals.map((approval) => (
+              <div key={approval.request_id} className="rounded border bg-gray-50 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs">{approval.request_id}</span>
+                  <StatusBadge status={approval.status} />
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                  <span>Required role: {approval.required_role ?? 'Any configured approver'}</span>
+                  <span>Reviewed by: {approval.reviewed_by ?? 'Pending review'}</span>
+                </div>
+                {approval.review_notes && (
+                  <p className="mt-2 text-xs text-gray-600">{approval.review_notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No approval workflow is attached to this trace.</p>
         )}
       </div>
     </div>
@@ -619,25 +664,30 @@ function ExportModal({
   endDate: string;
 }) {
   const [format, setFormat] = useState<'json' | 'jsonl' | 'csv'>('jsonl');
+  const [exportError, setExportError] = useState<string | null>(null);
   const exportEvidence = useExportEvidence();
 
   const handleExport = async () => {
-    const blob = await exportEvidence.mutateAsync({
-      start_time: startDate,
-      end_time: endDate,
-      format,
-    });
+    setExportError(null);
+    try {
+      const blob = await exportEvidence.mutateAsync({
+        start_time: startDate,
+        end_time: endDate,
+        format,
+      });
 
-    // Download the file
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `evidence-export-${new Date().toISOString().slice(0, 10)}.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    onClose();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `evidence-export-${new Date().toISOString().slice(0, 10)}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      onClose();
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Evidence export failed');
+    }
   };
 
   return (
@@ -665,6 +715,12 @@ function ExportModal({
             { value: 'csv', label: 'CSV (.csv)' },
           ]}
         />
+
+        {exportError && (
+          <div className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {exportError}
+          </div>
+        )}
       </div>
 
       <ModalFooter>

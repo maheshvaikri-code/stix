@@ -3,7 +3,7 @@
  * Enterprise-grade shared utilities for Shield, Trust & Integrity eXecution
  * 
  * @module @stix/shared
- * @version 0.1.15
+ * @version 0.1.16
  */
 
 // =============================================================================
@@ -469,5 +469,5 @@ export type {
 // VERSION
 // =============================================================================
 
-export const VERSION = '0.1.15';
+export const VERSION = '0.1.16';
 export const PACKAGE_NAME = '@stix/shared';

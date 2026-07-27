@@ -86,7 +86,7 @@ function loadConfig(): Config {
   const parsed = ConfigSchema.parse({
     service: {
       name: 'stix-approvals',
-      version: getEnv('SERVICE_VERSION', '0.1.15'),
+      version: getEnv('SERVICE_VERSION', '0.1.16'),
       port: getEnvNumber('PORT', SERVICE_PORTS.APPROVALS),
       host: getEnv('HOST', '0.0.0.0'),
       env,
